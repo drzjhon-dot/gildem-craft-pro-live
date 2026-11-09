@@ -15,7 +15,7 @@ const raw={items:{
 const recipes=extractSpecialRecipes(raw);
 
 test('v7 selector presenta categorías lógicas con subramas específicas',()=>{
- assert.deepEqual(BRANCH_CATEGORIES.map(x=>x.key),['armor','weapons','accessories','gathering','potions','mounts','foods']);
+ assert.deepEqual(BRANCH_CATEGORIES.map(x=>x.key),['armor','weapons','accessories','offhands','kits','siege','gathering','potions','mounts','foods']);
  assert.equal(categoryForBranch('gather_hide'),'gathering');
  assert.equal(categoryForBranch('potion_all'),'potions');
  assert.equal(categoryForBranch('mount_all'),'mounts');

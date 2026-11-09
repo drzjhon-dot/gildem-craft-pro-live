@@ -56,13 +56,15 @@ export const BRANCHES=[
  {key:'offhand',label:'Manos secundarias',city:'Martlock',test:byId(/^T[4-8]_OFF_/)},
  {key:'bags',label:'Bolsas',city:'Brecilien',test:byId(/^T[4-8]_BAG/)},
  {key:'capes',label:'Capas',city:'Brecilien',test:byId(/^T[4-8]_CAPE/)},
- {key:'weapons_all',label:'Todas las armas',city:null,test:byId(/^T[4-8]_(MAIN_|2H_)/)},
+ {key:'siege',label:'Martillos de asedio',city:'Caerleon',test:byId(/^T[2-8]_2H_TOOL_SIEGEHAMMER(?:_AVALON)?(?:@\d+)?$/),market:'royal'},
+ {key:'siege_banner',label:'Estandartes de asedio',city:'Caerleon',test:byId(/^T[4-8]_SIEGE_BANNER(?:@\d+)?$/),market:'royal'},
+ {key:'weapons_all',label:'Todas las armas',city:null,test:id=>/^T[4-8]_(?:MAIN_|2H_)/.test(id)&&!/^T[4-8]_2H_TOOL_/.test(id)},
 ];
 
 // Recolección: profesiones + herramientas fabricables (normales y avalonianas).
 // Sus identificadores oficiales empiezan por 2H_TOOL_, no por TOOL_.
 // Martillo de asedio no es una herramienta para recolectar materiales.
-const gatheringTools=/^T[2-8]_2H_TOOL_(?:AXE|PICK|SICKLE|KNIFE|HAMMER|FISHINGROD|TRACKING)(?:_AVALON)?(?:@\d+)?$/;
+const gatheringTools=/^T[2-8]_2H_TOOL_(?:AXE|PICK|SICKLE|KNIFE|HAMMER|FISHINGROD)(?:_AVALON)?(?:@\d+)?$/;
 const gatheringTool=type=>id=>new RegExp('^T[2-8]_2H_TOOL_'+type+'(?:_AVALON)?(?:@\\d+)?$').test(id);
 const gatheringFamily=(resource,tool)=>id=>new RegExp('^T[4-8]_(?:HEAD|SHOES|ARMOR|BACKPACK)_GATHERER_'+resource+'(?:@\\d+)?$').test(id)||gatheringTool(tool)(id);
 const gatheringGearOrTool=id=>/^T[4-8]_(?:HEAD|SHOES|ARMOR|BACKPACK)_GATHERER_/.test(id)||gatheringTools.test(id);
@@ -131,17 +133,24 @@ export function recipesForBranch(recipes,key,minTier=4,maxTier=7,maxEnchant=1,li
 export const BRANCH_CATEGORIES=[
  {key:'armor',label:'Armaduras',icon:'♜',description:'Botas, cascos y pecheras'},
  {key:'weapons',label:'Armas',icon:'⚔',description:'Todas las líneas de armas'},
- {key:'accessories',label:'Accesorios',icon:'◇',description:'Bolsas, capas y manos secundarias'},
+ {key:'accessories',label:'Accesorios',icon:'◇',description:'Bolsas y capas'},
+ {key:'offhands',label:'Manos secundarias',icon:'✦',description:'Escudos, antorchas, orbes y demás secundarios'},
+ {key:'kits',label:'Kits',icon:'⌘',description:'Kits de rastreo · Royal'},
+ {key:'siege',label:'Asedio',icon:'⚒',description:'Martillos y estandartes · Royal'},
  {key:'gathering',label:'Recolección',icon:'♧',description:'Equipos, mochilas y herramientas · Royal'},
  {key:'potions',label:'Pociones',icon:'⚗',description:'Alquimia · Royal'},
  {key:'mounts',label:'Monturas',icon:'♞',description:'Ensillado · Royal'},
  {key:'foods',label:'Comidas',icon:'♨',description:'Cocina · Royal'}
 ];
 export function categoryForBranch(b){const k=typeof b==='string'?b:b?.key||'';
- if(k.startsWith('food_'))return 'foods';if(k.startsWith('gather_'))return 'gathering';if(k.startsWith('potion'))return 'potions';if(k.startsWith('mount'))return 'mounts';
- if(k==='bags'||k==='capes'||k==='offhand')return 'accessories';
+ if(k.startsWith('food_'))return 'foods';if(k.startsWith('potion'))return 'potions';if(k.startsWith('mount'))return 'mounts';
+ if(k==='gather_tool_tracking')return 'kits';
+ if(k==='siege'||k==='siege_banner')return 'siege';
+ if(k.startsWith('gather_'))return 'gathering';
+ if(k==='bags'||k==='capes')return 'accessories';
+ if(k==='offhand')return 'offhands';
  if(/^(boots|heads|chests)/.test(k))return 'armor';return 'weapons';}
-export function branchIsRoyalOnly(key){return ['gathering','potions','mounts','foods'].includes(categoryForBranch(key));}
+export function branchIsRoyalOnly(key){return ['gathering','potions','mounts','foods','kits','siege'].includes(categoryForBranch(key));}
 export function sortedBranches(category,query=''){
  const normalized=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
  const term=normalized(query).trim();return BRANCHES.filter(b=>categoryForBranch(b)===category&&(!term||normalized(b.label).includes(term)));
@@ -152,6 +161,9 @@ const CATEGORY_ICON_MAP={
  armor:'T4_ARMOR_PLATE_SET1',
  weapons:'T4_MAIN_AXE',
  accessories:'T4_BAG',
+ offhands:'T4_OFF_TORCH',
+ kits:'T4_2H_TOOL_TRACKING',
+ siege:'T4_2H_TOOL_SIEGEHAMMER',
  gathering:'T4_ARMOR_GATHERER_WOOD',
  potions:'T4_POTION_HEAL',
  mounts:'T4_MOUNT_HORSE',
@@ -163,7 +175,7 @@ const BRANCH_ICON_MAP={
  chests_plate:'T4_ARMOR_PLATE_SET1',chests_cloth:'T4_ARMOR_CLOTH_SET1',chests_leather:'T4_ARMOR_LEATHER_SET1',chests_all:'T4_ARMOR_PLATE_SET1',
  axe:'T4_MAIN_AXE',sword:'T4_MAIN_SWORD',bow:'T4_2H_BOW',crossbow:'T4_2H_CROSSBOW',dagger:'T4_MAIN_DAGGER',spear:'T4_MAIN_SPEAR',mace:'T4_MAIN_MACE',hammer:'T4_MAIN_HAMMER',quarterstaff:'T4_2H_QUARTERSTAFF',
  fire:'T4_MAIN_FIRESTAFF',ice:'T4_MAIN_FROSTSTAFF',holy:'T4_MAIN_HOLYSTAFF',nature:'T4_MAIN_NATURESTAFF',curse:'T4_MAIN_CURSEDSTAFF',arcane:'T4_MAIN_ARCANESTAFF',shapeshifter:'T4_2H_SHAPESHIFTER_SET1',gloves:'T4_2H_KNUCKLES_SET1',
- offhand:'T4_OFF_TORCH',bags:'T4_BAG',capes:'T4_CAPE',weapons_all:'T4_MAIN_AXE',
+ offhand:'T4_OFF_TORCH',bags:'T4_BAG',capes:'T4_CAPE',siege:'T4_2H_TOOL_SIEGEHAMMER',siege_banner:'T4_SIEGE_BANNER',weapons_all:'T4_MAIN_AXE',
  gather_wood:'T4_ARMOR_GATHERER_WOOD',gather_hide:'T4_ARMOR_GATHERER_HIDE',gather_ore:'T4_ARMOR_GATHERER_ORE',gather_fiber:'T4_ARMOR_GATHERER_FIBER',gather_rock:'T4_ARMOR_GATHERER_ROCK',gather_fish:'T4_ARMOR_GATHERER_FISH',gather_all:'T4_ARMOR_GATHERER_WOOD',
  gather_tools:'T4_2H_TOOL_AXE',gather_tool_axe:'T4_2H_TOOL_AXE',gather_tool_pick:'T4_2H_TOOL_PICK',gather_tool_sickle:'T4_2H_TOOL_SICKLE',gather_tool_knife:'T4_2H_TOOL_KNIFE',gather_tool_hammer:'T4_2H_TOOL_HAMMER',gather_tool_fishing:'T4_2H_TOOL_FISHINGROD',gather_tool_tracking:'T4_2H_TOOL_TRACKING',
  potion_all:'T4_POTION_HEAL',potion_heal:'T4_POTION_HEAL',potion_energy:'T4_POTION_ENERGY',potion_poison:'T4_POTION_COOLDOWN',

@@ -1,11 +1,12 @@
-# Gildem Craft Pro v8.4.2 · Herramientas de recolección
+# v8.4.4 · Categorías de crafting completas
 
-- **Encontrar oportunidades → Recolección** ahora incluye herramientas de recolección por profesión y un selector exclusivo de herramientas.
-- Añadidos picos, hachas, hoces, cuchillos de desollar, martillos de piedra, cañas y kits de rastreo; variantes avalonianas si están presentes en las recetas oficiales.
-- Profesiones de equipo + herramienta: Leñador, Desollador, Minero, Cosechador, Cantero, Pescador.
-- El backend y la caché usan un identificador nuevo: se regeneran recetas desde ao-bin-dumps en lugar de continuar sirviendo el conjunto anterior.
-- Solo Royal; cálculos de materiales, retorno, capital, mercado y profit usando el mismo motor existente.
-- Sin herramientas de asedio, sin recetas simuladas.
-- Plan de crafting enfocado en Mercado Negro y HUD compacto se conservan.
+- Manos secundarias separadas de Accesorios en **ambas pestañas**.
+- Kits de rastreo disponibles como categoría propia tanto en Plan de crafting como en Encontrar oportunidades.
+- Asedio como categoría propia, con dos ramas: martillos de asedio (normales y avalonianos) y estandartes de asedio.
+- Eliminada la duplicación de herramientas: los kits ya no aparecen dentro de Recolección, y Asedio no se filtra como Armas.
+- Carga automática de recetas especiales al seleccionar Kits o Asedio, incluso sin seleccionar Recolección.
+- Renovados el caché de recetas de Netlify, IndexedDB y el Service Worker para no reutilizar catálogos previos.
+- Cambios de interfaz mantenidos en estilo compacto, sin añadir pestañas.
+- Pruebas automáticas específicas de selección exclusiva y cálculo de inversión/profit Royal.
 
-La aparición de un objeto y de su margen depende de que exista su receta y de disponer de precios AODP suficientemente recientes.
+**Limitación:** los kits y asedio se planifican como productos Royal; los precios y la disponibilidad no garantizan ventas. Las opciones con datos incompletos se omiten.

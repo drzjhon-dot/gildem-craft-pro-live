@@ -5,16 +5,18 @@ export const FULL_ITEM_DUMP = 'https://cdn.jsdelivr.net/gh/ao-data/ao-bin-dumps@
 export const FULL_ITEM_DUMP_BACKUP = 'https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/items.json';
 // Recolección: vestimenta/mochilas y herramientas del fabricante (incluidas variantes avalonianas).
 // NO incluir martillos de asedio: son herramientas de demolición, no de recolección.
-export const GATHER_TOOL_PATTERN=/^T[2-8]_2H_TOOL_(?:AXE|PICK|SICKLE|KNIFE|HAMMER|FISHINGROD|TRACKING)(?:_AVALON)?(?:@\d+)?$/;
+export const GATHER_TOOL_PATTERN=/^T[2-8]_2H_TOOL_(?:AXE|PICK|SICKLE|KNIFE|HAMMER|FISHINGROD)(?:_AVALON)?(?:@\d+)?$/;
+export const TRACKING_KIT_PATTERN=/^T[3-8]_2H_TOOL_TRACKING(?:@\d+)?$/;
+export const SIEGE_EQUIPMENT_PATTERN=/^(?:T[2-8]_2H_TOOL_SIEGEHAMMER(?:_AVALON)?|T[4-8]_SIEGE_BANNER)(?:@\d+)?$/;
 const gather=/^T[3-8]_(?:HEAD|ARMOR|SHOES|BACKPACK)_GATHERER_(?:WOOD|ORE|HIDE|FIBER|ROCK|FISH)(?:@\d+)?$/;
 const mount=/^T[3-8]_MOUNT_(?!.*(?:_SKIN|_UNIQUE))(?:[A-Z0-9_]+)$/;
 const potion=/^T[2-8]_POTION_[A-Z0-9_]+$/;
 const food=/^T[1-8]_MEAL_[A-Z0-9_]+$/;
 const singles=v=>Array.isArray(v)?v:v?[v]:[];
 const positive=v=>Number.isFinite(Number(v))&&Number(v)>0?Number(v):null;
-export function specialType(id){const root=String(id||'').split('@')[0];if(potion.test(root))return 'potion';if(food.test(root))return 'food';if(gather.test(root)||GATHER_TOOL_PATTERN.test(root))return 'gather';if(mount.test(root))return 'mount';return null;}
+export function specialType(id){const root=String(id||'').split('@')[0];if(potion.test(root))return 'potion';if(food.test(root))return 'food';if(TRACKING_KIT_PATTERN.test(root))return 'kit';if(SIEGE_EQUIPMENT_PATTERN.test(root))return 'siege';if(gather.test(root)||GATHER_TOOL_PATTERN.test(root))return 'gather';if(mount.test(root))return 'mount';return null;}
 export function blackMarketEligible(id){return !specialType(id)&&!/(?:_CRYSTAL|_SKIN)(?:@\d+)?$/.test(String(id||''));}
-export function craftCityForSpecial(type){return type==='potion'?'Brecilien':type==='food'?'Caerleon':type==='gather'?'Caerleon':'Caerleon';}
+export function craftCityForSpecial(type){return type==='potion'?'Brecilien':type==='food'?'Caerleon':type==='gather'?'Caerleon':type==='kit'?'Caerleon':type==='siege'?'Caerleon':'Caerleon';}
 export function specialNoCityBonus(type){return type==='mount';}
 export function specialNoDailyBonus(type){return type==='mount';}
 function materials(req){const mats=[];for(const m of singles(req?.craftresource)){

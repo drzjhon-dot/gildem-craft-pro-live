@@ -128,7 +128,8 @@ try{Object.assign(craftPrefs,JSON.parse(localStorage.getItem('gildem-craft-simpl
 // v8.4: no interpretar preferencias antiguas como permiso para refinar insumos del crafting.
 craftPrefs.refiningMode='off'; craftPrefs.refiningFocus=false; craftPrefs.ench=4; if(craftPrefs.buy==='all')craftPrefs.buy='bonus';
 // Los filtros antiguos permanecen guardados, pero el plan manual ya no muestra ramas Royal-only ni agregados.
-const BM_CATEGORIES=['armor','weapons','accessories'];
+// Kits y asedio se pueden elegir aquí, pero utilizan mercados Royal.
+const BM_CATEGORIES=['armor','weapons','accessories','offhands','kits','siege'];
 const isAggregateBranch=key=>key==='weapons_all'||key.endsWith('_all');
 const isManualBranch=key=>BM_CATEGORIES.includes(categoryForBranch(key))&&!isAggregateBranch(key);
 if(!isManualBranch(craftPrefs.branch)){craftPrefs.branch='boots_plate';craftPrefs.market='black';}
@@ -222,9 +223,9 @@ function craftRateHelp(){
  const use=control('craft-invest-preview');if(use)use.textContent=val('craft-invest','all')==='all'?'Intentaremos asignar todo el presupuesto sin fabricar objetos con pérdida ni ignorar la liquidez.':'Reservaremos capital y aplicaremos límites más conservadores por objeto y mercado.';
 }
 function craftPage(){const c=craftPrefs;
- main.innerHTML=`${blockTitle('Plan de crafting · Mercado Negro','Especializado en armas, armaduras y accesorios. Selecciona una rama concreta y controla cada objeto.',`<button class="btn sm" data-action="advanced">✧ Sincronizar diarios</button>`)}
+ main.innerHTML=`${blockTitle('Plan de crafting · Mercado Negro','Elige armas, armaduras, accesorios, manos secundarias, kits o asedio; el destino se adapta a la categoría.',`<button class="btn sm" data-action="advanced">✧ Sincronizar diarios</button>`)}
  <form id="craft-form" class="panel craft-wizard">
- <div class="craft-step"><span class="craft-step-num">1</span><div><h3>Elige tu rama para el Mercado Negro</h3><p>Solo armas, armaduras y accesorios. Para pociones, monturas, comidas, recolección y refinamiento utiliza «Encontrar oportunidades».</p></div></div>
+ <div class="craft-step"><span class="craft-step-num">1</span><div><h3>Elige tu rama para el Mercado Negro</h3><p>Armas, armaduras, accesorios y secundarios para el Mercado Negro. Kits y asedio para Royal. Más productos en «Encontrar oportunidades».</p></div></div>
  <div class="form-grid craft-step-fields">
  ${branchPicker()}
  <div class="craft-filter-row" role="group" aria-label="Filtros de fabricación: ciudad, tiers y encantamiento">
@@ -288,7 +289,7 @@ function craftPage(){const c=craftPrefs;
  craftRateHelp();void refreshCraftItems();
 }
 
-const AUTO_CATEGORIES=[['armor','Armaduras','Botas, cascos y pecheras'],['weapons','Armas','Todas las líneas de armas'],['accessories','Accesorios','Capas, bolsas y secundarios'],['gathering','Recolección','Equipo, mochilas y herramientas · Royal'],['potions','Pociones','Alquimia · Royal'],['mounts','Monturas','Ensillado · Royal'],['foods','Comidas','Cocina · Royal'],['refining','Refinamiento','Recursos refinados · Royal']];
+const AUTO_CATEGORIES=[['armor','Armaduras','Botas, cascos y pecheras'],['weapons','Armas','Todas las líneas de armas'],['accessories','Accesorios','Capas y bolsas'],['offhands','Manos secundarias','Escudos, antorchas, orbes y secundarios'],['kits','Kits','Kits de rastreo · Royal'],['siege','Asedio','Martillos y estandartes · Royal'],['gathering','Recolección','Equipo, mochilas y herramientas · Royal'],['potions','Pociones','Alquimia · Royal'],['mounts','Monturas','Ensillado · Royal'],['foods','Comidas','Cocina · Royal'],['refining','Refinamiento','Recursos refinados · Royal']];
 const autoDefaults={budget:20000000,market:'mixed',goal:'balanced',focus:false,deep:false,daily:0,tierMin:4,tierMax:8,ench:4,requireBook:false,categories:AUTO_CATEGORIES.filter(x=>x[0]!=='refining').map(x=>x[0]),refineFamilies:REFINERY_CHOICES.map(x=>x.key),refineSale:'listed',refineDaily:0,refineStation:0,refineFreight:0,refineDelivery:0,branchMode:'all',branchKeys:[],itemMode:'all',itemKeys:[],tierExact:'all',enchExact:'all',refiningMode:'off',refiningFee:0,focusUnit:0};
 const autoPrefs={...autoDefaults};try{Object.assign(autoPrefs,JSON.parse(localStorage.getItem('gildem-v8-autocraft')||'{}'));}catch{}
 // El escáner también compra refinados para el crafting; refinar para vender sigue disponible como categoría independiente.
@@ -311,7 +312,7 @@ function refreshAutoCategoryPanels(){
  const notice=control('auto-refine-market-tip');if(notice)notice.hidden=val('auto-market','mixed')!=='black';
 }
 async function refreshAutoPickers(){refreshAutoCategoryPanels();renderAutoBranches();renderItemChoices('auto');
- const cats=readAutoCategories();if(!cats.some(x=>['gathering','potions','mounts','foods'].includes(x)))return;
+ const cats=readAutoCategories();if(!cats.some(x=>['gathering','potions','mounts','foods','kits','siege'].includes(x)))return;
  const info=control('auto-item-help');if(info)info.textContent='Sincronizando familias especiales de Albion…';
  try{await loadSpecialCatalog(()=>{});registerPotionFamilies(recipes,names);registerMountFamilies(recipes,names);}catch(e){if(state.page==='autocraft'&&info)info.textContent='Recetas especiales no disponibles: '+e.message;return;}
  if(state.page==='autocraft'){renderAutoBranches();renderItemChoices('auto');}
@@ -376,7 +377,7 @@ async function runAutoScan(force=false){
  state.autoRunning=true;state.preflight=null;setBusy('auto-results','Preparando el catálogo de las ramas seleccionadas…');
  const status=text=>setBusy('auto-results',text);
  try{
-  if(craftCats.some(x=>['gathering','potions','mounts','foods'].includes(x)))await loadSpecialCatalog(status);
+  if(craftCats.some(x=>['gathering','potions','mounts','foods','kits','siege'].includes(x)))await loadSpecialCatalog(status);
   if(craftCats.length){registerPotionFamilies(recipes,names);registerMountFamilies(recipes,names);}
   const pick=craftCats.length?selectUniversalRecipes(recipes,BRANCHES,{categories:craftCats,tierMin,tierMax,enchant,limit:deep?650:280,categoryForBranch,branchKeys:branchMode==='selected'?branchKeys:null,itemFilter:{mode:itemMode,stems:itemKeys,enchExact}}):{chosen:[],eligible:0,branches:0,scanned:0,coverage:1,partial:false};
   const scanRefining=wantsRefining&&market!=='black'?refinementScanIds({families:refineFamilies,tierMin,tierMax,enchant,enchExact}):[];

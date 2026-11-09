@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {specialType,blackMarketEligible,extractSpecialRecipes,GATHER_TOOL_PATTERN} from '../core/special-recipes.js';
+import {specialType,blackMarketEligible,extractSpecialRecipes,GATHER_TOOL_PATTERN,TRACKING_KIT_PATTERN} from '../core/special-recipes.js';
 import {BRANCHES,branchByKey,branchIsRoyalOnly,categoryForBranch,branchIconId,recipesForBranch} from '../core/branches.js';
 import {selectUniversalRecipes,createUniversalCandidates} from '../core/opportunity-scan.js';
 import {rowMap} from '../core/engine.js';
@@ -16,20 +16,20 @@ function fixture(){
 }
 
 test('v8.4.2 reconoce herramientas reales, avalonianas y excluye asedio',()=>{
-  for(const id of toolIds){assert(GATHER_TOOL_PATTERN.test(id));assert.equal(specialType(id),'gather');assert.equal(blackMarketEligible(id),false);}
-  assert.equal(specialType('T4_2H_TOOL_SIEGEHAMMER'),null);
+  for(const id of toolIds){assert(id.includes('TRACKING')?TRACKING_KIT_PATTERN.test(id):GATHER_TOOL_PATTERN.test(id));assert.equal(specialType(id),id==='T6_2H_TOOL_TRACKING'?'kit':'gather');assert.equal(blackMarketEligible(id),false);}
+  assert.equal(specialType('T4_2H_TOOL_SIEGEHAMMER'),'siege');
   assert.equal(GATHER_TOOL_PATTERN.test('T4_2H_TOOL_SIEGEHAMMER'),false);
   assert.equal(blackMarketEligible('T4_MAIN_AXE'),true);
 });
 
 test('v8.4.2 extrae recetas oficiales sin inventar materiales o cantidades',()=>{
   const r=extractSpecialRecipes(fixture());
-  assert.equal(Object.keys(r).length,toolIds.length);
+  assert.equal(Object.keys(r).length,toolIds.length+1);
   for(const id of toolIds){
     assert.deepEqual(r[id].materials.map(x=>[x.id,x.count]),[['T4_PLANKS',6],['T4_METALBAR',4]]);
     assert.equal(r[id].amountCrafted,1);assert.equal(r[id].city,'Caerleon');assert.equal(r[id].market,'royal');
   }
-  assert.equal(r.T4_2H_TOOL_SIEGEHAMMER,undefined);
+  assert.equal(r.T4_2H_TOOL_SIEGEHAMMER.kind,'siege');
 });
 
 test('v8.4.2 recoge cada herramienta bajo su profesión y permite elegir solo herramientas',()=>{
@@ -37,7 +37,7 @@ test('v8.4.2 recoge cada herramienta bajo su profesión y permite elegir solo he
     gather_hide:'T7_2H_TOOL_KNIFE',gather_rock:'T5_2H_TOOL_HAMMER_AVALON',gather_fish:'T4_2H_TOOL_FISHINGROD',gather_tool_tracking:'T6_2H_TOOL_TRACKING'};
   for(const [key,id] of Object.entries(checks)){
     assert(branchByKey(key).test(id),key+' should include '+id);
-    assert.equal(categoryForBranch(key),'gathering');assert(branchIsRoyalOnly(key));assert.match(branchIconId(key),/^T4_/);
+    assert.equal(categoryForBranch(key),key==='gather_tool_tracking'?'kits':'gathering');assert(branchIsRoyalOnly(key));assert.match(branchIconId(key),/^T4_/);
   }
   assert(branchByKey('gather_tools').test('T5_2H_TOOL_PICK'));
   assert(!branchByKey('gather_tools').test('T5_ARMOR_GATHERER_ORE'));
@@ -48,7 +48,7 @@ test('v8.4.2 recoge cada herramienta bajo su profesión y permite elegir solo he
 });
 
 test('v8.4.2 Encontrar oportunidades respeta filtros de ramas y objetos de herramientas',()=>{
- const options={categories:['gathering'],tierMin:4,tierMax:8,enchant:4,limit:200,categoryForBranch};
+ const options={categories:['gathering','kits'],tierMin:4,tierMax:8,enchant:4,limit:200,categoryForBranch};
  const all=selectUniversalRecipes(sampleRecipes,BRANCHES,options);
  assert.equal(all.chosen.length,toolIds.length);
  const pick=selectUniversalRecipes(sampleRecipes,BRANCHES,{...options,branchKeys:['gather_tool_pick']});
@@ -73,7 +73,7 @@ test('v8.4.2 frontend, backend y service worker renuevan versión de recetas',()
  const catalog=readFileSync(new URL('../core/catalog.js',import.meta.url),'utf8');
  const netlify=readFileSync(new URL('../netlify/functions/recipes.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
- assert(catalog.includes('special-recipes-v4-tools'));
- assert(netlify.includes('special-recipes-v4-tools'));
- assert(sw.includes('gildem-craft-pro-v8.4.2'));
+ assert(catalog.includes('special-recipes-v5-kits-siege-offhands'));
+ assert(netlify.includes('special-recipes-v5-kits-siege-offhands'));
+ assert(sw.includes('gildem-craft-pro-v8.4.4'));
 });
