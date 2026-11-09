@@ -3,7 +3,8 @@ import {journalInfo,journalSummary,JOURNAL_NPC_REFERENCE} from './core/journals.
 import {rebuildPlan,fitPlan} from './core/plan.js';
 import {CITIES,ALL_CITIES,CITY_COLORS,fmt,short,h,qualityQuote,freshnessLabel,rowMap,quote,profitTrade,topTrades,craftCost,craftProfit,historyDaily,allocatePlan,craftingReturnRate,allocateCraftPlan,selectCraftSaleRoutes,itemTier,itemEnch,normalized} from './core/engine.js';
 import {iconSources,nextIconSource,FALLBACK_ICON} from './core/icons.js';
-import {BRANCHES,BRANCH_CATEGORIES,categoryForBranch,branchIsRoyalOnly,sortedBranches,branchByKey,recipesForBranch} from './core/branches.js';
+import {BRANCHES,BRANCH_CATEGORIES,categoryForBranch,branchIsRoyalOnly,sortedBranches,branchByKey,recipesForBranch,registerPotionFamilies} from './core/branches.js';
+import {refiningInputsFor,compareRefining,plannedRefining} from './core/refining-integration.js';
 import {blackMarketEligible,specialType} from './core/special-recipes.js';
 import {prices,history,orderbook,pricesQuality,clearCache,cachedCount,HOUR} from './core/data.js';
 import {historyMetrics,confidenceOf,scenarioProfit,qualityWeightedSale,allocateSmartPortfolio,focusPerSilver} from './core/optimizer.js';
@@ -15,13 +16,18 @@ import {verifyPlannedPrices,breakEvenPrice} from './core/verify.js';
 import {cashPosition,startPortfolio,adjustWallet} from './core/cashflow.js';
 import {learnFromSales} from './core/personal-learning.js';
 import {checkMaterialSupply} from './core/material-supply.js';
+import {selectUniversalRecipes,createUniversalCandidates,verifiedRotation} from './core/opportunity-scan.js';
+import {validateEntry,availableInventory,procurementPlan,consumeAllocations} from './core/inventory.js';
+import {planLogistics} from './core/logistics.js';
+import {recipeSnapshot,compareSnapshot,flagChangedPortfolios} from './core/patch-watch.js';
+import {newSyncCode,syncId,encryptPayload,decryptPayload} from './core/sync-crypto.js';
 import {names,recipes,loadCatalog,loadSpecialCatalog,recipeCatalogStatus,itemName,findItems,GROUPS,craftable,loadAdvanced,journalFor,journalIds} from './core/catalog.js';
 const $=(s)=>document.querySelector(s);
 const main=$('#main-content');
-const navNames={cartera:'Mi negocio',focuslab:'Focus y specs',alertas:'Mis alertas',inicio:'Resumen',precios:'Precios y mercados',comercio:'Oportunidades',negro:'Mercado Negro',crafting:'Plan de crafting',refino:'Refinamiento',transmutar:'Transmutación',encantar:'Encantamiento',ajustes:'Ajustes y datos'};
+const navNames={autocraft:'Encontrar oportunidades',cartera:'Mi negocio',focuslab:'Focus y specs',alertas:'Mis alertas',inicio:'Resumen',precios:'Precios y mercados',comercio:'Oportunidades',negro:'Mercado Negro',crafting:'Plan de crafting',refino:'Refinamiento',transmutar:'Transmutación',encantar:'Encantamiento',ajustes:'Ajustes y datos'};
 const prefs={region:'west',premium:true,tax:4,setup:2.5,maxAge:24,transport:0,rrr:24.8,station:0};
 try{Object.assign(prefs,JSON.parse(localStorage.getItem('gildem-prefs')||'{}'));}catch{}
-const state={preflight:null,page:'crafting',id:'T4_BAG',market:null,trade:null,plan:null,refine:null,enchant:null,transmute:null,catalogReady:false,loading:false,lastFetch:0,lastWarning:null,query:'',fullCatalog:false};
+const state={autoPlan:null,autoRunning:false,autoInfo:null,preflight:null,page:'crafting',id:'T4_BAG',market:null,trade:null,plan:null,refine:null,enchant:null,transmute:null,catalogReady:false,loading:false,lastFetch:0,lastWarning:null,query:'',fullCatalog:false};
 function save(){try{localStorage.setItem('gildem-prefs',JSON.stringify(prefs));}catch{}}
 function control(id){return document.getElementById(id);}
 function val(id,def=''){return control(id)?.value??def;}
@@ -48,8 +54,8 @@ function errorText(e){return `<div class="error-box"><strong>No pudimos completa
 function showToast(msg,isError=false){const e=$('#toast');e.textContent=msg;e.className=(isError?'error ':'')+'show';clearTimeout(showToast.t);showToast.t=setTimeout(()=>e.className='',4500);}
 function setBusy(id,text='Consultando datos del mercado…'){const e=control(id);if(e)e.innerHTML=`<div class="loading"><span class="spinner"></span><span>${h(text)}</span></div>`;}
 function updateStatus(info){if(!info)return;state.lastFetch=info.fetchedAt||Date.now();state.lastWarning=info.warning||null;$('#sidebar-status').textContent=info.warning?'Caché de respaldo':info.cached?'Caché de 1 hora':'Consulta completada';$('#api-indicator').textContent=info.warning?'Datos en caché':info.cached?'Caché válida':'AODP consultado';}
-function changePage(page){state.page=page;document.querySelectorAll('[data-nav]').forEach(el=>el.classList.toggle('active',el.dataset.nav===page));$('#page-title').textContent=page==='inicio'?'Tu centro económico':navNames[page];$('#breadcrumb').textContent=navNames[page];document.querySelector('.sidebar').classList.remove('open');render();window.scrollTo({top:0,behavior:'smooth'});}
-function render(){if(state.page==='inicio')home();if(state.page==='cartera')portfolioPage();if(state.page==='focuslab')focusPage();if(state.page==='alertas')alertsPage();if(state.page==='precios')marketPage();if(state.page==='comercio'||state.page==='negro')tradePage();if(state.page==='crafting')craftPage();if(state.page==='refino')refinePage();if(state.page==='encantar')enchantPage();if(state.page==='transmutar')transmutePage();if(state.page==='ajustes')settingsPage();}
+function changePage(page){if(page!==state.page)state.preflight=null;state.page=page;document.querySelectorAll('[data-nav]').forEach(el=>el.classList.toggle('active',el.dataset.nav===page));$('#page-title').textContent=page==='inicio'?'Tu centro económico':navNames[page];$('#breadcrumb').textContent=navNames[page];document.querySelector('.sidebar').classList.remove('open');render();window.scrollTo({top:0,behavior:'smooth'});}
+function render(){if(state.page==='inicio')home();if(state.page==='cartera')portfolioPage();if(state.page==='autocraft')autoPage();if(state.page==='focuslab')focusPage();if(state.page==='alertas')alertsPage();if(state.page==='precios')marketPage();if(state.page==='comercio'||state.page==='negro')tradePage();if(state.page==='crafting')craftPage();if(state.page==='refino')refinePage();if(state.page==='encantar')enchantPage();if(state.page==='transmutar')transmutePage();if(state.page==='ajustes')settingsPage();}
 function home(){
  const count=Object.keys(recipes).length, catalog=Object.keys(names).length, real=overallDashboard(loadPortfolios());
  main.innerHTML=`<div class="page-grid">
@@ -62,7 +68,8 @@ function home(){
   <div class="col-7"><div class="panel"><h3 class="subheading">Tu siguiente movimiento</h3><div class="quick-grid">
    ${quick('precios','⌕','Explorador de precios','Compara compras y ventas entre ciudades')}
    ${quick('comercio','⇄','Oportunidades','Compra barato y vende con margen')}
-   ${quick('crafting','⚒','Diversificador de crafting','Invierte por rama y controla saturación')}
+   ${quick('crafting','⚒','Plan por rama','Sube specs y planifica una línea concreta')}
+   ${quick('autocraft','✦','Encontrar oportunidades','Mezcla ramas y mercados con un presupuesto')}
    ${quick('cartera','▤','Mi negocio','Registra beneficios cobrados y stock pendiente')}
    ${quick('focuslab','✦','Focus y especialización','Crea perfiles con costo exacto de Focus')}
    ${quick('alertas','◉','Alertas de profit','Condiciones para nuevas oportunidades')}
@@ -112,7 +119,7 @@ function tradePage(){const bm=state.page==='negro';main.innerHTML=`${blockTitle(
 function tradeResult(r){return `<div class="page-grid"><div class="col-3">${stat('Oportunidades',fmt(r.all.length),'Con ganancia neta positiva','jade','↗')}</div><div class="col-3">${stat('ROI más alto',r.all.length?Math.max(...r.all.map(x=>x.roi)).toFixed(1)+'%':'—','No implica cantidad disponible','gold','%')}</div><div class="col-3">${stat('Profit máximo/unit.',r.all.length?short(Math.max(...r.all.map(x=>x.profit))):'—','Antes de riesgos y slippage','blue','◈')}</div><div class="col-3">${stat('Productos analizados',fmt(r.count),'Calidad normal, listado de muestra','','⌕')}</div>
  <div class="col-12"><div class="panel"><div class="toggleline"><h3 class="subheading">Oportunidades encontradas</h3><span class="pill neutral">${r.cached?'Caché horaria':'Datos consultados'}</span></div><div class="table-scroll">${r.all.length?`<table class="data-table"><thead><tr><th>Artículo</th><th>Comprar</th><th>Vender</th><th>Modo</th><th>Inversión</th><th>Profit neto</th><th>ROI</th><th>Antigüedad</th></tr></thead><tbody>${r.all.slice(0,75).map(x=>`<tr><td>${itemCell(x.id)}</td><td>${h(x.from)}</td><td>${h(x.to)}</td><td><span class="pill ${x.mode==='instant'?'green':'amber'}">${x.mode==='instant'?'Instantáneo':'Publicar'}</span></td><td>${moneyCell(x.cost)}</td><td>${moneyCell(x.profit,'positive')}</td><td class="positive">${x.roi.toFixed(1)}%</td><td>${x.ageHours.toFixed(1)} h</td></tr>`).join('')}</tbody></table>`:empty('No hay oportunidades verificadas','La API puede no tener precios recientes de estos artículos.')}</div><p class="explain">Un margen positivo no garantiza volumen ejecutable. El transporte se descuenta por unidad según Ajustes. Las oportunidades de publicación requieren esperar una compra.</p></div></div>${r.warning?`<div class="col-12"><div class="notice red">${h(r.warning)}</div></div>`:''}</div>`;}
 // Persistent beginner-friendly crafting defaults. Advanced inputs are optional.
-const craftDefaults={branch:'boots_plate',city:'auto',daily:0,focus:'no',budget:10000000,invest:'all',market:'mixed',tierMin:4,tierMax:7,ench:1,buy:'all',buyMode:'instant',saleMode:'listed',station:0,transport:0,cap:0,unknown:2,journals:true,goal:'balanced',minConfidence:0,focusBudget:10000,focusPerUnit:0,qualityMode:'normal',q1:100,q2:0,q3:0,q4:0,q5:0,priceStress:8,resourceStress:7,riskBM:0,riskRoyal:0,matShipping:0,bmTax:2.5,royalTax:4,listingFee:2.5,bmMode:'instant',requireBook:false,useWallet:false};
+const craftDefaults={branch:'boots_plate',city:'auto',daily:0,focus:'no',budget:10000000,invest:'all',market:'mixed',tierMin:4,tierMax:7,ench:1,buy:'all',buyMode:'instant',saleMode:'listed',station:0,transport:0,cap:0,unknown:2,journals:true,goal:'balanced',minConfidence:0,focusBudget:10000,focusPerUnit:0,qualityMode:'normal',q1:100,q2:0,q3:0,q4:0,q5:0,priceStress:8,resourceStress:7,riskBM:0,riskRoyal:0,matShipping:0,bmTax:2.5,royalTax:4,listingFee:2.5,bmMode:'instant',requireBook:false,useWallet:false,refiningMode:'off',refiningFee:0,refiningDaily:0,refiningFocus:false,refiningFocusUnit:0};
 let craftPrefs={...craftDefaults};
 try{Object.assign(craftPrefs,JSON.parse(localStorage.getItem('gildem-craft-simple-v2')||'{}'));}catch{}
 function saveCraftPrefs(input){craftPrefs={...craftPrefs,...input};try{localStorage.setItem('gildem-craft-simple-v2',JSON.stringify(craftPrefs));}catch{}}
@@ -141,7 +148,8 @@ function chooseBranch(key){const branch=branchByKey(key);if(branch.key!==key)ret
   for(const option of control('craft-market').options)option.disabled=option.value!=='royal';
   if(categoryForBranch(key)==='mounts')control('craft-daily').value='0';
   if(categoryForBranch(key)==='foods'){control('craft-tiermin').value='1';control('craft-tiermax').value='8';}
-  else if(['mounts','potions'].includes(categoryForBranch(key))&&Number(control('craft-tiermin').value)>3)control('craft-tiermin').value='3';
+  else if(categoryForBranch(key)==='potions'){control('craft-tiermin').value='2';control('craft-tiermax').value='8';control('craft-ench').value='3';}
+  else if(categoryForBranch(key)==='mounts'&&Number(control('craft-tiermin').value)>3)control('craft-tiermin').value='3';
   const compare=control('craft-city')?.querySelector('option[value=compare]');if(compare)compare.textContent=categoryForBranch(key)==='foods'?'Comparar Caerleon con Bridgewatch':'Comparar bono vs fabricar en Caerleon';
  }else{for(const option of control('craft-market').options)option.disabled=false;}
  saveCraftPrefs({branch:key,market:val('craft-market')});craftRateHelp();
@@ -182,6 +190,7 @@ function craftPage(){const c=craftPrefs;
  <div class="form-grid craft-step-fields">
  ${selectField('Bono diario de producción','craft-daily',[[0,'Sin bono diario'],[10,'Bono diario +10%'],[20,'Bono diario +20%']],c.daily,'span6')}
  ${selectField('¿Usar Focus?','craft-focus',[['no','Sin Focus'],['yes','Con Focus']],c.focus,'span6')}
+ ${selectField('Refinar materiales antes del crafting','craft-refining-mode',[['off','Comprar materiales refinados (normal)'],['auto','Comparar y refinar si ahorra silver'],['always','Refinar siempre que haya datos suficientes']],c.refiningMode,'span6')}
  </div><div class="craft-return-hint" id="craft-rate-preview"></div>
  <div class="craft-step"><span class="craft-step-num">3</span><div><h3>¿Cuánto quieres invertir y dónde vender?</h3><p>Elige el destino y deja que el sistema busque el margen neto y una distribución prudente.</p></div></div>
  <div class="form-grid craft-step-fields">
@@ -201,6 +210,10 @@ function craftPage(){const c=craftPrefs;
  ${selectField('Cómo comprar materiales','craft-buy-mode',[['instant','Comprar al precio de venta (inmediato)'],['order','Poner órdenes de compra (no garantizadas)']],c.buyMode,'span6')}
  ${selectField('Forma de venta en Royal','craft-sale-mode',[['listed','Publicar orden de venta'],['instant','Vender inmediatamente']],c.saleMode,'span6')}
  ${numberField('Costo del taller por fabricación/lote','craft-station',c.station,0,1,'span4')}
+ ${numberField('Costo de estación por unidad refinada','craft-refining-fee',c.refiningFee,0,1,'span4')}
+ ${selectField('Bono diario de refinado (si está activo)','craft-refining-daily',[[0,'Sin bono'],[10,'+10%'],[20,'+20%']],c.refiningDaily,'span4')}
+ ${selectField('Focus al refinar (independiente del craft)','craft-refining-focus',[['false','Sin Focus al refinar'],['true','Usar Focus verificado']],c.refiningFocus?'true':'false','span4')}
+ ${numberField('Focus exacto por unidad refinada','craft-refining-focus-unit',c.refiningFocusUnit,0,1,'span4')}
  ${numberField('Transporte por unidad vendida y trayecto','craft-transport',c.transport,0,1,'span4')}
  ${numberField('Transporte de materiales por unidad fuera de la ciudad de fabricación','craft-mat-shipping',c.matShipping,0,1,'span4')}
  ${numberField('Riesgo estimado de pérdida BM (%)','craft-risk-bm',c.riskBM,0,.1,'span4')}
@@ -222,11 +235,117 @@ function craftPage(){const c=craftPrefs;
  </div><div class="notice amber" style="margin-top:14px">Si taller o transporte están en 0, el plan supone que son gratis. Introduce tus tarifas reales antes de invertir. Si utilizas órdenes de compra, el costo estimado tampoco garantiza que se ejecuten.</div><p class="explain" style="margin-top:14px">Los bonos diarios del 10% o 20% solo se aplican si el juego muestra ese bono activo para la rama elegida. La opción Royal compara órdenes observadas y, si existe historial, actividad de órdenes observadas en los últimos 14 días completos (no ventas confirmadas).</p></details>
  <div class="craft-submit"><button class="btn gold craft-main-submit" type="submit">⚒ GENERAR MI PLAN DE CRAFTING</button><span class="muted tiny">Con verificación final antes de comprar materiales.</span></div>
  </form>
- <div class="notice neutral patch-notice"><div><strong>Datos del juego y parches</strong> · Parche contrastado al publicar esta versión: <strong>Dragonfire Patch 4 · 2 nov 2026</strong>. Las recetas se revalidan al consultarlas después de 24 h o manualmente; consulta también <a href="https://albiononline.com/update" target="_blank" rel="noopener noreferrer">los parches oficiales</a> para novedades posteriores.</div><button class="btn sm" type="button" data-action="refresh-game-recipes">↻ Actualizar recetas tras parche</button><span id="recipe-sync-status" class="muted tiny">La API de precios AODP no contiene recetas.</span></div>
+ <div class="notice neutral patch-notice"><div><strong>Datos del juego y parches</strong> · Las fuentes de recetas se verifican por revisión pública; confirma la fecha de la fuente y el <a href="https://albiononline.com/update" target="_blank" rel="noopener noreferrer">parche oficial vigente</a>. Las recetas se revalidan al consultarlas después de 24 h o manualmente; consulta los anuncios oficiales para novedades posteriores.</div><button class="btn sm" type="button" data-action="refresh-game-recipes">↻ Actualizar recetas tras parche</button><span id="recipe-sync-status" class="muted tiny">La API de precios AODP no contiene recetas.</span></div>
  <div id="craft-results" style="margin-top:18px">${state.plan?craftResult(state.plan):empty('Tu plan aparecerá aquí','Verás objetos, tiers, cantidades, mejores mercados y tu lista de compras.')}</div>`;
  if(branchIsRoyalOnly(c.branch))for(const option of control('craft-market').options)option.disabled=option.value!=='royal';
  craftRateHelp();
 }
+
+const AUTO_CATEGORIES=[['armor','Armaduras'],['weapons','Armas'],['accessories','Accesorios'],['gathering','Recolección'],['potions','Pociones'],['mounts','Monturas'],['foods','Comidas']];
+const autoDefaults={budget:20000000,market:'mixed',goal:'balanced',focus:false,deep:false,daily:0,tierMin:4,tierMax:8,ench:1,requireBook:false,categories:AUTO_CATEGORIES.map(x=>x[0])};
+const autoPrefs={...autoDefaults};try{Object.assign(autoPrefs,JSON.parse(localStorage.getItem('gildem-v8-autocraft')||'{}'));}catch{}
+function autoPage(){
+ main.innerHTML=`${blockTitle('Encontrar oportunidades','Escáner multi-rama independiente. Busca profit en Royal y Mercado Negro, sin alterar tu Plan de crafting.',`<span class="pill green">Nuevo · v8</span>`)}
+ <form id="auto-form" class="panel"><div class="form-grid">
+  ${numberField('Silver disponible para invertir','auto-budget',autoPrefs.budget,1000,1000,'span4')}
+  ${selectField('Destino de venta','auto-market',[['mixed','Royal + Black Market'],['royal','Solo Royal'],['black','Solo Mercado Negro']],autoPrefs.market,'span4')}
+  ${selectField('Objetivo de optimización','auto-goal',[['balanced','Profit + liquidez'],['profit','Profit total'],['daily','Rotación según mis ventas'],['roi','Mayor ROI'],['focus','Mayor silver por Focus']],autoPrefs.goal,'span4')}
+  ${selectField('Focus','auto-focus',[['no','Sin Focus'],['yes','Usar mi Focus configurado']],autoPrefs.focus?'yes':'no','span4')}
+  ${selectField('Profundidad del análisis','auto-deep',[['quick','Rápido · muestra repartida entre ramas'],['wide','Amplio · más recetas y consultas']],autoPrefs.deep?'wide':'quick','span4')}
+  ${selectField('Bono diario confirmado','auto-daily',[[0,'0 %'],[10,'10 %'],[20,'20 %']],autoPrefs.daily,'span4')}
+  <div class="field span12"><label>Familias que quieres analizar</label><div class="auto-category-grid">${AUTO_CATEGORIES.map(([key,label])=>{const g=BRANCH_CATEGORIES.find(x=>x.key===key);return `<label class="auto-category"><input type="checkbox" name="auto-category" value="${h(key)}" ${autoPrefs.categories.includes(key)?'checked':''}>${itemimg(g?.iconId||'T4_BAG',32,true)}<span>${h(label)}</span></label>`;}).join('')}</div></div>
+ </div><details class="craft-advanced"><summary>⚙ Filtros extra (opcional)</summary><div class="form-grid" style="margin-top:14px">
+  ${selectField('Tier inicial','auto-tiermin',[1,2,3,4,5,6,7,8].map(t=>[t,'T'+t]),autoPrefs.tierMin,'span4')}
+  ${selectField('Tier final','auto-tiermax',[4,5,6,7,8].map(t=>[t,'T'+t]),autoPrefs.tierMax,'span4')}
+  ${selectField('Encantamiento máximo','auto-ench',[0,1,2,3,4].map(t=>[t,'.'+t]),autoPrefs.ench,'span4')}
+  <div class="field span12"><label class="checkbox-row"><input type="checkbox" id="auto-require-book" ${autoPrefs.requireBook?'checked':''}> Exigir profundidad de órdenes observadas para BM (puede eliminar todas las oportunidades BM)</label></div>
+ </div></details>
+ <div class="craft-submit"><button type="submit" class="btn gold craft-main-submit" ${state.autoRunning?'disabled':''}>✦ BUSCAR DÓNDE INVERTIR</button><span class="muted tiny">El modo rápido usa una muestra diversa; el modo amplio busca más recetas. No se afirma cobertura exhaustiva.</span></div></form>
+ <div id="auto-results" style="margin-top:18px">${state.autoPlan?autoResults(state.autoPlan):empty('Tu cartera automática aparecerá aquí','Compara las mejores recetas entre familias, según precios recientes y tu capital.')}</div>`;
+}
+function autoResults(p){const meta=p.autoMeta||{};
+ return `<div class="panel" style="margin-bottom:14px"><div class="toggleline"><h3 class="subheading">Cobertura del escaneo</h3><span class="pill ${meta.partial?'amber':'green'}">${meta.partial?'Muestreo, NO todo el catálogo':'Todas las recetas elegibles encontradas'}</span></div>
+ <div class="cost-row"><span>Recetas examinadas</span><strong>${fmt(meta.scanned||0)} de ${fmt(meta.eligible||0)} elegibles</strong></div><div class="cost-row"><span>Ramas cubiertas</span><strong>${fmt(meta.branches||0)}</strong></div><div class="cost-row"><span>Rutas viables</span><strong>${fmt(meta.candidates||0)}</strong></div><p class="explain">La cobertura depende del catálogo descargado, filtros, tiempo y límites de AODP. No se incluye una receta sin precio reciente. Las comidas, pociones, monturas y el equipo de recolección se venden solo en Royal.</p></div>`+craftResult(p);
+}
+async function runAutoScan(force=false){
+ if(state.autoRunning)return;
+ const budget=num('auto-budget',20000000),market=val('auto-market','mixed'),goal=val('auto-goal','balanced'),focus=val('auto-focus','no')==='yes';
+ const tierMin=num('auto-tiermin',4),tierMax=num('auto-tiermax',8),enchant=num('auto-ench',1),deep=val('auto-deep','quick')==='wide',daily=num('auto-daily',0);
+ const cats=[...document.querySelectorAll('input[name="auto-category"]:checked')].map(x=>x.value);
+ if(!Number.isSafeInteger(budget)||budget<1000||budget>1000000000000||tierMin>tierMax||!cats.length){showToast('Comprueba el presupuesto, tiers y categorías.',true);return;}
+ if(goal==='focus'&&!focus){showToast('Activa Focus para optimizar silver por Focus.',true);return;}
+ const focusProfile=loadFocusProfile();if(focus&&!Object.values(focusProfile).some(x=>Number(x.focus)>0)){showToast('Primero guarda costos de Focus reales por objeto en Focus y specs.',true);return;}
+ const input={...craftPrefs,market,goal,focus,budget,city:'auto',buyMode:'instant',tierMin,tierMax,enchant,daily,focusPerUnit:0,
+  cities:CITIES,saleMode:craftPrefs.saleMode||'listed',materialShipping:Number(craftPrefs.matShipping)||0,station:Number(craftPrefs.station)||0,transport:Number(craftPrefs.transport)||0,
+  bmTax:Number(craftPrefs.bmTax)||2.5,royalTax:Number(craftPrefs.royalTax)||4,listingFee:Number(craftPrefs.listingFee)||2.5,riskBM:Number(craftPrefs.riskBM)||0,riskRoyal:Number(craftPrefs.riskRoyal)||0,priceStress:Number(craftPrefs.priceStress)||8,resourceStress:Number(craftPrefs.resourceStress)||7};
+ Object.assign(autoPrefs,{budget,market,goal,focus,deep,daily,tierMin,tierMax,ench:enchant,requireBook:checked('auto-require-book'),categories:cats});
+ localStorage.setItem('gildem-v8-autocraft',JSON.stringify(autoPrefs));
+ state.autoRunning=true;state.preflight=null;setBusy('auto-results','Preparando el catálogo de las ramas seleccionadas…');
+ const status=text=>setBusy('auto-results',text);
+ try{
+  if(cats.some(x=>['gathering','potions','mounts','foods'].includes(x)))await loadSpecialCatalog(status);registerPotionFamilies(recipes,names);
+  const pick=selectUniversalRecipes(recipes,BRANCHES,{categories:cats,tierMin,tierMax,enchant,limit:deep?650:280,categoryForBranch});
+  if(!pick.chosen.length)throw Error('No hay recetas verificables para esos tiers y categorías.');
+  const ids=pick.chosen.map(x=>x.id),materials=[...new Set(ids.flatMap(id=>(recipes[id]?.materials||[]).map(m=>m.id)))];
+  status(`Comparando ${ids.length} recetas y ${materials.length} recursos entre ciudades…`);
+  const p=await prices([...new Set([...ids,...materials])],prefs.region,force);
+  updateStatus(p);
+  const result=createUniversalCandidates({selected:pick.chosen,recipes,priceMap:rowMap(p.rows),inputs:input,profile:focusProfile,experience:learnFromSales(loadPortfolios()),nameOf:itemName,maxAge:prefs.maxAge});
+  // Limit subsequent book/history calls to the best unique items, but show coverage.
+  let candidates=result.candidates;
+  const scored=[...candidates].sort((a,b)=>(b.profit/b.capitalPerUnit)-(a.profit/a.capitalPerUnit));
+  const ids2=[...new Set(scored.slice(0,deep?500:220).map(x=>x.id))].slice(0,deep?160:90);
+  candidates=candidates.filter(x=>ids2.includes(x.id));
+  let warning=p.warning||'';const histLookup=new Map();
+  if(ids2.length){status('Consultando actividad histórica observada para las mejores oportunidades…');try{
+   const hist=await history(ids2,prefs.region,force);warning=[warning,hist.warning].filter(Boolean).join(' · ');
+   for(const r of hist.rows){if(Number(r.quality||1)!==1)continue;const key=r.item_id+'|'+(r.location||r.city);histLookup.set(key,[...(histLookup.get(key)||[]),...(r.data||[])]);}
+  }catch(e){warning=[warning,'Historial incompleto: '+e.message].filter(Boolean).join(' · ');}}
+  for(const x of candidates){x.activity=historyMetrics(histLookup.get(x.id+'|'+x.city)||[],14);x.activity7=historyMetrics(histLookup.get(x.id+'|'+x.city)||[],7);}
+  const instant=candidates.filter(x=>x.mode==='instant'),instantIds=[...new Set(instant.map(x=>x.id))];
+  if(instantIds.length){status('Comprobando órdenes de compra y límites de absorción…');try{
+    const places=[...new Set(instant.map(x=>x.city))],bookResult=await orderbook(instantIds,prefs.region,force,places);
+    warning=[warning,bookResult.warning].filter(Boolean).join(' · ');
+    const map=normalizeOrderbook(bookResult.rows,instantIds,places,prefs.maxAge);
+    candidates=candidates.map(x=>x.mode==='instant'?enrichWithDepth(x,map.get(x.id+'|'+x.city)):x);
+  }catch(e){warning=[warning,'Órdenes de compra sin verificar: '+e.message].filter(Boolean).join(' · ');
+   candidates=candidates.map(x=>x.mode==='instant'?enrichWithDepth(x,null):x);
+  }}
+  if(autoPrefs.requireBook)candidates=candidates.filter(x=>x.city!=='Black Market'||x.depthVerified);
+  const listed=candidates.filter(x=>x.mode==='listed'&&x.city!=='Black Market');
+  if(listed.length){status('Revisando competencia Royal y profundidad de publicación…');try{
+   const bid=[...new Set(listed.map(x=>x.id))].slice(0,deep?120:70),cities=[...new Set(listed.map(x=>x.city))];
+   const res=await orderbook(bid,prefs.region,force,cities),book=normalizeSellBook(res.rows,bid,cities,prefs.maxAge);
+   for(const x of listed)x.competition=listingPressure(book.get(x.id+'|'+x.city),x.sell);
+   warning=[warning,res.warning].filter(Boolean).join(' · ');
+  }catch(e){warning=[warning,'Competencia Royal no comprobada: '+e.message].filter(Boolean).join(' · ');}}
+  for(const x of candidates){x.confidence=confidenceOf({ageHours:x.ageHours,activity:x.activity,market:x.city==='Black Market'?'Black Market':'Royal',depthVerified:x.depthVerified});x.dailySales=null;}
+  const routes=selectCraftSaleRoutes(candidates,market);
+  const allocation=allocatePortfolioV6(routes,budget,{goal:goal==='daily'?'daily':goal,useAll:false,capFraction:.10,unknownCap:2,focusLimit:focus?Number(craftPrefs.focusBudget||10000):null,maxPerItemFraction:.2,maxVariants:70});
+  const plan=fitPlan(allocation.rows,budget,focus?Number(craftPrefs.focusBudget||10000):null);
+  let supplyNote='';
+  if(plan.materials.length){
+   const common=plan.materials.slice().sort((a,b)=>b.qtyGross*b.unitPrice-a.qtyGross*a.unitPrice).slice(0,35);
+   try{status('Comprobando profundidad de compra para los materiales más costosos…');
+    const bookResult=await orderbook([...new Set(common.map(x=>x.id))],prefs.region,force,[...new Set(common.map(x=>x.city))]);
+    const sellBook=normalizeSellBook(bookResult.rows,[...new Set(common.map(x=>x.id))],[...new Set(common.map(x=>x.city))],prefs.maxAge);
+    const supply=checkMaterialSupply(common,sellBook);
+    if(supply.warnings.length)supplyNote=`Profundidad insuficiente para ${supply.insufficient} recursos verificados: ${supply.warnings.slice(0,4).join(' · ')}. Revisa cantidades antes de comprar.`;
+    if(supply.missing.length)supplyNote+=' '+supply.missing.length+' materiales principales sin profundidad observable (compra no asegurada).';
+   }catch(e){supplyNote='No se pudo verificar la profundidad de compra de materias primas: '+e.message;}
+  }
+  const stock=procurementPlan(plan.materials,loadInventory(),loadPortfolios());
+  state.autoPlan={plan,budget,branch:'Exploración de '+cats.length+' categorías',city:'auto',daily,focus,market,invest:'caution',journals:false,cap:.10,unknownCap:2,scanned:pick.scanned,advanced:false,
+   warning:[warning,supplyNote,pick.partial?'Exploración por muestra: las recetas fuera del muestreo no fueron analizadas.':null,'Diarios no incluidos en la búsqueda automática hasta que su fama y precios estén verificados. Si el taller o el transporte están en 0, esos gastos no se descontarán.'].filter(Boolean).join(' · '),
+   goal,focusBudget:Number(craftPrefs.focusBudget||10000),buyMode:'instant',availableCandidates:routes,bmDepth:instant.some(x=>x.depthVerified),requireBook:autoPrefs.requireBook,qualityMode:'normal',priceStress:input.priceStress,resourceStress:input.resourceStress,matShipping:input.materialShipping,useWallet:false,solverMethod:'optimización diversificada entre ramas (aproximada)',
+   autoMeta:{...pick,candidates:routes.length,stockSaving:stock.cashSaved}};
+  control('auto-results').innerHTML=autoResults(state.autoPlan);
+  showToast(plan.rows.length?`Encontradas ${plan.rows.length} rutas viables en ${pick.branches} ramas.`:'No se encontraron rutas con datos suficientes y profit neto positivo.',!plan.rows.length);
+ }catch(e){control('auto-results').innerHTML=errorText(e);showToast(e.message,true);}finally{state.autoRunning=false;}
+}
+function currentPlan(){return state.page==='autocraft'?state.autoPlan:state.plan;}
+function currentResultElement(){return control(state.page==='autocraft'?'auto-results':'craft-results');}
+function redrawCurrentPlan(){const p=currentPlan(),el=currentResultElement();if(p&&el)el.innerHTML=state.page==='autocraft'?autoResults(p):craftResult(p);}
 function craftResult(p){const b=p.plan, journalTotals=new Map();
  for(const r of b.rows){if(r.journal?.prices){const key=r.journal.empty;const old=journalTotals.get(key)||{...r.journal,qty:0};old.qty+=r.qty*r.journal.ratio;journalTotals.set(key,old);}}
  const listRows=b.rows.map((r,index)=>`<tr><td>${itemCell(r.id,'',r.personalLearning?.qtySold>=3?`${r.personalLearning.qtySold} vendidas por ti · ${r.personalLearning.averageDays.toFixed(1)} días medios`:r.id)}</td><td><strong>T${itemTier(r.id)}.${itemEnch(r.id)}</strong></td><td class="main-city">${h(r.craftCity)}</td><td>${r.city==='Black Market'?'<span class="pill amber">Mercado Negro</span>':'<span class="pill green">Royal</span>'}</td><td>${h(r.city==='Black Market'?'Caerleon · Mercado Negro':r.city)}</td><td>${r.mode==='instant'?'Inmediata':'Orden de venta'}</td><td><input class="qty-input" type="number" data-plan-qty="${index}" min="0" max="${Number.isFinite(r.maxCrafts)?r.maxCrafts:999999}" step="1" value="${r.qty}" aria-label="Fabricaciones de ${h(itemName(r.id))}"></td><td><strong>${fmt(r.qty*(r.craftAmount||1))}</strong></td><td>${r.returnRate.toFixed(1)}%</td><td>${moneyCell(r.sell)}</td><td>${moneyCell(r.profit,r.profit>=0?'positive':'negative')}</td><td>${moneyCell(r.totalProfit,'positive')}</td><td>${r.activity?.observations?fmt(r.activity.activeDays)+' / 14 días · '+short(r.activity.observedDaily)+'/día observado':'Sin observaciones'}</td><td>${r.mode==='instant'?(r.depthVerified?`<span class="pill green">${h(r.bookCoverage||'Libro observado')}</span>`:`<span class="pill amber">${r.city==='Black Market'?'1 provisional':'Profundidad no verificada'}</span>`):'<span class="pill amber">Venta no garantizada</span>'}</td><td><span class="pill ${r.confidence?.tone||'red'}" title="${h((r.confidence?.reasons||[]).join(' · '))}">${h(r.confidence?.label||'Baja')} (${r.confidence?.score||0})</span></td><td>${moneyCell(r.stressProfit,r.stressProfit>=0?'positive':'negative')}</td><td>${r.focusPerUnit?fmt(r.focusPerUnit):'—'}</td><td>${moneyCell(breakEvenPrice(r))}</td><td>${r.competition?.known?`${fmt(r.competition.unitsAhead)} unidades delante · ${h(r.competition.risk)}`:'Sin datos de competencia'}</td><td><button class="btn sm ghost" data-action="watch-route" data-index="${index}" title="Crear alerta basada en esta ruta">◉ Alerta</button></td></tr>`).join('');
@@ -239,16 +358,24 @@ function craftResult(p){const b=p.plan, journalTotals=new Map();
  for(const r of b.rows){const t=r.city==='Black Market'?'black':'royal';totals[t].qty+=r.qty*(r.craftAmount||1);totals[t].profit+=r.totalProfit;}
  const mixedStats=p.market==='mixed'?`<div class="col-6">${stat('Destino: Mercado Negro',fmt(totals.black.qty)+' unidades','Profit estimado '+short(totals.black.profit),'gold','♜')}</div><div class="col-6">${stat('Destino: Royal',fmt(totals.royal.qty)+' unidades','Profit estimado '+short(totals.royal.profit),'jade','⌂')}</div>`:'';
  const missedSide=p.market==='mixed'&&b.rows.length&&(totals.black.qty===0||totals.royal.qty===0)?`<div class="col-12"><div class="notice neutral">${totals.black.qty===0?'No se asignaron unidades al Mercado Negro':'No se asignaron unidades a Royal'}. No hubo oportunidades rentables, con precios recientes y capacidad de presupuesto suficientes para incluir ambos destinos. No se inventan ventas para completar la distribución.</div></div>`:'';
+ const stock=procurementPlan(b.materials,loadInventory(),loadPortfolios());
+ const logistic=planLogistics(b);
+ const refinements=plannedRefining(b.rows);
+ const refinedBox=refinements.length?`<div class="col-12"><div class="panel"><h3 class="subheading">Refinamiento incluido en el plan</h3><p class="explain">Estos materiales se producirán antes de fabricar. La lista de compras ya muestra sus recursos crudos y el refinado del tier anterior; no contabiliza dos veces el refinado final.</p><div class="table-scroll"><table class="data-table"><thead><tr><th>Material a refinar</th><th>Fabricaciones</th><th>Ciudad</th><th>Retorno</th><th>Costo estación</th><th>Traslado</th><th>Focus</th></tr></thead><tbody>${refinements.map(x=>`<tr><td>${itemCell(x.id)}</td><td>${fmt(Math.ceil(x.crafts))}</td><td>${h(x.city)}</td><td>${x.rrr.toFixed(1)}%</td><td>${moneyCell(x.stationFee)}</td><td>${moneyCell(x.transferFee)}</td><td>${fmt(x.focus)}</td></tr>`).join('')}</tbody></table></div></div></div>`:'';
  const context=`${h(p.branch)} · ${p.city==='auto'?'Bono de cada ciudad':p.city==='compare'?'Bono vs Caerleon':h(p.city)} · bono diario ${p.daily}% · ${p.focus?'con Focus':'sin Focus'} · ${marketLabel}`;
- return `<div class="page-grid"><div class="col-12"><div class="craft-summary"><div><span class="kicker">TU PLAN PERSONALIZADO</span><h3>${context}</h3><p>Precios observados, retorno esperado y cantidades limitadas por la liquidez disponible. No se garantizan ventas ni márgenes futuros.</p></div><div class="button-row"><button class="btn gold sm" data-action="save-investment" ${!b.rows.length?'disabled':''}>▤ Guardar como inversión</button><button class="btn sm" data-action="export-plan" ${!b.rows.length?'disabled':''}>↓ CSV del plan</button><button class="btn sm ghost" data-action="export-shopping" ${!b.rows.length?'disabled':''}>↓ Compras y diarios</button><button class="btn sm green" data-action="preflight" ${!b.rows.length?'disabled':''}>✓ Verificar antes de comprar</button></div></div></div>
+ return `<div class="page-grid"><div class="col-12"><div class="craft-summary"><div><span class="kicker">${p.autoMeta?'ESCÁNER MULTI-RAMA':'TU PLAN PERSONALIZADO'}</span><h3>${context}</h3><p>Precios observados, retorno esperado y cantidades limitadas por la liquidez disponible. No se garantizan ventas ni márgenes futuros.</p></div><div class="button-row"><button class="btn gold sm" data-action="save-investment" ${!b.rows.length?'disabled':''}>▤ Guardar como inversión</button><button class="btn sm" data-action="export-plan" ${!b.rows.length?'disabled':''}>↓ CSV del plan</button><button class="btn sm ghost" data-action="export-shopping" ${!b.rows.length?'disabled':''}>↓ Compras y diarios</button><button class="btn sm green" data-action="preflight" ${!b.rows.length?'disabled':''}>✓ Verificar antes de comprar</button></div></div></div>
  <div class="col-3">${stat('Capital necesario',short(b.totalCost),'Compra bruta y gastos · límite '+short(p.budget),'gold','◈')}</div><div class="col-3">${stat('Profit estimado',short(b.totalProfit),'Incluye retorno esperado','jade','↗')}</div><div class="col-3">${stat('Unidades a vender',fmt(b.rows.reduce((s,x)=>s+x.qty*(x.craftAmount||1),0)),b.rows.length+' rutas de venta','blue','⚒')}</div><div class="col-3">${stat('Presupuesto restante',short(b.remaining),p.invest==='all'?'Sin oportunidades verificables adicionales':'Reserva sin asignar','','◎')}</div>
  ${mixedStats}${missedSide}
+ <div class="col-12"><div class="notice neutral"><strong>Rotación y silver por día:</strong> ${b.rows.some(r=>verifiedRotation(r))?b.rows.filter(r=>verifiedRotation(r)).slice(0,5).map(r=>`${h(itemName(r.id))}: ${short(verifiedRotation(r).silverPerDay)} silver/día por fabricación estimado desde ${fmt(verifiedRotation(r).sample)} unidades vendidas por ti`).join(' · '):'Sin suficientes ventas personales para estimar la velocidad de recuperación. El historial de órdenes AODP no demuestra ventas ni permite prometer días de venta.'}</div></div>
  <div class="col-12"><div class="notice neutral"><strong>Economía del lote:</strong> capital bruto ${short(b.totalCost)} para comenzar · consumo neto esperado ${short(b.totalNetCost)} · profit proyectado ${short(b.totalProfit)}. La devolución de materiales depende del juego. ${p.solverMethod||''}. ${p.useWallet?'Este plan respeta el silver libre registrado en Mi negocio.':''}</div></div>
+ <div class="col-12"><div class="panel"><div class="toggleline"><h3 class="subheading">Inventario y desembolso real</h3><span class="pill neutral">El beneficio mantiene el valor económico de los materiales</span></div><div class="page-grid" style="margin-top:10px"><div class="col-4">${stat('Stock aprovechable',short(stock.cashSaved),'Valor estimado de materiales ya disponibles','jade','▤')}</div><div class="col-4">${stat('Silver efectivo a desembolsar',short(Math.max(0,b.totalCost-stock.cashSaved)),'Sin comprar otra vez el mismo stock','gold','◈')}</div><div class="col-4">${stat('Unidades de materiales a comprar',fmt(stock.needed.reduce((a,x)=>a+x.buy,0)),'Se descuentan reservas de otros planes','blue','🧺')}</div></div><details style="margin-top:12px"><summary>Ver compras descontando stock y reservas</summary><div class="table-scroll"><table class="data-table"><thead><tr><th>Recurso</th><th>Ciudad</th><th>Necesitas</th><th>De tu inventario</th><th>Comprar</th></tr></thead><tbody>${stock.needed.map(x=>`<tr><td>${itemCell(x.id)}</td><td>${h(x.city)}</td><td>${fmt(x.need)}</td><td>${fmt(x.stock)}</td><td><strong>${fmt(x.buy)}</strong></td></tr>`).join('')}</tbody></table></div></details><p class="explain">Solo se reserva stock al guardar un plan. Se descuenta físicamente al confirmar la compra y empezar la inversión. La ganancia NO aumenta artificialmente por usar material que ya posees.</p></div></div>
+ <div class="col-12"><div class="panel"><h3 class="subheading">Ruta logística por ciudad</h3><div class="table-scroll"><table class="data-table"><thead><tr><th>Etapa</th><th>Ciudad</th><th>Operaciones</th><th>Unidades</th><th>Desembolso estimado</th></tr></thead><tbody>${logistic.steps.map(step=>`<tr><td>${h(step.stage)}</td><td>${h(step.city)}</td><td>${step.items.map(x=>`${h(itemName(x.id))} × ${fmt(x.qty)}`).join(', ')}</td><td>${fmt(step.units)}</td><td>${step.cost?short(step.cost):'—'}</td></tr>`).join('')}</tbody></table></div><p class="explain">Transporte ya presupuestado en el plan: ${short(logistic.transportEstimated)} silver. No son distancias ni tiempos comprobados. Los trayectos al Mercado Negro pueden implicar riesgo PvP.</p></div></div>
  <div class="col-12"><div id="preflight-results">${state.preflight?preflightResult(state.preflight):'<div class="notice neutral">Antes de comprar materiales, pulsa «Verificar antes de comprar» para recargar cotizaciones y órdenes sin confiar en la caché horaria.</div>'}</div></div>
  <div class="col-12"><div class="panel"><div class="toggleline"><h3 class="subheading">Lista exacta: qué fabricar y dónde vender</h3><span class="pill green">${b.rows.length} rutas · cantidades editables</span></div><div class="table-scroll">${listRows?`<table class="data-table"><thead><tr><th>Objeto</th><th>Tier</th><th>Fabricar</th><th>Mercado</th><th>Vender en</th><th>Tipo de venta</th><th>Fabricaciones</th><th>Unidades para vender</th><th>RRR</th><th>Precio por unidad</th><th>Profit por fabricación</th><th>Profit total</th><th>Actividad 14d (no ventas)</th><th>Libro de órdenes</th><th>Confianza</th><th>Profit estrés/fabricación</th><th>Focus/fabricación</th><th>Precio equilibrio/u</th><th>Competencia Royal</th><th>Alerta</th></tr></thead><tbody>${listRows}</tbody></table>`:empty('Sin candidatos rentables y verificables','Amplía tiers, cambia mercado o revisa si tu ciudad realmente tiene bono para la rama.')}</div></div></div>
  <div class="col-8"><div class="panel"><h3 class="subheading">🧺 Lista de compras para comenzar</h3><div class="table-scroll">${mats?`<table class="data-table"><thead><tr><th>Material</th><th>Comprar (bruto)</th><th>Consumo esperado</th><th>Ciudad de compra</th><th>Precio/u</th><th>Total bruto</th></tr></thead><tbody>${mats}</tbody></table>`:empty('Sin materiales')}</div><p class="explain">Compra las cantidades <strong>brutas</strong>. El retorno de recursos no ocurre antes de fabricar y se estima para varias fabricaciones; las cantidades netas no son una lista de compra inicial. Si usas diarios, presupuestar diarios enteros puede requerir capital adicional.</p></div></div>
  <div class="col-4"><div class="panel"><h3 class="subheading">Uso del presupuesto y riesgo</h3><div class="progress-track"><div class="progress-fill" style="width:${usedPct}%"></div></div><div class="cost-row"><span>Comprometido</span><strong>${short(b.totalCost)} (${usedPct.toFixed(1)}%)</strong></div><div class="cost-row"><span>Restante</span><strong>${short(b.remaining)}</strong></div><div class="cost-row"><span>Costo neto esperado</span><strong>${short(b.totalNetCost)}</strong></div><div class="cost-row"><span>Diarios vacíos a comprar</span><strong>${short(b.journalSummary?.cost||0)}</strong></div><div class="cost-row"><span>Profit bajo estrés</span><strong>${short(b.rows.reduce((s,r)=>s+r.stressProfit*r.qty,0))}</strong></div><div class="cost-row total"><span>ROI sobre capital bruto</span><strong>${b.totalCost?(100*b.totalProfit/b.totalCost).toFixed(1)+'%':'—'}</strong></div><div class="notice neutral" style="margin-top:16px">${p.invest==='all'?'Modo presupuesto completo: intenta asignar el máximo posible con profit y límites de demanda válidos.':'Modo cautela: máximo 30% del capital por objeto.'} <strong>El riesgo incluye precio de venta -${p.priceStress}% y materiales +${p.resourceStress}%. No se fuerzan compras ni se supone que las órdenes observadas se venderán.</strong></div></div></div>
  <div class="col-12"><div class="panel"><h3 class="subheading">Distribución de ventas ${marketLabel}</h3><div class="table-scroll">${cities?`<table class="data-table"><thead><tr><th>Tipo</th><th>Destino</th><th>Unidades para vender</th><th>Rutas</th><th>Capital</th><th>Profit estimado</th></tr></thead><tbody>${cities}</tbody></table>`:empty('Sin destinos')}</div><p class="explain">${p.market==='royal'?'El plan considera precios de las ciudades Royal y hasta 3 mercados por objeto, priorizando precios netos y ventas observadas. Los registros históricos no garantizan que una orden futura se venda.':p.market==='mixed'?'Mercado Negro usa niveles de órdenes de compra observadas cuando los hay; sin niveles verificados, limita a 1 craft provisional por objeto. Las cantidades pueden desaparecer antes de vender. Las rutas Royal usan precios y ventas históricas por ciudad, con hasta tres destinos por objeto. El capital y los recursos solo se cuentan una vez por unidad fabricada.':'AODP no confirma el volumen ni profundidad actual de todas las órdenes del Mercado Negro. Se aplica un tope de unidades por variante y no se presenta una demanda inventada.'}</p></div></div>
+ ${refinedBox}
  <div class="col-12"><div class="panel"><h3 class="subheading">Diarios de crafting por tier y profesión</h3>${journals?`<div class="table-scroll"><table class="data-table"><thead><tr><th>Diario vacío</th><th>Comprar</th><th>Se llenan</th><th>Ciudad de compra</th><th>Capital estimado</th><th>Exactitud</th></tr></thead><tbody>${journals}</tbody></table></div>`:`<div class="notice neutral">${p.journals?'No se pudo inferir la profesión o fama del diario en este plan. No se inventan cantidades.':'Puedes activar diarios en Opciones avanzadas.'}</div>`}<p class="explain">Diarios enteros presupuestados por profesión. Cuando no se conoce la fama exacta se usa una estimación, y el precio de trabajador es solo referencia si falta cotización. El profit no incluye vender diarios llenos sin precio válido. Cambia cantidades arriba para recalcular diarios, presupuesto y recursos.</p></div></div>
  <div class="col-12"><details class="panel craft-candidates"><summary>Otras oportunidades de la rama (opcional)</summary><p class="explain">Puedes añadir una unidad si hay presupuesto y capacidad. Las rutas sin precio reciente no se recomiendan.</p><div class="candidate-grid">${(p.availableCandidates||[]).filter(x=>!b.rows.some(r=>r.id===x.id&&r.city===x.city&&r.craftCity===x.craftCity)&&x.profit>0).slice(0,24).map((x,i)=>`<div class="candidate-item">${itemimg(x.id,36)}<div><strong>${h(itemName(x.id))}</strong><small>${h(x.city)} · ${fmt(x.profit)} silver/fabricación · ROI ${x.roi.toFixed(1)}%</small></div><button class="btn sm ghost" data-action="add-route" data-route-key="${h(x.id+'|'+x.city+'|'+x.craftCity)}">+ 1</button></div>`).join('')||'<p class="muted tiny">No hay más candidatos rentables con los filtros actuales.</p>'}</div></details></div>
  ${p.warning?`<div class="col-12"><div class="notice red">${h(p.warning)}</div></div>`:''}
@@ -300,6 +427,13 @@ function settingsPage(){main.innerHTML=`${blockTitle('Ajustes y datos','Parámet
  <div class="page-grid" style="margin-top:18px"><div class="col-7"><div class="panel"><h3 class="subheading">Catálogo del juego y diarios</h3><div class="cost-row"><span>Objetos traducidos</span><strong>${fmt(Object.keys(names).length)}</strong></div><div class="cost-row"><span>Recetas extraídas del juego</span><strong>${fmt(Object.keys(recipes).length)}</strong></div><div class="cost-row"><span>Fama para diarios</span><strong>${state.fullCatalog?'Activada':'No descargada'}</strong></div><div class="cost-row"><span>Entradas locales de API</span><strong>${cachedCount()}</strong></div><div class="button-row" style="margin-top:18px"><button class="btn" data-action="sync-catalog">↻ Actualizar catálogo</button><button class="btn" data-action="refresh-game-recipes">♨ Actualizar recetas del juego</button><button class="btn" data-action="advanced">✧ Descargar diarios avanzados</button></div><div id="settings-info" class="muted tiny" style="margin-top:10px">Catálogo ligero ~2 MB · Diarios avanzados usan datos completos del juego (~24 MB).</div></div></div>
  <div class="col-5"><div class="panel"><h3 class="subheading">Cómo funciona el refresco horario</h3><p class="explain">1. Cada consulta guarda el resultado durante una hora. 2. Transcurrida una hora se solicita otra instantánea a AODP. 3. La página abierta repite la actualización cada hora. 4. Si estás sin conexión o la API limita peticiones, se muestra el último dato existente con su antigüedad real.</p><div class="notice neutral"><strong>Importante:</strong> ni el navegador ni AODP garantizan nuevos precios cada hora en cada mercado. Los precios solo cambian cuando la comunidad los observa.</div></div></div>
  <div class="col-12"><div class="panel"><h3 class="subheading">Diagnóstico de imágenes de Albion</h3><p class="explain">Las fotos se buscan en el CDN alternativo, el proxy de Netlify y el render oficial; si fallan, se muestra una imagen local de respaldo. No depende de la API de precios.</p><div class="button-row"><button class="btn" data-action="test-icons" type="button">▣ Comprobar servidores de imágenes</button></div><div id="icon-diagnostics" class="muted tiny" aria-live="polite" style="margin-top:12px">Puedes verificar la conexión de los iconos desde este navegador.</div></div></div>
+ <div class="col-12"><div class="panel"><h3 class="subheading">Sincronización privada entre dispositivos (opcional)</h3>
+ <p class="explain">Tus inversiones, Focus, inventario y alertas siguen siendo locales por defecto. Si habilitas GILDEM_SYNC_ENABLED=1 en Netlify, podrás guardar y recuperar una copia cifrada con AES-GCM. La clave nunca sale de tu navegador; quien la pierda no podrá descifrar el respaldo. No es una cuenta de usuario ni un servicio de copia continua.</p>
+ <div class="form-grid">
+ ${field('Clave secreta de sincronización (guárdala fuera del navegador)','sync-secret','<input class="input" type="password" autocomplete="off" id="sync-secret" placeholder="Generar o pegar clave privada">','span12')}
+ </div><div class="button-row" style="margin-top:12px"><button class="btn sm" type="button" data-action="sync-generate">Generar clave segura</button><button class="btn sm" type="button" data-action="sync-upload">↑ Subir copia cifrada</button><button class="btn sm gold" type="button" data-action="sync-download">↓ Recuperar copia cifrada</button></div>
+ <div id="sync-message" class="muted tiny" style="margin-top:12px">Por defecto la sincronización está desactivada en Netlify. Actívala desde Environment variables si deseas usarla.</div>
+ </div></div>
  <div class="col-12"><div class="panel"><h3 class="subheading">Fuentes del proyecto</h3><p class="explain">Precios e historial: <a target="_blank" rel="noopener" href="https://west.albion-online-data.com/api-docs">Albion Online Data Project (AODP)</a>. Catálogo de nombres y recetas: <a target="_blank" rel="noopener" href="https://github.com/vkorne-web/albion-market">albion-market</a>, extraído de <a target="_blank" rel="noopener" href="https://github.com/ao-data/ao-bin-dumps">ao-bin-dumps</a>. Esta es una herramienta de fans, no oficial, sin afiliación con Albion Online ni con los desarrolladores de Albion Multi App.</p></div></div></div>`;}
 async function runLookup(force=false){const t=val('item-search',state.id).trim();let id=state.id;
  if(t===itemName(state.id)){id=state.id;}else if(/^T\d+_[A-Z\d_]+(?:@\d)?$/i.test(t)){id=t.toUpperCase();}else if(t){const found=findItems(t,1)[0];if(found)id=found.id;else return showToast('Selecciona un objeto del buscador o introduce su ID',true);}
@@ -325,7 +459,7 @@ async function runTrade(force=false){const kind=val('trade-kind','popular'),dest
 function calcInputs(){const tierMin=num('craft-tiermin',4),tierMax=num('craft-tiermax',7);
  if(tierMin>tierMax)throw Error('El tier inicial no puede superar al final.');
  const selectedBranch=val('craft-branch','boots_plate');
- return {branch:selectedBranch,city:val('craft-city','auto'),daily:num('craft-daily',0),focus:val('craft-focus','no')==='yes',budget:num('craft-budget',10000000),invest:val('craft-invest','all'),market:branchIsRoyalOnly(selectedBranch)?'royal':val('craft-market','black'),tierMin,tierMax,ench:num('craft-ench',1),buy:val('craft-buy','all'),buyMode:val('craft-buy-mode','instant'),goal:val('craft-goal','balanced'),minConfidence:num('craft-confidence',0),focusBudget:num('craft-focus-budget',10000),focusPerUnit:num('craft-focus-unit',0),qualityMode:['mounts','potions','foods'].includes(categoryForBranch(selectedBranch))?'normal':val('craft-quality-mode','normal'),qualityWeights:[1,2,3,4,5].map(i=>num('craft-q'+i,i===1?100:0)),priceStress:num('craft-price-stress',8),resourceStress:num('craft-resource-stress',7),riskBM:num('craft-risk-bm',0),riskRoyal:num('craft-risk-royal',0),matShipping:num('craft-mat-shipping',0),bmTax:num('craft-bm-tax',2.5),royalTax:num('craft-royal-tax',4),listingFee:num('craft-listing-fee',2.5),bmMode:val('craft-bm-mode','instant'),requireBook:checked('craft-require-book'),useWallet:checked('craft-use-wallet'),saleMode:val('craft-sale-mode','listed'),station:num('craft-station',0),transport:num('craft-transport',0),cap:num('craft-cap',0),unknownCap:num('craft-unknown',2),journals:!['mounts','potions','foods'].includes(categoryForBranch(selectedBranch))&&checked('craft-journals')};}
+ return {branch:selectedBranch,city:val('craft-city','auto'),daily:num('craft-daily',0),focus:val('craft-focus','no')==='yes',budget:num('craft-budget',10000000),invest:val('craft-invest','all'),market:branchIsRoyalOnly(selectedBranch)?'royal':val('craft-market','black'),tierMin,tierMax,ench:num('craft-ench',1),buy:val('craft-buy','all'),buyMode:val('craft-buy-mode','instant'),goal:val('craft-goal','balanced'),minConfidence:num('craft-confidence',0),focusBudget:num('craft-focus-budget',10000),focusPerUnit:num('craft-focus-unit',0),qualityMode:['mounts','potions','foods'].includes(categoryForBranch(selectedBranch))?'normal':val('craft-quality-mode','normal'),qualityWeights:[1,2,3,4,5].map(i=>num('craft-q'+i,i===1?100:0)),priceStress:num('craft-price-stress',8),resourceStress:num('craft-resource-stress',7),riskBM:num('craft-risk-bm',0),riskRoyal:num('craft-risk-royal',0),matShipping:num('craft-mat-shipping',0),bmTax:num('craft-bm-tax',2.5),royalTax:num('craft-royal-tax',4),listingFee:num('craft-listing-fee',2.5),bmMode:val('craft-bm-mode','instant'),requireBook:checked('craft-require-book'),useWallet:checked('craft-use-wallet'),saleMode:val('craft-sale-mode','listed'),station:num('craft-station',0),transport:num('craft-transport',0),cap:num('craft-cap',0),unknownCap:num('craft-unknown',2),journals:!['mounts','potions','foods'].includes(categoryForBranch(selectedBranch))&&checked('craft-journals'),refiningMode:val('craft-refining-mode','off'),refiningFee:num('craft-refining-fee',0),refiningDaily:num('craft-refining-daily',0),refiningFocus:val('craft-refining-focus','false')==='true',refiningFocusUnit:num('craft-refining-focus-unit',0)};}
 function getMaterialFinder(map,input,craftCity=''){return id=>{const allowed=input.buy==='all'?CITIES:[input.buy];let best=null;
  const side=input.buyMode==='order'?'buy_price_max':'sell_price_min';
  for(const city of allowed){const q=quote(map,id,city,side,prefs.maxAge);if(!q)continue;const fee=input.buyMode==='order'?prefs.setup/100:0;const effective=q.price*(1+fee)+(city!==craftCity?input.matShipping:0);if(!best||effective<best.price)best={...q,price:effective,originalPrice:q.price,city,mode:input.buyMode,shippingPerUnit:city!==craftCity?input.matShipping:0};}return best;};}
@@ -340,10 +474,12 @@ async function runCraft(force=false){
   if(!['balanced','daily','profit','roi','focus'].includes(input.goal))throw Error('Prioridad del plan no reconocida');
   if(input.cap<0||input.cap>100||input.unknownCap<0||!Number.isInteger(input.unknownCap))throw Error('Límite de volumen inválido');
   if([input.bmTax,input.royalTax,input.listingFee].some(x=>x<0||x>30))throw Error('Las tarifas de venta deben estar entre 0% y 30%.');
-  if(input.matShipping<0||input.station<0||input.transport<0||input.focusBudget<0||input.focusPerUnit<0||input.riskBM<0||input.riskBM>100||input.riskRoyal<0||input.riskRoyal>100)throw Error('Gastos, Focus o riesgo fuera de rango');
+  if(input.matShipping<0||input.station<0||input.transport<0||input.refiningFee<0||input.refiningFocusUnit<0||input.focusBudget<0||input.focusPerUnit<0||input.riskBM<0||input.riskBM>100||input.riskRoyal<0||input.riskRoyal>100)throw Error('Gastos, Focus o riesgo fuera de rango');
   if(input.priceStress<0||input.priceStress>80||input.resourceStress<0||input.resourceStress>100)throw Error('Escenario de riesgo fuera de rango');
   if(input.qualityMode==='mix'&&Math.abs(input.qualityWeights.reduce((a,b)=>a+b,0)-100)>.001)throw Error('Los porcentajes de calidad deben sumar exactamente 100%.');
-  if(input.goal==='focus'&&!input.focus)throw Error('Para maximizar silver/Focus, activa la opción Con Focus.');
+  if(!['off','auto','always'].includes(input.refiningMode)||![0,10,20].includes(input.refiningDaily))throw Error('Opción de refinado inválida.');
+  if(input.refiningFocus&&!(input.refiningFocusUnit>0))throw Error('Introduce el costo real de Focus por unidad refinada; no se puede adivinar solo con tu spec.');
+  if(input.goal==='focus'&&!input.focus&&!input.refiningFocus)throw Error('Para maximizar silver/Focus, activa Focus de crafting o de refinado.');
   const profile=loadFocusProfile();
   if(input.focus&&!input.focusPerUnit&&!Object.values(profile).some(x=>Number(x.focus)>0))throw Error('Para evitar una recomendación falsa, introduce el Focus por craft que marca el juego, o guarda los valores por objeto en Focus y specs.');
  }catch(e){return showToast(e.message,true);}
@@ -352,7 +488,7 @@ async function runCraft(force=false){
  const branch=branchByKey(input.branch);
  if(branchIsRoyalOnly(input.branch)){
   setBusy('craft-results','Cargando recetas reales del juego para '+branch.label+'…');
-  try{await loadSpecialCatalog(t=>setBusy('craft-results',t));}
+  try{await loadSpecialCatalog(t=>setBusy('craft-results',t));registerPotionFamilies(recipes,names);}
   catch(e){control('craft-results').innerHTML=errorText(e);return showToast(e.message,true);}
  }
  const ids=recipesForBranch(recipes,input.branch,input.tierMin,input.tierMax,input.ench,categoryForBranch(input.branch)==='foods'?260:150,'auto');
@@ -361,7 +497,8 @@ async function runCraft(force=false){
  try{
   const materialIds=[...new Set(ids.flatMap(id=>recipes[id].materials.map(m=>m.id)))];
   const journalSet=new Set();if(input.journals){for(const id of ids){const j=journalInfo(id,recipes[id],input.branch,journalFor(id));if(j&&j.ratio>0){journalSet.add(j.empty);journalSet.add(j.full);}}}
-  const response=await prices([...new Set([...ids,...materialIds,...journalSet])],prefs.region,force);
+  const refinementIds=input.refiningMode!=='off'?refiningInputsFor(materialIds):[];
+  const response=await prices([...new Set([...ids,...materialIds,...refinementIds,...journalSet])],prefs.region,force);
   updateStatus(response);
   const map=rowMap(response.rows);
   let qualitiesMap=map;
@@ -384,13 +521,23 @@ async function runCraft(force=false){
    const craftCities=input.city==='auto'?(rec.specialtyEnabled===false?CITIES:[rec.city]):input.city==='compare'?[...new Set([rec.city,kind==='food'?'Bridgewatch':'Caerleon'])]:[input.city];
    for(const city of craftCities){
     if(!city)continue;
-    const find=getMaterialFinder(map,input,city);
+    const marketFind=getMaterialFinder(map,input,city);
+    const find=id=>{const direct=marketFind(id);if(input.refiningMode==='off')return direct;
+      const compared=compareRefining({id,craftCity:city,buyRefined:direct,findMarket:(rawId,targetCity)=>getMaterialFinder(map,input,targetCity)(rawId),
+       mode:input.refiningMode,stationFee:input.refiningFee,transferFee:input.matShipping,
+       focus:input.refiningFocus,focusPerRefine:input.refiningFocusUnit,dailyBonus:input.refiningDaily});
+      return compared.source?{...compared.source,refinementComparison:compared.comparison}:null;};
     const specialty=rec.specialtyEnabled!==false&&city===rec.city;
     const rate=craftingReturnRate({specialty,dailyBonus:dailyForRecipe,focus:input.focus});
     const without=craftingReturnRate({specialty,dailyBonus:dailyForRecipe,focus:false});
     const costData=craftCost(rec,find,rate.returnRate,input.station);
     if(!costData)continue;
-    const focusGain=input.focus?costData.materials.reduce((a,m)=>a+(m.ret?m.count*m.unitPrice*(rate.returnRate-without.returnRate)/100:0),0):0;
+    const refiningFocusCost=costData.materials.reduce((sum,m)=>sum+m.count*(m.refining?.focusPerRefine||0),0);
+    const refiningSaving=costData.materials.reduce((sum,m)=>{const f=m.refining;if(!f?.focus)return sum;
+      const sourceInput=f.inputs.reduce((x,y)=>x+y.count*y.unitPrice,0);
+      const regularRR=100*(18+40+input.refiningDaily)/(100+18+40+input.refiningDaily);
+      return sum+m.used*sourceInput*(f.rrr-regularRR)/100;},0);
+    const focusGain=(input.focus?costData.materials.reduce((a,m)=>a+(m.ret?m.count*m.unitPrice*(rate.returnRate-without.returnRate)/100:0),0):0)+refiningSaving;
     // Diarios calculados por tier y profesión; preferimos la relación real del
     // dump del juego, y distinguimos las estimaciones cuando falta.
     let journal=null,journalBonus=0;
@@ -432,7 +579,7 @@ async function runCraft(force=false){
     const stress=scenarioProfit({sale:sale.price*outputAmount,cost:costData.total,tax:taxPct/100,setup:input.listingFee/100,mode,transport:transit,materialCost:costData.materialCost,journal:journalBonus,drop:input.priceStress/100,materialsRise:input.resourceStress/100});
     const oldAge=Math.max(sale.ageHours,...costData.materials.map(x=>x.at?(Date.now()-x.at)/3600000:0));
     candidates.push({id,itemName:itemName(id),craftCity:city,city:saleCity,mode,sell:sale.price,profit:calc.profit-riskPenalty,cost:calc.cost+riskPenalty,capitalPerUnit,roi:(calc.profit-riskPenalty)/(calc.cost+riskPenalty)*100,returnRate:rate.returnRate,materials:costData.materials,
-      rawMaterials:costData.rawMaterials,at:sale.at,ageHours:oldAge,activity:null,confidence:null,personalLearning:salesExperience.get(id+'|'+saleCity)||null,focusPerUnit,focusGain,stressProfit:stress.stressed-riskPenalty,
+      rawMaterials:costData.rawMaterials,at:sale.at,ageHours:oldAge,activity:null,confidence:null,personalLearning:salesExperience.get(id+'|'+saleCity)||null,focusPerUnit:focusPerUnit+refiningFocusCost,focusGain,stressProfit:stress.stressed-riskPenalty,
       taxRate:taxPct/100,saleTaxPercent:taxPct,craftAmount:outputAmount,recipeKind:kind||'equipo',setupRate:mode==='listed'?input.listingFee/100:0,transportCost:transit,transportRiskPct:lossPct,expectedRiskCost:riskPenalty,stationCost:input.station,buyMode:input.buyMode,buySetup:prefs.setup/100,qualityMode:input.qualityMode,qualityWeights:input.qualityWeights,journal,journalBonus});
    }
    }
@@ -505,13 +652,13 @@ async function runCraft(force=false){
   }}
   const shortlisted=selectCraftSaleRoutes(candidates,input.market);
   const capFraction=input.cap>0?input.cap/100:(input.invest==='all'?.2:.07);
-  const draft=allocatePortfolioV6(shortlisted,input.budget,{goal:input.goal,useAll:input.invest==='all',capFraction,unknownCap:input.unknownCap,ensureBothMarkets:input.market==='mixed',focusLimit:input.focus?input.focusBudget:null,minimumConfidence:input.minConfidence});
-  const plan=fitPlan(draft.rows,input.budget,input.focus?input.focusBudget:null);
+  const draft=allocatePortfolioV6(shortlisted,input.budget,{goal:input.goal,useAll:input.invest==='all',capFraction,unknownCap:input.unknownCap,ensureBothMarkets:input.market==='mixed',focusLimit:input.focus||input.refiningFocus?input.focusBudget:null,minimumConfidence:input.minConfidence});
+  const plan=fitPlan(draft.rows,input.budget,input.focus||input.refiningFocus?input.focusBudget:null);
   const source=branchIsRoyalOnly(input.branch)?recipeCatalogStatus():null;
   const recipeAge=source?.downloadedAt?Date.now()-Date.parse(source.downloadedAt):Infinity;
   const recipeWarning=source&&(!Number.isFinite(recipeAge)||recipeAge>24*3600000)?'Recetas especiales sin verificación reciente después de un parche. Compruébalas dentro del juego antes de invertir.':null;
   const warnings=[warning,recipeWarning,input.goal==='daily'&&!salesExperience.size?'Sin ventas propias registradas todavía: la prioridad de rotación utiliza señales conservadoras del mercado.':null,branchIsRoyalOnly(input.branch)?(categoryForBranch(input.branch)==='mounts'?'Monturas: solo Royal; se incluye el ensillado, no la crianza ni alimentación.':categoryForBranch(input.branch)==='foods'?'Comidas: solo Royal; el precio incluye todos los ingredientes de la receta. Verifica las tarifas del cocinero y la fecha del catálogo tras cada parche.':'Esta rama solo admite venta en Royal.'):null,noFocusValues?`${noFocusValues} recetas omitidas: falta un costo de Focus verificado.`:null,noQualityQuotes?`${noQualityQuotes} precios por calidad incompletos o antiguos: excluidos.`:null,input.buyMode==='order'?'Materiales presupuestados con órdenes de compra no ejecutadas; pueden no completarse.':null].filter(Boolean);
-  state.plan={plan,budget:input.budget,branch:branch.label,city:input.city,daily:input.daily,focus:input.focus,market:input.market,invest:input.invest,journals:input.journals,cap:capFraction,unknownCap:input.unknownCap,scanned:ids.length,advanced:state.fullCatalog,warning:warnings.join(' · '),goal:input.goal,focusBudget:input.focusBudget,buyMode:input.buyMode,availableCandidates:shortlisted,bmDepth:bookVerified,requireBook:input.requireBook,qualityMode:input.qualityMode,priceStress:input.priceStress,resourceStress:input.resourceStress,matShipping:input.matShipping,useWallet:input.useWallet,solverMethod:draft.method||'asignación de capital'};
+  state.plan={plan,budget:input.budget,branch:branch.label,city:input.city,daily:input.daily,focus:input.focus,refiningFocus:input.refiningFocus,refiningMode:input.refiningMode,refiningFee:input.refiningFee,refiningDaily:input.refiningDaily,market:input.market,invest:input.invest,journals:input.journals,cap:capFraction,unknownCap:input.unknownCap,scanned:ids.length,advanced:state.fullCatalog,warning:warnings.join(' · '),goal:input.goal,focusBudget:input.focusBudget,buyMode:input.buyMode,availableCandidates:shortlisted,bmDepth:bookVerified,requireBook:input.requireBook,qualityMode:input.qualityMode,priceStress:input.priceStress,resourceStress:input.resourceStress,matShipping:input.matShipping,useWallet:input.useWallet,solverMethod:draft.method||'asignación de capital'};
   control('craft-results').innerHTML=craftResult(state.plan);
   if(!plan.rows.length)showToast('No hay rutas con margen, precios y filtros válidos. Amplía ajustes.',true);
   else{showToast('Plan generado: '+plan.rows.reduce((s,r)=>s+r.qty*(r.craftAmount||1),0)+' productos en '+plan.rows.length+' rutas.');checkAlerts(false).catch(()=>{});}
@@ -526,11 +673,11 @@ function preflightResult(report){const up=report.updates||[];
  ${report.notes?.length?`<div class="notice neutral" style="margin:13px 0"><strong>Advertencias:</strong> ${report.notes.map(h).join(' · ')}</div>`:''}
  <div class="table-scroll"><table class="data-table"><thead><tr><th>Objeto / destino</th><th>Venta anterior</th><th>Venta nueva</th><th>Variación</th><th>Profit/fabricación actualizado</th><th>Fecha observación</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
-async function runPreflight(){const p=state.plan;if(!p?.plan?.rows?.length)return showToast('Genera primero un plan.',true);
+async function runPreflight(){const p=currentPlan();if(!p?.plan?.rows?.length)return showToast('Genera primero un plan.',true);
  const target=control('preflight-results');if(target)setBusy('preflight-results','Reconsultando productos, materiales, diarios y órdenes observadas…');
  try{
   const rows=p.plan.rows;
-  const ids=[...new Set(rows.flatMap(r=>[r.id,...r.materials.map(m=>m.id),...(r.journal?.prices?[r.journal.empty,r.journal.full]:[])]))];
+  const ids=[...new Set(rows.flatMap(r=>[r.id,...r.materials.flatMap(m=>m.refining?[m.id,...m.refining.inputs.map(x=>x.id)]:[m.id]),...(r.journal?.prices?[r.journal.empty,r.journal.full]:[])]))];
   const response=await (p.qualityMode==='mix'?pricesQuality:prices)(ids,prefs.region,true);
   if(response.warning)throw Error('No se pudo confirmar información nueva en AODP: '+response.warning);
   let book=new Map();const instant=rows.filter(r=>r.mode==='instant');
@@ -539,7 +686,7 @@ async function runPreflight(){const p=state.plan;if(!p?.plan?.rows?.length)retur
    if(depth.warning)throw Error('Profundidad de órdenes sin confirmar: '+depth.warning);
    book=normalizeOrderbook(depth.rows,products,cities,prefs.maxAge);
   }
-  const report=verifyPlannedPrices(rows,response.rows,{budget:p.budget,focusLimit:p.focus?p.focusBudget:null,maxAgeHours:prefs.maxAge,materialShipping:p.matShipping||0,book});
+  const report=verifyPlannedPrices(rows,response.rows,{budget:p.budget,focusLimit:p.focus||p.refiningFocus?p.focusBudget:null,maxAgeHours:prefs.maxAge,materialShipping:p.matShipping||0,book});
   report.notes=[];
   if(p.qualityMode==='mix')report.notes.push('Las calidades son una mezcla estimada, no resultados asegurados.');
   if(rows.some(r=>r.mode==='listed'))report.notes.push('Royal: publicar orden de venta no garantiza compradores ni plazo de venta.');
@@ -608,65 +755,73 @@ async function runEnchant(force=false){let base=val('enchant-item','').trim().to
  if(!a||!b||!r)throw Error('No hay precios recientes para al menos uno de los materiales u objetos seleccionados.');
  state.enchant={base,target,resource,city,qty,basePrice:a.price,enchPrice:b.price,runePrice:r.price,total:a.price+r.price*qty};control('enchant-results').innerHTML=enchantResult(state.enchant);
  }catch(e){control('enchant-results').innerHTML=errorText(e);showToast(e.message,true);}}
-async function syncCatalog(force=false){const info=control('settings-info');if(info)info.textContent='Sincronizando nombres y recetas…';try{const stats=await loadCatalog(force);state.catalogReady=true;if(info)info.textContent=`Listos: ${fmt(stats.names)} objetos · ${fmt(stats.recipes)} recetas.`;else if(state.page==='inicio')render();showToast('Catálogo en español sincronizado');}catch(e){if(info)info.textContent='Error: '+e.message;showToast('Catálogo temporalmente no disponible: '+e.message,true);}}
+async function syncCatalog(force=false){const info=control('settings-info');if(info)info.textContent='Sincronizando nombres y recetas…';try{const stats=await loadCatalog(force);registerPotionFamilies(recipes,names);state.catalogReady=true;if(info)info.textContent=`Listos: ${fmt(stats.names)} objetos · ${fmt(stats.recipes)} recetas.`;else if(state.page==='inicio')render();showToast('Catálogo en español sincronizado');}catch(e){if(info)info.textContent='Error: '+e.message;showToast('Catálogo temporalmente no disponible: '+e.message,true);}}
 async function syncGameRecipes(){
  const status=control('recipe-sync-status')||control('settings-info');
  const report=t=>{if(status)status.textContent=t;};
  report('Buscando las últimas recetas en los datos del juego…');
  try{
-  const amount=await loadSpecialCatalog(report,true);
+  const amount=await loadSpecialCatalog(report,true);registerPotionFamilies(recipes,names);
+  const old=loadPortfolios(),updated=flagChangedPortfolios(old,recipes,recipeCatalogStatus().sourceRevision);
+  if(updated.some((p,i)=>JSON.stringify(p.patchChanges)!==JSON.stringify(old[i].patchChanges)))writeLocal(K_LEDGER,updated);
   const source=recipeCatalogStatus();
   report('Recetas: '+fmt(amount)+' variantes · revisión '+(source.sourceRevision?.slice(0,10)||'no disponible')+' · consulta '+(source.downloadedAt?new Date(source.downloadedAt).toLocaleString('es-ES'):'sin fecha')+'. Regenera tu plan.');
-  showToast('Catálogo actualizado desde el archivo público del juego.');
+  const n=updated.reduce((s,p)=>s+(p.patchChanges||[]).length,0);
+  showToast(n?`Recetas actualizadas: ${n} cambios en tus planes guardados. Recalcula antes de comprar.`:'Recetas actualizadas y planes guardados comprobados.');
  }catch(e){report('No se pudieron validar recetas nuevas: '+e.message);showToast(e.message,true);}
 }
 async function syncAdvanced(){const info=control('settings-info')||control('craft-results');if(info)info.textContent='Descargando datos de diarios…';try{const total=await loadAdvanced(text=>{if(info)info.textContent=text;});state.fullCatalog=true;if(state.page==='ajustes')settingsPage();if(state.page==='crafting'){if(state.plan){state.plan.advanced=true;control('craft-results').innerHTML=craftResult(state.plan);}else craftPage();}showToast('Diarios sincronizados: '+fmt(total)+' entradas. Vuelve a generar el plan para incluirlos.');}catch(e){if(info)info.textContent='Error: '+e.message;showToast(e.message,true);}}
 function applySettings(){prefs.region=val('settings-server','west');prefs.premium=val('settings-premium','premium')==='premium';prefs.maxAge=num('settings-age',24);prefs.tax=num('settings-tax',4);prefs.setup=num('settings-setup',2.5);prefs.transport=num('settings-shipping',0);prefs.rrr=num('settings-rrr',24.8);prefs.station=num('settings-station',0);
  if(prefs.maxAge<1||prefs.maxAge>720||prefs.tax<0||prefs.tax>50||prefs.setup<0||prefs.setup>50||prefs.rrr<0||prefs.rrr>=100)return showToast('Uno de los parámetros está fuera de rango.',true);
  save();$('#server-select').value=prefs.region;render();showToast('Ajustes guardados. Próximos cálculos usarán los nuevos valores.');}
-function exportPlan(){if(!state.plan?.plan.rows.length)return showToast('Genera primero un plan de crafting',true);
+function exportPlan(){const active=currentPlan();if(!active?.plan.rows.length)return showToast('Genera primero un plan de crafting',true);
  const fields=[['TIPO','NOMBRE','ID','TIER','FABRICACIONES','UNIDADES_A_VENDER','CIUDAD_FABRICACION','CIUDAD_VENTA_O_COMPRA','RETORNO_PORCENTAJE','COSTO_BRUTO_POR_FABRICACION','COSTO_NETO_POR_FABRICACION','PRECIO_VENTA','PROFIT_POR_FABRICACION','PROFIT_TOTAL','TIPO_MERCADO','MODO_VENTA','CONFIANZA','ESTRES_PROFIT_FABRICACION','FOCUS_POR_FABRICACION','ACTIVIDAD_ORDENES_DIARIAS']];
- for(const r of state.plan.plan.rows)fields.push(['CRAFT',itemName(r.id),r.id,`${itemTier(r.id)}.${itemEnch(r.id)}`,r.qty,r.qty*(r.craftAmount||1),r.craftCity,r.city,r.returnRate.toFixed(2),Math.round(r.capitalPerUnit),Math.round(r.cost),r.sell,Math.round(r.profit),Math.round(r.totalProfit),r.city==='Black Market'?'MERCADO NEGRO':'ROYAL',r.mode==='instant'?'INMEDIATA':'ORDEN',r.confidence?.label,Math.round(r.stressProfit),r.focusPerUnit,r.activity?.observedDaily??'']);
- for(const m of state.plan.plan.materials)fields.push(['COMPRA',itemName(m.id),m.id,itemTier(m.id),Math.ceil(m.qtyGross),'','',m.city,'',Math.round(m.unitPrice),'','','','','','']);
+ for(const r of active.plan.rows)fields.push(['CRAFT',itemName(r.id),r.id,`${itemTier(r.id)}.${itemEnch(r.id)}`,r.qty,r.qty*(r.craftAmount||1),r.craftCity,r.city,r.returnRate.toFixed(2),Math.round(r.capitalPerUnit),Math.round(r.cost),r.sell,Math.round(r.profit),Math.round(r.totalProfit),r.city==='Black Market'?'MERCADO NEGRO':'ROYAL',r.mode==='instant'?'INMEDIATA':'ORDEN',r.confidence?.label,Math.round(r.stressProfit),r.focusPerUnit,r.activity?.observedDaily??'']);
+ for(const m of active.plan.materials)fields.push(['COMPRA',itemName(m.id),m.id,itemTier(m.id),Math.ceil(m.qtyGross),'','',m.city,'',Math.round(m.unitPrice),'','','','','','']);
  const csv='\ufeff'+fields.map(row=>row.map(s=>'"'+String(s??'').replaceAll('"','""')+'"').join(';')).join('\r\n');
  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='gildem-plan-royal-blackmarket-unificado.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);
 }
 function exportShopping(){
- const p=state.plan?.plan;if(!p?.rows.length)return showToast('Genera un plan primero.',true);
+ const p=currentPlan()?.plan;if(!p?.rows.length)return showToast('Genera un plan primero.',true);
  const lines=[['TIPO','NOMBRE','ID','CIUDAD','COMPRAR_CANTIDAD_BRUTA','CONSUMO_ESTIMADO','PRECIO_UNITARIO','COSTO_BRUTO','PRECISION']];
- for(const m of p.materials)lines.push(['MATERIAL',itemName(m.id),m.id,m.city,Math.ceil(m.qtyGross),Math.ceil(m.qtyNet),Math.round(m.unitPrice),Math.round(Math.ceil(m.qtyGross)*m.unitPrice),'Cotización AODP']);
+ for(const m of p.materials)lines.push([m.refinedFrom?'RECURSO PARA REFINAR':'MATERIAL',itemName(m.id),m.id,m.city,Math.ceil(m.qtyGross),Math.ceil(m.qtyNet),Math.round(m.unitPrice),Math.round(Math.ceil(m.qtyGross)*m.unitPrice),'Cotización AODP']);
+ for(const r of plannedRefining(p.rows))lines.push(['REFINAR EN TALLER',itemName(r.id),r.id,r.city,Math.ceil(r.crafts),'',Math.round(r.stationFee+r.transferFee),Math.round(r.stationFee+r.transferFee),'Costos de estación y traslado configurados']);
  for(const j of p.journalSummary?.items||[])lines.push(['DIARIO VACÍO',j.name+' T'+j.tier,j.empty,j.buyCity,j.qty,'',j.price,Math.round(j.purchaseCost),j.exact?'Dato del juego':'Estimación de fama / precio referencia']);
  const csv='\ufeff'+lines.map(row=>row.map(x=>'"'+String(x??'').replaceAll('"','""')+'"').join(';')).join('\r\n');
  downloadText(csv,'gildem-compras-y-diarios-royal-bm.csv','text/csv;charset=utf-8;');
 }
 function changePlanQty(index,qty){
- const current=state.plan?.plan;if(!current)return;
+ const active=currentPlan(),current=active?.plan;if(!current)return;
  if(!Number.isInteger(qty)||qty<0)return showToast('Introduce una cantidad entera de 0 o más.',true);
  const rows=current.rows.map(x=>({...x}));if(!rows[index])return;
  rows[index].qty=qty;
- const result=rebuildPlan(rows,state.plan.budget,state.plan.focus?state.plan.focusBudget:null);
- if(!result.ok){showToast(result.reason,true);control('craft-results').innerHTML=craftResult(state.plan);return;}
- state.preflight=null;state.plan.plan=result;control('craft-results').innerHTML=craftResult(state.plan);
+ const result=rebuildPlan(rows,active.budget,active.focus||active.refiningFocus?active.focusBudget:null);
+ if(!result.ok){showToast(result.reason,true);redrawCurrentPlan();return;}
+ state.preflight=null;active.plan=result;redrawCurrentPlan();
  showToast('Cantidades, diarios y compra actualizados.');
 }
 function addPlanRoute(key){
- const p=state.plan;if(!p?.plan)return;
+ const p=currentPlan();if(!p?.plan)return;
  const x=(p.availableCandidates||[]).find(r=>r.id+'|'+r.city+'|'+r.craftCity===key);
  if(!x)return showToast('Ruta no encontrada',true);
  if(p.plan.rows.some(r=>r.id===x.id&&r.city===x.city&&r.craftCity===x.craftCity))return showToast('Esa ruta ya está en tu plan.',true);
  if(x.marketCapacity===0)return showToast('El libro no soporta una unidad rentable.',true);
- const next=rebuildPlan([...p.plan.rows,{...x,qty:1,maxCrafts:Number.isFinite(x.marketCapacity)?x.marketCapacity:(x.city==='Black Market'&&x.mode==='instant'?1:(x.activity?.observations?Math.max(1,Math.floor(x.activity.observedDaily*p.cap)):p.unknownCap))}],p.budget,p.focus?p.focusBudget:null);
+ const next=rebuildPlan([...p.plan.rows,{...x,qty:1,maxCrafts:Number.isFinite(x.marketCapacity)?x.marketCapacity:(x.city==='Black Market'&&x.mode==='instant'?1:(x.activity?.observations?Math.max(1,Math.floor(x.activity.observedDaily*p.cap)):p.unknownCap))}],p.budget,p.focus||p.refiningFocus?p.focusBudget:null);
  if(!next.ok)return showToast(next.reason,true);
- state.preflight=null;p.plan=next;control('craft-results').innerHTML=craftResult(p);showToast('Se añadió una fabricación y se recalcularon las compras.');
+ state.preflight=null;p.plan=next;redrawCurrentPlan();showToast('Se añadió una fabricación y se recalcularon las compras.');
 }
 function suggestItems(text){const wrap=control('search-results');if(!wrap)return;
  const matches=findItems(text,10);if(!text.trim()||!matches.length){wrap.style.display='none';return;}
  wrap.style.display='block';wrap.innerHTML=matches.map(o=>`<button class="search-result" data-select-id="${h(o.id)}" type="button">${itemimg(o.id,42)}<span><strong>${h(o.name)}</strong><small>${h(o.id)}</small></span></button>`).join('');}
-function currentAction(force=false){if(state.page==='precios'&&state.market)return runLookup(force);if((state.page==='comercio'||state.page==='negro')&&state.trade)return runTrade(force);if(state.page==='crafting'&&state.plan)return runCraft(force);if(state.page==='refino'&&state.refine)return runRefine(force);if(state.page==='encantar'&&state.enchant)return runEnchant(force);if(state.page==='transmutar'&&state.transmute)return runTransmute(force);showToast('Selecciona una herramienta y ejecuta tu primera consulta.');}
+function currentAction(force=false){if(state.page==='precios'&&state.market)return runLookup(force);if((state.page==='comercio'||state.page==='negro')&&state.trade)return runTrade(force);if(state.page==='crafting'&&state.plan)return runCraft(force);if(state.page==='autocraft'&&state.autoPlan){if(force)return runAutoScan(true);return;}if(state.page==='refino'&&state.refine)return runRefine(force);if(state.page==='encantar'&&state.enchant)return runEnchant(force);if(state.page==='transmutar'&&state.transmute)return runTransmute(force);showToast('Selecciona una herramienta y ejecuta tu primera consulta.');}
 // ─── Mi negocio, datos de Focus y alertas locales ──────────────────────────
-const K_LEDGER='gildem-v4-ledger',K_FOCUS='gildem-v4-focus',K_ALERTS='gildem-v4-alerts',K_WALLET='gildem-v6-wallet';
+const K_LEDGER='gildem-v4-ledger',K_FOCUS='gildem-v4-focus',K_ALERTS='gildem-v4-alerts',K_WALLET='gildem-v6-wallet',K_INVENTORY='gildem-v8-inventory';
 function readLocal(key,defaultValue){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):defaultValue;}catch{return defaultValue;}}
-function writeLocal(key,v){try{localStorage.setItem(key,JSON.stringify(v));return true;}catch{showToast('No se pudo guardar. Libera espacio en este navegador.',true);return false;}}
+function writeLocal(key,v){try{saveDailyBackup();localStorage.setItem(key,JSON.stringify(v));return true;}catch{showToast('No se pudo guardar. Libera espacio en este navegador.',true);return false;}}
+function snapshotPayload(){return {version:8,exported:new Date().toISOString(),portfolios:readLocal(K_LEDGER,[]),alerts:readLocal(K_ALERTS,[]),focus:readLocal(K_FOCUS,{}),wallet:readLocal(K_WALLET,{}),inventory:readLocal(K_INVENTORY,[])};}
+function saveDailyBackup(){try{const key='gildem-v8-daily-backups',old=JSON.parse(localStorage.getItem(key)||'[]');if(old.length&&Date.now()-Date.parse(old[old.length-1].at)<24*3600000)return;
+ old.push({at:new Date().toISOString(),backup:snapshotPayload()});localStorage.setItem(key,JSON.stringify(old.slice(-3)));}catch{}}
+function loadInventory(){const list=readLocal(K_INVENTORY,[]);return Array.isArray(list)?list:[];}
 function loadPortfolios(){const p=readLocal(K_LEDGER,[]);return Array.isArray(p)?p:[];}
 function loadWallet(){return readLocal(K_WALLET,{initial:null,adjustments:[]});}
 function loadFocusProfile(){const p=readLocal(K_FOCUS,{});return p&&typeof p==='object'&&!Array.isArray(p)?p:{};}
@@ -679,6 +834,7 @@ function portfolioPage(){
  const cards=all.slice().reverse().map(p=>{
  const sm=summarizePortfolio(p);
  return `<div class="panel"><div class="toggleline"><div><h3 class="subheading">${h(p.title)}</h3><p class="tiny muted">${h(new Date(p.createdAt).toLocaleDateString('es-ES'))} · ${p.lots.length} lotes · ${fmt(sm.sold)}/${fmt(sm.qty)} unidades vendidas</p></div><span class="pill ${p.started?'green':'amber'}">${p.started?'Compra confirmada':'Plan pendiente'}</span>${!p.started?`<button class="btn sm gold" data-action="start-portfolio" data-pid="${h(p.id)}">✓ Marcar compra realizada</button>`:''}<button class="btn sm ghost" data-action="delete-portfolio" data-pid="${h(p.id)}" aria-label="Eliminar plan">Eliminar</button></div>
+  ${p.patchChanges?.length?`<div class="notice red">⚠ Recetas modificadas desde que guardaste este plan: ${p.patchChanges.map(h).join(', ')}. Vuelve a generar el plan antes de fabricar.</div>`:''}
   <div class="progress-track"><div class="progress-fill" style="width:${Math.max(0,Math.min(100,sm.progress*100))}%"></div></div><div class="tags" style="margin:13px 0 8px"><span class="pill green">Realizado ${short(sm.realizedProfit)}</span><span class="pill amber">Potencial restante ${short(sm.unrealizedEst)}</span><span class="pill neutral">Capital inicial bruto ${short(sm.upfront)}</span></div>
   <div class="table-scroll"><table class="data-table"><thead><tr><th>Objeto / destino</th><th>Fabricadas</th><th>Vendidas</th><th>Pendientes</th><th>Costo/u</th><th>Origen</th><th>Acciones</th></tr></thead><tbody>${p.lots.map(l=>{
   const sold=(l.sales||[]).reduce((s,x)=>s+x.qty,0);
@@ -711,6 +867,14 @@ function portfolioPage(){
  <div class="notice neutral" style="margin-top:12px">El capital bruto de compra no equivale al costo neto después de devoluciones. Ajusta el costo de tus lotes al costo real y guarda tus ventas para medir resultados.</div>
  <div class="button-row" style="margin-top:13px"><button class="btn sm" data-action="export-ledger">↓ CSV de ventas</button><label class="btn sm ghost" style="cursor:pointer">Restaurar JSON <input type="file" id="restore-data" accept=".json,application/json" style="display:none"></label></div>
  </div></div>
+ <div class="col-12"><div class="panel"><div class="toggleline"><div><h3 class="subheading">Mi inventario de materiales</h3><p class="tiny muted">Reserva stock entre planes guardados y descuéntalo cuando confirmes la fabricación.</p></div><span class="pill green">${loadInventory().length} tipos registrados</span></div>
+ <form class="form-grid" id="inventory-form" style="margin-top:12px">
+  ${field('ID de material o recurso','inventory-id','<input class="input" id="inventory-id" placeholder="T5_METALBAR" required>','span4')}
+  ${selectField('Ciudad del stock','inventory-city',CITIES,'Caerleon','span4')}
+  ${numberField('Cantidad física (reemplaza el saldo)','inventory-qty',0,0,1,'span2')}
+  ${numberField('Costo histórico por unidad','inventory-unitcost',0,0,1,'span2')}
+  <div class="field span12"><button class="btn sm gold" type="submit">Guardar inventario</button></div>
+ </form><div class="table-scroll" style="margin-top:12px"><table class="data-table"><thead><tr><th>Material</th><th>Ciudad</th><th>En inventario</th><th>Reservado</th><th>Disponible</th><th>Valor histórico</th></tr></thead><tbody>${availableInventory(loadInventory(),all).map(x=>`<tr><td>${itemCell(x.id)}</td><td>${h(x.city)}</td><td>${fmt(x.qty)}</td><td>${fmt(x.reserved)}</td><td><strong>${fmt(x.available)}</strong></td><td>${short(x.qty*x.unitCost)}</td></tr>`).join('')}</tbody></table></div><p class="explain">El inventario no se crea a partir de tus precios de AODP. Debes registrar manualmente lo que ya posees; no existe una conexión pública con la mochila del personaje.</p></div></div>
  <div class="col-12">${cards||empty('Aún no tienes inversiones guardadas','Genera un plan de crafting y pulsa «Guardar como inversión» para crear tu primera cartera.')}</div></div>`;
 }
 function focusPage(){const profile=loadFocusProfile(),rows=Object.entries(profile).map(([id,v])=>`<tr><td>${itemCell(id)}</td><td>${fmt(v.focus)}</td><td>${fmt(v.spec)}</td><td><button class="btn sm ghost" data-action="remove-focus" data-id="${h(id)}">Eliminar</button></td></tr>`).join('');
@@ -743,14 +907,17 @@ function alertsPage(){const alerts=loadAlerts();let routes=state.plan?.plan.rows
  <button class="btn sm ghost" data-action="enable-notify">Habilitar notificaciones locales</button><div class="notice neutral" style="margin-top:15px">Para recibir alertas garantizadas con la aplicación cerrada necesitaríamos un sistema de usuarios, almacenamiento de reglas por cuenta y un canal de envío de notificaciones. La tarea de Netlify incluida actualiza solamente una lista pública de productos vigilados.</div></div></div>
  <div class="col-12"><div class="panel"><h3 class="subheading">Alertas guardadas (${alerts.length})</h3><div class="table-scroll">${items?`<table class="data-table"><thead><tr><th>Objeto</th><th>Mercado</th><th>ROI mínimo</th><th>Profit mínimo</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>${items}</tbody></table>`:empty('Aún no tienes alertas','Crea primero un plan y luego guarda tus condiciones de oportunidad.')}</div></div></div></div>`;
 }
-function savePlanPortfolio(){const p=state.plan?.plan;
+function savePlanPortfolio(){const p=currentPlan()?.plan;
  if(!p?.rows.length)return showToast('Necesitas generar un plan primero.',true);
  const name=window.prompt('Nombre para esta inversión','Craft '+new Date().toLocaleDateString('es-ES'));
  if(name===null)return;
- const all=loadPortfolios();all.push({...createPortfolioFromPlan(p,String(name||'Plan de crafting').slice(0,70)),started:false});
+ const all=loadPortfolios();
+ const deduction=procurementPlan(p.materials,loadInventory(),all);
+ all.push({...createPortfolioFromPlan(p,String(name||'Plan de crafting').slice(0,70)),started:false,inventoryAllocations:deduction.allocations,
+  inventoryCredit:deduction.cashSaved,recipeSnapshot:recipeSnapshot(p.rows,recipes),recipeRevision:recipeCatalogStatus().sourceRevision||null,patchChanges:[]});
  if(writeLocal(K_LEDGER,all))showToast('Plan guardado en Mi negocio. Registra las ventas al cobrarlas.');
 }
-function appendPlanAlert(index){const r=state.plan?.plan.rows[Number(index)];if(!r)return showToast('No existe esa ruta.',true);
+function appendPlanAlert(index){const r=currentPlan()?.plan.rows[Number(index)];if(!r)return showToast('No existe esa ruta.',true);
  const list=loadAlerts();const alert=addAlertFromRoute(r,{minRoi:Math.max(0,Math.floor(r.roi*.8)),minProfit:Math.max(0,Math.floor(r.profit*.8))});list.push(alert);
  if(writeLocal(K_ALERTS,list))showToast('Alerta creada para '+itemName(r.id)+' en '+r.city);
 }
@@ -779,14 +946,38 @@ async function checkAlerts(report=false){const alerts=loadAlerts(),active=alerts
  if(report)showToast(hits?`${hits} alerta(s) alcanzan los umbrales. Comprueba los precios antes de invertir.`:'No hay alertas confirmadas ahora.');
 }
 function downloadText(text,name,type){const blob=new Blob([text],{type});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);}
-function exportBackup(){downloadText(JSON.stringify({version:7,exported:new Date().toISOString(),portfolios:loadPortfolios(),alerts:loadAlerts(),focus:loadFocusProfile(),wallet:loadWallet()},null,2),'gildem-craft-respaldo.json','application/json');}
+async function cloudSync(mode){const msg=control('sync-message'),code=val('sync-secret','').trim();if(!code){showToast('Genera o pega la clave secreta.',true);return;}
+ if(msg)msg.textContent='Conectando cifrado…';
+ try{const id=await syncId(code);const url='./.netlify/functions/private-sync';let response;
+  if(mode==='upload')response=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,encrypted:await encryptPayload(snapshotPayload(),code)})});
+  else response=await fetch(url+'?id='+id,{cache:'no-store'});
+  const data=await response.json();if(!response.ok)throw Error(data.error||'Servidor no disponible');
+  if(mode==='download'){
+   const payload=await decryptPayload(data.encrypted,code);
+   if(![4,6,7,8].includes(payload.version)||!Array.isArray(payload.portfolios)||!Array.isArray(payload.alerts)||!payload.focus||typeof payload.focus!=='object')throw Error('La copia descifrada no es un respaldo válido.');
+   if(!confirm('¿Reemplazar tus inversiones, inventario, Focus y alertas de ESTE navegador con la copia cifrada?'))return;
+   writeLocal(K_LEDGER,payload.portfolios.slice(0,500));writeLocal(K_ALERTS,payload.alerts.slice(0,500));writeLocal(K_FOCUS,payload.focus);if(payload.wallet)writeLocal(K_WALLET,payload.wallet);
+   if(Array.isArray(payload.inventory))writeLocal(K_INVENTORY,payload.inventory.map(validateEntry).slice(0,600));
+   showToast('Copia privada recuperada con éxito');settingsPage();
+  }else showToast('Copia cifrada guardada. Usa la misma clave en otro dispositivo.');
+  if(msg)msg.textContent='Última operación: '+new Date(data.updatedAt||Date.now()).toLocaleString('es-ES')+' · cifrado privado.';
+ }catch(e){if(msg)msg.textContent=e.message;showToast(e.message,true);}
+}
+function saveInventoryInput(){try{const entry=validateEntry({id:val('inventory-id'),city:val('inventory-city'),qty:num('inventory-qty'),unitCost:num('inventory-unitcost')});
+ const stock=loadInventory(),existing=stock.findIndex(x=>x.id===entry.id&&x.city===entry.city);
+ const reserved=(availableInventory([{...entry,qty:1000000000}],loadPortfolios())[0]?.reserved||0);
+ if(entry.qty<reserved)throw Error(`Hay ${reserved} unidades reservadas en planes sin iniciar. No puedes reducir el stock por debajo de esa cantidad.`);
+ if(existing>=0)stock[existing]=entry;else stock.push(entry);
+ if(writeLocal(K_INVENTORY,stock)){portfolioPage();showToast('Inventario actualizado.');}
+ }catch(e){showToast(e.message,true);}}
+function exportBackup(){downloadText(JSON.stringify(snapshotPayload(),null,2),'gildem-craft-respaldo.json','application/json');}
 function exportLedger(){const data=[['PLAN','FECHA','ITEM','MERCADO','FABRICADAS','VENDIDAS','COSTO_UNITARIO','PRECIO_VENTA_UNITARIO','TARIFAS','TRANSPORTE','PROFIT_REAL_VENTA']];
  for(const p of loadPortfolios())for(const lot of p.lots)for(const s of lot.sales||[]){const profit=s.qty*(s.price-lot.unitCost)-s.fees-s.transport;data.push([p.title,s.at,lot.id,lot.market,lot.qty,s.qty,lot.unitCost,s.price,s.fees,s.transport,profit]);}
  const csv='\ufeff'+data.map(row=>row.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(';')).join('\r\n');downloadText(csv,'gildem-ventas-reales-v6.csv','text/csv;charset=utf-8;');}
 async function importBackup(file){if(!file)return;if(file.size>2000000)return showToast('El respaldo supera el tamaño permitido (2 MB).',true);
- try{const payload=JSON.parse(await file.text());if(![4,6,7].includes(payload.version)||!Array.isArray(payload.portfolios)||!Array.isArray(payload.alerts)||!payload.focus||typeof payload.focus!=='object')throw Error('Formato de respaldo inválido.');
+ try{const payload=JSON.parse(await file.text());if(![4,6,7,8].includes(payload.version)||!Array.isArray(payload.portfolios)||!Array.isArray(payload.alerts)||!payload.focus||typeof payload.focus!=='object')throw Error('Formato de respaldo inválido.');
   if(!confirm('¿Reemplazar tus inversiones, alertas y valores de Focus actuales por este respaldo?'))return;
-  writeLocal(K_LEDGER,payload.portfolios.slice(0,500));writeLocal(K_ALERTS,payload.alerts.slice(0,500));writeLocal(K_FOCUS,payload.focus);if(payload.wallet)writeLocal(K_WALLET,payload.wallet);render();showToast('Respaldo recuperado en este navegador.');
+  writeLocal(K_LEDGER,payload.portfolios.slice(0,500));writeLocal(K_ALERTS,payload.alerts.slice(0,500));writeLocal(K_FOCUS,payload.focus);if(payload.wallet)writeLocal(K_WALLET,payload.wallet);if(Array.isArray(payload.inventory))writeLocal(K_INVENTORY,payload.inventory.map(validateEntry).slice(0,600));render();showToast('Respaldo recuperado en este navegador.');
  }catch(e){showToast('No se pudo restaurar: '+e.message,true);}}
 function registerRealSale(){const raw=val('sale-lot'),s=raw.indexOf('::');if(s<0)return showToast('Selecciona un lote de una inversión.',true);
  const pid=raw.slice(1,s),lotId=raw.slice(s+2),all=loadPortfolios(),i=all.findIndex(x=>x.id===pid);
@@ -837,12 +1028,19 @@ document.addEventListener('click',e=>{
  const btn=e.target.closest('[data-action]');if(!btn)return;
  const action=btn.dataset.action;
  if(action==='save-investment')savePlanPortfolio();
+ if(action==='run-auto')runAutoScan();
  if(action==='watch-route')appendPlanAlert(btn.dataset.index);
  if(action==='backup-data')exportBackup();
+ if(action==='sync-generate'){const code=newSyncCode();const el=control('sync-secret');if(el){el.type='text';el.value=code;el.select();}showToast('Clave creada: cópiala y guárdala en un lugar seguro. No puede recuperarse.');}
+ if(action==='sync-upload')cloudSync('upload');
+ if(action==='sync-download')cloudSync('download');
  if(action==='export-ledger')exportLedger();
  if(action==='check-alerts')checkAlerts(true);
  if(action==='enable-notify'){if(typeof Notification==='undefined')showToast('Este navegador no admite notificaciones.',true);else Notification.requestPermission().then(p=>showToast(p==='granted'?'Notificaciones activadas.':'Permiso no concedido.'));}
- if(action==='start-portfolio'){try{const all=startPortfolio(loadPortfolios(),btn.dataset.pid,loadWallet());if(writeLocal(K_LEDGER,all)){portfolioPage();showToast('Compra registrada; el capital se descuenta de tu caja.');}}catch(e){showToast(e.message,true);}}
+ if(action==='start-portfolio'){try{const previous=loadPortfolios(),active=previous.find(x=>x.id===btn.dataset.pid);
+ const inventory=consumeAllocations(loadInventory(),active?.inventoryAllocations||[]);
+ const all=startPortfolio(previous,btn.dataset.pid,loadWallet());
+ if(writeLocal(K_LEDGER,all)&&writeLocal(K_INVENTORY,inventory)){portfolioPage();showToast('Compra registrada, inventario consumido y caja actualizada.');}}catch(e){showToast(e.message,true);}}
  if(action==='delete-portfolio'){if(confirm('¿Borrar este plan con todas sus ventas registradas?')){writeLocal(K_LEDGER,loadPortfolios().filter(x=>x.id!==btn.dataset.pid));portfolioPage();}}
  if(action==='edit-lot')updateLotCost(btn.dataset.pid,btn.dataset.lot);
  if(action==='remove-focus'){const p=loadFocusProfile();delete p[btn.dataset.id];writeLocal(K_FOCUS,p);focusPage();}
@@ -853,7 +1051,7 @@ document.addEventListener('click',e=>{
  if(action==='export-plan')exportPlan();
  if(action==='export-shopping')exportShopping();
  if(action==='preflight')runPreflight();
- if(action==='refresh-craft-now')runCraft(true);
+ if(action==='refresh-craft-now'){if(state.page==='autocraft')runAutoScan(true);else runCraft(true);}
  if(action==='add-route')addPlanRoute(btn.dataset.routeKey);
  if(action==='clear-cache'){if(confirm('¿Eliminar los precios almacenados en este dispositivo?')){clearCache();showToast('Caché eliminada');settingsPage();}}
  if(action==='test-icons')runIconDiagnostics();
@@ -864,15 +1062,16 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{if(e.target.id==='craft-branch-search'){const el=control('craft-branch-options');if(el)el.innerHTML=branchOptions(e.target.value);return;}if(e.target.id==='item-search'){state.query=e.target.value;suggestItems(state.query);}});
 document.addEventListener('change',e=>{if(e.target.matches('[data-plan-qty]')){changePlanQty(Number(e.target.dataset.planQty),Number(e.target.value));return;}if(e.target.id==='restore-data')importBackup(e.target.files?.[0]);if(e.target.closest('#craft-form')){craftRateHelp();try{saveCraftPrefs({...calcInputs(),focus:val('craft-focus','no'),unknown:num('craft-unknown',2)});}catch{}}if(e.target.id==='settings-premium'){const tax=control('settings-tax');if(tax)tax.value=e.target.value==='premium'?4:8;}});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='craft-branch-search'){e.preventDefault();const first=sortedBranches(branchCategory,e.target.value)[0];if(first)chooseBranch(first.key);return;}if(e.key==='Enter'&&e.target.id==='item-search'){e.preventDefault();control('search-results').style.display='none';runLookup();}});
-document.addEventListener('submit',e=>{e.preventDefault();const id=e.target.id;if(id==='trade-form')runTrade();if(id==='craft-form')runCraft();if(id==='refine-form')runRefine();if(id==='transmute-form')runTransmute();if(id==='enchant-form')runEnchant();if(id==='settings-form')applySettings();
+document.addEventListener('submit',e=>{e.preventDefault();const id=e.target.id;if(id==='trade-form')runTrade();if(id==='craft-form')runCraft();if(id==='auto-form')runAutoScan();if(id==='refine-form')runRefine();if(id==='transmute-form')runTransmute();if(id==='enchant-form')runEnchant();if(id==='settings-form')applySettings();
  if(id==='sale-form')registerRealSale();
- if(id==='wallet-form'){try{const initial=Number(val('wallet-initial',''));if(!Number.isFinite(initial)||initial<0)throw Error('Capital inicial inválido');let wallet=loadWallet();wallet={...wallet,initial,adjustments:Array.isArray(wallet.adjustments)?wallet.adjustments:[]};const extra=num('wallet-adjust',0);if(extra)wallet=adjustWallet(wallet,extra,val('wallet-note','Ajuste manual'));if(writeLocal(K_WALLET,wallet)){portfolioPage();showToast('Saldo actualizado.');}}catch(err){showToast(err.message,true);}}
- if(id==='alert-form'){const index=num('alert-route',-1),route=state.plan?.plan.rows[index];if(!route){showToast('Genera un plan primero.',true);return;}const all=loadAlerts();all.push(addAlertFromRoute(route,{minRoi:num('alert-roi',10),minProfit:num('alert-profit',3000)}));if(writeLocal(K_ALERTS,all)){showToast('Alerta guardada.');alertsPage();}}
+  if(id==='inventory-form')saveInventoryInput();
+  if(id==='wallet-form'){try{const initial=Number(val('wallet-initial',''));if(!Number.isFinite(initial)||initial<0)throw Error('Capital inicial inválido');let wallet=loadWallet();wallet={...wallet,initial,adjustments:Array.isArray(wallet.adjustments)?wallet.adjustments:[]};const extra=num('wallet-adjust',0);if(extra)wallet=adjustWallet(wallet,extra,val('wallet-note','Ajuste manual'));if(writeLocal(K_WALLET,wallet)){portfolioPage();showToast('Saldo actualizado.');}}catch(err){showToast(err.message,true);}}
+ if(id==='alert-form'){const index=num('alert-route',-1),route=currentPlan()?.plan.rows[index];if(!route){showToast('Genera un plan primero.',true);return;}const all=loadAlerts();all.push(addAlertFromRoute(route,{minRoi:num('alert-roi',10),minProfit:num('alert-profit',3000)}));if(writeLocal(K_ALERTS,all)){showToast('Alerta guardada.');alertsPage();}}
  if(id==='focus-form'){const id=val('focus-item').trim().toUpperCase();const focus=num('focus-cost',0),spec=num('focus-spec',0);if(!/^T[2-8]_[A-Z0-9_]+(?:@[1-4])?$/.test(id)||!(focus>0)||spec<0||spec>120){showToast('Introduce un ID válido, un costo positivo y spec de 0 a 120.',true);return;}const p=loadFocusProfile();p[id]={focus,spec};if(writeLocal(K_FOCUS,p)){focusPage();showToast('Perfil de Focus actualizado.');}}
  });
 $('#mobile-menu').addEventListener('click',()=>document.querySelector('.sidebar').classList.toggle('open'));
 $('#server-select').value=prefs.region;
-$('#server-select').addEventListener('change',e=>{prefs.region=e.target.value;save();state.market=null;state.trade=null;state.plan=null;state.refine=null;state.enchant=null;state.transmute=null;render();showToast('Servidor actualizado');});
+$('#server-select').addEventListener('change',e=>{prefs.region=e.target.value;save();state.market=null;state.trade=null;state.plan=null;state.autoPlan=null;state.refine=null;state.enchant=null;state.transmute=null;render();showToast('Servidor actualizado');});
 render();syncCatalog();
 if('serviceWorker'in navigator&&location.protocol==='https:'){navigator.serviceWorker.register('./sw.js').catch(()=>{});}
 window.setInterval(()=>{if(document.visibilityState==='visible'){currentAction(false);checkAlerts(false).catch(()=>{});}},HOUR);

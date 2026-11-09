@@ -44,8 +44,8 @@ export function craftCost(recipe,findPrice,returnRate,stationFee=0){
   if(!recipe?.materials?.length)return null;let total=0,rawTotal=0;const materials=[];
   for(const m of recipe.materials){const data=findPrice(m.id);if(!data?.price||!Number.isFinite(m.count)||m.count<=0)return null;
     const refunded=m.ret===false?0:Math.min(m.count*returnRate/100,Number.isFinite(m.maxReturn)?m.maxReturn:Infinity);
-    const used=m.count-refunded;const gross=m.count*data.price;const cost=used*data.price;
-    total+=cost;rawTotal+=gross;materials.push({id:m.id,count:m.count,returned:refunded,used,unitPrice:data.price,cost,city:data.city,at:data.at,shippingPerUnit:data.shippingPerUnit||0,originalPrice:data.originalPrice||data.price,ret:m.ret!==false,maxReturn:m.maxReturn});
+    const used=m.count-refunded;const gross=m.count*(data.upfrontUnitPrice??data.price);const cost=used*data.price;
+    total+=cost;rawTotal+=gross;materials.push({id:m.id,count:m.count,returned:refunded,used,unitPrice:data.price,cost,city:data.city,at:data.at,shippingPerUnit:data.shippingPerUnit||0,originalPrice:data.originalPrice||data.price,ret:m.ret!==false,maxReturn:m.maxReturn,refining:data.refining||null,upfrontUnitPrice:data.upfrontUnitPrice??data.price});
   }
   return {materials,materialCost:total,rawMaterials:rawTotal,total:total+stationFee,stationFee};
 }

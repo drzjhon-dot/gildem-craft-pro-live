@@ -72,6 +72,17 @@ BRANCHES.push(
  {key:'potion_heal',label:'Pociones de curación',city:'Brecilien',test:byId(/^T[2-8]_POTION_HEAL(?:@|$)/),market:'royal'},
  {key:'potion_energy',label:'Pociones de energía',city:'Brecilien',test:byId(/^T[2-8]_POTION_ENERGY(?:@|$)/),market:'royal'},
  {key:'potion_poison',label:'Pociones de veneno',city:'Brecilien',test:byId(/^T[2-8]_POTION_COOLDOWN(?:@|$)/),market:'royal'},
+ {key:'potion_gigant',label:'Pociones de gigantismo',city:'Brecilien',test:byId(/^T[2-8]_POTION_REVIVE(?:@|$)/),market:'royal'},
+ {key:'potion_resist',label:'Pociones de resistencia',city:'Brecilien',test:byId(/^T[2-8]_POTION_STONESKIN(?:@|$)/),market:'royal'},
+ {key:'potion_sticky',label:'Pociones pegajosas',city:'Brecilien',test:byId(/^T[2-8]_POTION_SLOWFIELD(?:@|$)/),market:'royal'},
+ {key:'potion_invis',label:'Pociones de invisibilidad',city:'Brecilien',test:byId(/^T[2-8]_POTION_CLEANSE(?:@|$)/),market:'royal'},
+ {key:'potion_calm',label:'Pociones de calma',city:'Brecilien',test:byId(/^T[2-8]_POTION_MOB_RESET(?:@|$)/),market:'royal'},
+ {key:'potion_cleanse',label:'Pociones de limpieza',city:'Brecilien',test:byId(/^T[2-8]_POTION_CLEANSE2(?:@|$)/),market:'royal'},
+ {key:'potion_acid',label:'Pociones de ácido',city:'Brecilien',test:byId(/^T[2-8]_POTION_ACID(?:@|$)/),market:'royal'},
+ {key:'potion_berserk',label:'Pociones de berserker',city:'Brecilien',test:byId(/^T[2-8]_POTION_BERSERK(?:@|$)/),market:'royal'},
+ {key:'potion_fire',label:'Pociones de fuego infernal',city:'Brecilien',test:byId(/^T[2-8]_POTION_LAVA(?:@|$)/),market:'royal'},
+ {key:'potion_gather',label:'Pociones de recolección',city:'Brecilien',test:byId(/^T[2-8]_POTION_GATHER(?:@|$)/),market:'royal'},
+ {key:'potion_tornado',label:'Tornados en botella',city:'Brecilien',test:byId(/^T[2-8]_POTION_TORNADO(?:@|$)/),market:'royal'},
  {key:'mount_all',label:'Todas las monturas ensillables',city:null,test:byId(/^T[3-8]_MOUNT_(?!.*_SKIN)/),market:'royal'},
  {key:'mount_horse',label:'Caballos y caballos blindados',city:null,test:byId(/^T[3-8]_MOUNT_(?:HORSE|ARMORED_HORSE)(?:@|$)/),market:'royal'},
  {key:'mount_ox',label:'Bueyes de transporte',city:null,test:byId(/^T[3-8]_MOUNT_OX(?:@|$)/),market:'royal'},
@@ -140,6 +151,7 @@ const BRANCH_ICON_MAP={
  offhand:'T4_OFF_TORCH',bags:'T4_BAG',capes:'T4_CAPE',weapons_all:'T4_MAIN_AXE',
  gather_wood:'T4_ARMOR_GATHERER_WOOD',gather_hide:'T4_ARMOR_GATHERER_HIDE',gather_ore:'T4_ARMOR_GATHERER_ORE',gather_fiber:'T4_ARMOR_GATHERER_FIBER',gather_rock:'T4_ARMOR_GATHERER_ROCK',gather_all:'T4_ARMOR_GATHERER_WOOD',
  potion_all:'T4_POTION_HEAL',potion_heal:'T4_POTION_HEAL',potion_energy:'T4_POTION_ENERGY',potion_poison:'T4_POTION_COOLDOWN',
+ potion_gigant:'T5_POTION_REVIVE',potion_resist:'T5_POTION_STONESKIN',potion_sticky:'T5_POTION_SLOWFIELD',potion_invis:'T8_POTION_CLEANSE',potion_calm:'T5_POTION_MOB_RESET',potion_cleanse:'T5_POTION_CLEANSE2',potion_acid:'T5_POTION_ACID',potion_berserk:'T6_POTION_BERSERK',potion_fire:'T6_POTION_LAVA',potion_gather:'T6_POTION_GATHER',potion_tornado:'T6_POTION_TORNADO',
  mount_all:'T4_MOUNT_HORSE',mount_horse:'T4_MOUNT_HORSE',mount_ox:'T4_MOUNT_OX',
  food_all:'T4_MEAL_SALAD',food_soup:'T5_MEAL_SOUP',food_salad:'T4_MEAL_SALAD',food_pie:'T5_MEAL_PIE',food_omelette:'T5_MEAL_OMELETTE',food_stew:'T6_MEAL_STEW',food_sandwich:'T6_MEAL_SANDWICH',food_roast:'T5_MEAL_ROAST',food_fish:'T4_MEAL_SALAD_FISH',food_avalon:'T6_MEAL_STEW_AVALON'
 };
@@ -147,3 +159,24 @@ export function categoryIconId(key){return CATEGORY_ICON_MAP[key]||'T4_BAG';}
 export function branchIconId(key){const b=branchByKey(key);return BRANCH_ICON_MAP[b.key]||CATEGORY_ICON_MAP[categoryForBranch(b.key)]||'T4_BAG';}
 for(const c of BRANCH_CATEGORIES){if(!c.iconId)c.iconId=categoryIconId(c.key);}
 for(const b of BRANCHES){if(!b.iconId)b.iconId=branchIconId(b.key);}
+
+// Los parches pueden incorporar familias nuevas. No dependemos exclusivamente
+// de la lista estática: detectamos cualquier nueva raíz POTION en las recetas.
+export function registerPotionFamilies(catalogRecipes={},spanishNames={}){
+ const covered=BRANCHES.filter(b=>b.key.startsWith('potion_')&&b.key!=='potion_all');
+ const stems=new Map();
+ for(const id of Object.keys(catalogRecipes)){
+  const m=id.match(/^T([2-8])_POTION_([A-Z0-9_]+?)(?:@\d+)?$/);
+  if(!m||!catalogRecipes[id]?.materials?.length)continue;
+  if(!stems.has(m[2])||(!id.includes('@')&&Number(m[1])>=4))stems.set(m[2],id);
+ }
+ let added=0;
+ for(const [stem,id] of stems){
+  if(covered.some(b=>b.test(id)))continue;
+  const label=spanishNames[id]||spanishNames[id.split('@')[0]]||stem.replaceAll('_',' ');
+  const test=byId(new RegExp('^T[2-8]_POTION_'+stem+'(?:@\\d+)?$'));
+  const branch={key:'potion_auto_'+stem.toLowerCase(),label:'Pociones · '+label,city:'Brecilien',test,market:'royal',iconId:id.split('@')[0]};
+  BRANCHES.push(branch);covered.push(branch);added++;
+ }
+ return added;
+}

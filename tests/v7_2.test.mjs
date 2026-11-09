@@ -44,8 +44,8 @@ test('v7.2 imágenes configuradas para todas las categorías y subramas',()=>{
 });
 test('v7.2 respaldo exportado puede restaurarse al importar versión 7',()=>{
  const src=readFileSync(new URL('../app.js',import.meta.url),'utf-8');
- assert.match(src,/version:7,exported:/);
- assert.match(src,/\[4,6,7\]\.includes\(payload\.version\)/);
+ assert.match(src,/version:8,exported:|version:8,exported:new Date/);
+ assert.match(src,/\[4,6,7,8\]\.includes\(payload\.version\)/);
 });
 test('v7.2 Netlify incluye función de recetas y fallback de iconos',()=>{
  const build=readFileSync(new URL('../package.json',import.meta.url),'utf-8');
@@ -54,5 +54,5 @@ test('v7.2 Netlify incluye función de recetas y fallback de iconos',()=>{
  assert.ok(build.includes('node --check netlify/functions/recipes.mjs'));
  assert.ok(app.includes("data-icon-step"));
  assert.ok(readFileSync(new URL("../core/icons.js",import.meta.url),"utf8").includes("item-fallback.svg"));
- assert.ok(sw.includes('gildem-craft-pro-v7.4.3'));
+ assert.ok(sw.includes('gildem-craft-pro-v8.1.0'));
 });

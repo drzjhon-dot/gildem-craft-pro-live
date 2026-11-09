@@ -1,13 +1,12 @@
-# Verificación del despliegue
+# Comprobación de Gildem Craft Pro v8.1
 
-| URL de tu nuevo sitio | Resultado esperado | Si falla |
+| Ruta | Resultado esperado | Si da error |
 |---|---|---|
-| `/version.json` | JSON versión `7.4.3` | `404`: carpeta `dist` no publicada o despliegue antiguo |
-| `/.netlify/functions/health` | JSON `status: ok` | `404`: funciones no desplegadas o sitio equivocado |
-| `/.netlify/functions/recipes` | JSON con recetas verificadas | `503`: fuente pública inaccesible, revisar logs |
-| `/.netlify/functions/market?region=west&kind=prices&items=T4_BAG&locations=Martlock&qualities=1` | JSON de cotizaciones | `502`/`429`: problema AODP; puede ser temporal |
-| `/.netlify/functions/snapshot?region=west` | Snapshot horario (cuando se ejecute) | `404` al inicio es posible |
+| `/` | Plan de crafting y menú con Encontrar oportunidades | Comprueba **Publish directory = dist** |
+| `/version.json` | JSON que incluye `"version":"8.1.0"` | Si ves 7.4.3, el cambio no se ha publicado |
+| `/.netlify/functions/health` | JSON que incluye `"status":"ok"` | Comprueba despliegue conectado a GitHub y Functions |
+| `/.netlify/functions/recipes` | JSON de recetas (puede tardar la primera vez) | Verifica Deploy/Functions Logs y conectividad |
+| **Pociones** | 14 familias conocidas, más las añadidas por parches | Pulsa «Actualizar recetas tras parche» |
+| **Refinamiento integrado** | Materia cruda, tier anterior, ciudad bonus y detalle de materiales | Comprueba precios observados y tarifas reales |
 
-En Netlify, la vista **Functions** (o Logs & metrics > Functions, según plan) debe mostrar `health`, `market`, `recipes`, `item-image`, `snapshot` y `hourly-prices`.
-
-La compilación y las pruebas de Node se pueden ejecutar localmente mediante `npm run preflight` y `npm run build`. La instalación de dependencias requiere acceso a npm; la prueba local de este paquete no confirma que npm ni AODP respondan desde Netlify.
+**No supone que todo el mercado sea en tiempo real:** los datos de AODP dependen de las capturas de jugadores y de cuándo se enviaron. No confundir actividad histórica con ventas confirmadas.

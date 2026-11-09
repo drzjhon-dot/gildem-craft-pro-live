@@ -14,7 +14,7 @@ export function cashPosition(wallet,portfolios=[]){
  let committed=0,collected=0,unsoldGross=0,planned=0;
  for(const p of portfolios){const up=(p?.lots||[]).reduce((s,l)=>s+Math.max(0,num(l.qty))*Math.max(0,num(l.capitalPerUnit)),0);
   if(p.started!==true){planned+=up;continue;}
-  committed+=up;
+  committed+=Math.max(0,up-num(p.inventoryCredit));
   for(const lot of p.lots||[]){let sold=0;for(const s of lot.sales||[]){sold+=num(s.qty);collected+=num(s.qty)*num(s.price)-num(s.fees)-num(s.transport);}
     unsoldGross+=Math.max(0,num(lot.qty)-sold)*num(lot.capitalPerUnit);
   }
@@ -25,7 +25,7 @@ export function startPortfolio(portfolios,id,wallet){
  const all=structuredClone(portfolios),p=all.find(x=>x.id===id);if(!p)throw Error('No existe la inversión');
  if(p.started===true)return all;
  const before=cashPosition(wallet,all);
- const amount=(p.lots||[]).reduce((s,l)=>s+Math.max(0,num(l.qty)*num(l.capitalPerUnit)),0);
+ const amount=Math.max(0,(p.lots||[]).reduce((s,l)=>s+Math.max(0,num(l.qty)*num(l.capitalPerUnit)),0)-num(p.inventoryCredit));
  if(before.configured&&amount>before.available+.001)throw Error('Capital insuficiente. Ajusta el capital en Mi negocio o confirma solo inversiones que hayas pagado.');
  p.started=true;p.startedAt=new Date().toISOString();return all;
 }

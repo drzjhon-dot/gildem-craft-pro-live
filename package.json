@@ -1,13 +1,13 @@
 {
   "name": "gildem-craft-pro",
   "private": true,
-  "version": "7.4.3",
+  "version": "8.1.0",
   "type": "module",
-  "description": "Gildem Craft Pro: planificador Royal y Black Market para Albion Online, recetas, Focus, presupuesto y ROI.",
+  "description": "Plan de crafting con refinamiento integrado y 14 familias de pociones; escáner independiente, inventario y sincronización opcional",
   "scripts": {
     "start": "python3 -m http.server 8080",
     "test": "node --test tests/*.test.mjs",
-    "build": "node --check app.js && node --check netlify/functions/market.mjs && node --check netlify/functions/recipes.mjs && node --check netlify/functions/item-image.mjs && node --check netlify/functions/hourly-prices.mjs && node --check netlify/functions/snapshot.mjs && npm test && node scripts/build.mjs",
+    "build": "node --check app.js && node --check netlify/functions/private-sync.mjs && node --check netlify/functions/market.mjs && node --check netlify/functions/recipes.mjs && node --check netlify/functions/item-image.mjs && node --check netlify/functions/hourly-prices.mjs && node --check netlify/functions/snapshot.mjs && npm test && node scripts/build.mjs",
     "preflight": "node scripts/check-deploy.mjs"
   },
   "engines": {

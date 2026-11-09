@@ -11,11 +11,32 @@ export function verifyPlannedPrices(rows,priceRows,{budget,focusLimit=null,maxAg
   let materials=[],netMaterials=0,grossMaterials=0,stale=false;
   for(const m of r.materials||[]){
    const side=r.buyMode==='order'?'buy_price_max':'sell_price_min';
+   const netUse=m.count*(m.ret===false?1:1-finite(r.returnRate)/100);
+   if(m.refining){
+    // Recotiza los materiales RAW y el refinado previo, no un supuesto precio
+    // de venta del resultado que el usuario está produciendo internamente.
+    const ref=m.refining,inputs=[];let grossInputs=0,failed=false;
+    for(const x of ref.inputs){
+     const q=quote(map,x.id,x.city,side,maxAgeHours);
+     if(!q){blockers.push(`${r.id}: falta precio reciente para refinar ${m.id} (${x.id}, ${x.city})`);failed=true;break;}
+     const shipping=x.city!==ref.city?materialShipping:0;
+     const unitPrice=q.price*(1+(r.buyMode==='order'?finite(r.buySetup):0))+shipping;
+     inputs.push({...x,unitPrice,originalPrice:q.price,at:q.at});grossInputs+=x.count*unitPrice;
+    }
+    if(failed){stale=true;break;}
+    const fee=finite(ref.stationFee),transfer=finite(ref.transferFee);
+    const netRefined=grossInputs*(1-finite(ref.rrr)/100)+fee+transfer;
+    const upfront=grossInputs+fee+transfer;
+    const updated={...m,used:netUse,unitPrice:netRefined,upfrontUnitPrice:upfront,
+     refining:{...ref,inputs,netCost:netRefined,upfrontCost:upfront},
+     at:Math.min(...inputs.map(x=>x.at)),cost:netUse*netRefined};
+    materials.push(updated);netMaterials+=updated.cost;grossMaterials+=m.count*upfront;
+    continue;
+   }
    const q=quote(map,m.id,m.city,side,maxAgeHours);
    if(!q){blockers.push(`${r.id}: falta precio reciente de ${m.id} en ${m.city}`);stale=true;break;}
    const shipping=m.city!==r.craftCity?materialShipping:0;
    const effective=q.price*(1+(r.buyMode==='order'?finite(r.buySetup):0))+shipping;
-   const netUse=m.count*(m.ret===false?1:1-finite(r.returnRate)/100);
    const updated={...m,unitPrice:effective,used:netUse,at:q.at,returned:m.count-netUse,cost:netUse*effective};
    materials.push(updated);netMaterials+=updated.cost;grossMaterials+=updated.count*effective;
   }

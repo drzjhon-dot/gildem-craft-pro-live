@@ -79,6 +79,7 @@ export async function loadSpecialCatalog(onProgress=()=>{},force=false){
    if(!validSpecial(special))throw Error('No se encontraron recetas válidas');
    recipeSourceState={source:downloaded.source,sourceRevision:downloaded.sourceRevision,downloadedAt:downloaded.downloadedAt,cached:downloaded.cached};
    await put(SPECIAL_VERSION,special);await put(SPECIAL_VERSION+'-metadata',recipeSourceState);
+   for(const id of Object.keys(recipes))if(recipes[id]?.recipeSource==='ao-bin-dumps'&&!special[id])delete recipes[id];
    Object.assign(recipes,special);specialLoaded=true;specialLoadedAt=Date.now();
    onProgress('Recetas de '+Object.keys(special).length+' objetos cargadas. Revisión: '+(recipeSourceState.sourceRevision?.slice(0,9)||'no disponible')+'.');
    return Object.keys(special).length;

@@ -2,6 +2,7 @@
 // diarios se recuentan desde cero cada vez (ningún material se cuenta dos veces).
 import {routeProfitAtQuantity} from './depth.js';
 import {journalSummary} from './journals.js';
+import {purchaseComponents} from './refining-integration.js';
 export function rebuildPlan(rows,budget,focusLimit=null){
  const capital=Number(budget),focusBudget=focusLimit===null?Infinity:Number(focusLimit);
  const positive=(rows||[]).filter(r=>Number.isInteger(r.qty)&&r.qty>0);
@@ -13,7 +14,7 @@ export function rebuildPlan(rows,budget,focusLimit=null){
   if(projected===null||projected<=0)return {ok:false,reason:'La cantidad supera los niveles rentables del libro de compra para '+x.id};
   committed+=x.qty*x.capitalPerUnit;netCost+=x.qty*x.cost;focus+=x.qty*(x.focusPerUnit||0);
   output.push({...x,totalProfit:projected,allocation:x.qty*x.capitalPerUnit});
-  for(const m of x.materials||[]){const k=m.id+'|'+(m.city||'');const old=matMap.get(k)||{...m,qtyGross:0,qtyNet:0};old.qtyGross+=x.qty*m.count;old.qtyNet+=x.qty*m.used;matMap.set(k,old);}
+  for(const m of x.materials||[])for(const purchase of purchaseComponents(m)){const k=purchase.id+'|'+(purchase.city||'');const old=matMap.get(k)||{...purchase,qtyGross:0,qtyNet:0};old.qtyGross+=x.qty*purchase.count;old.qtyNet+=x.qty*purchase.used;matMap.set(k,old);}
  }
  const journal=journalSummary(output);
  const roundedReserve=journal.cost-journal.fractionalCost;

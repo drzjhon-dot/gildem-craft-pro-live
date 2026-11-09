@@ -66,3 +66,13 @@
 .patch-notice>div{flex:1 1 350px}
 .patch-notice a{color:#f1c77d;text-decoration:underline;text-underline-offset:2px}
 #recipe-sync-status{flex:1 1 100%;line-height:1.5}
+
+/* v8: escáner independiente, inventario y sincronización privada */
+.auto-category-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:8px}
+.auto-category{border:1px solid #354b61;background:#102238;color:#d2e0ee;display:flex;align-items:center;gap:7px;padding:10px;border-radius:10px;font-size:12px;cursor:pointer;min-width:0}
+.auto-category:has(input:checked){border-color:#d5aa63;background:#283329}
+.auto-category .item-icon{width:34px;height:34px;flex:0 0 34px}
+.auto-category input{accent-color:#daa95d}
+.auto-category span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:950px){.auto-category-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:580px){.auto-category-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
