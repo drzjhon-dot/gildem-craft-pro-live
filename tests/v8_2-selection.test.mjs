@@ -73,6 +73,6 @@ test('v8.2 interfaz reduce pestañas y enseña los dos controles de refinado',as
  const app=await readFile(new URL('../app.js',import.meta.url),'utf8');
  assert(!/data-nav="(?:cartera|focuslab|alertas)"/.test(html));
  assert(html.includes('data-nav="crafting"')&&html.includes('data-nav="autocraft"'));
- assert(app.includes('craft-refining-mode')&&app.includes('auto-refining-mode'));
+ assert(!app.includes("'craft-refining-mode'")&&!app.includes("'auto-refining-mode'")); assert(app.includes("['refining','Refinamiento'"));
  assert(app.includes('auto-branch-options')&&app.includes('craft-item-options'));
 });

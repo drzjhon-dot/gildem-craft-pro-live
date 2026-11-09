@@ -5,6 +5,7 @@ import {specialType,blackMarketEligible} from './special-recipes.js';
 import {scenarioProfit} from './optimizer.js';
 import {itemMatches} from './item-selection.js';
 import {compareRefining} from './refining-integration.js';
+import {materialPurchaseCities} from './material-cities.js';
 
 const mainBranch = (branches,id)=>branches.find(b=>b.test(id)&&!(/_all$/.test(b.key)||b.key==='weapons_all'))||branches.find(b=>b.test(id));
 export function selectUniversalRecipes(recipes,branches,{categories=['armor','weapons','accessories','gathering','potions','mounts','foods'],tierMin=4,tierMax=8,enchant=1,limit=240,categoryForBranch,branchKeys=null,itemFilter=null}={}){
@@ -45,7 +46,7 @@ export function createUniversalCandidates({selected,recipes,priceMap,inputs,prof
   const craftCities=noSpecial?inputs.cities:[r.city];
   let best=null;
   for(const craftCity of craftCities){
-   const marketFinder=(materialId,targetCity)=>{let b=null;for(const city of inputs.cities){const q=quote(priceMap,materialId,city,side,maxAge);if(!q)continue;
+   const marketFinder=(materialId,targetCity)=>{let b=null;for(const city of materialPurchaseCities(materialId,inputs.materialPurchase||'all',inputs.cities)){const q=quote(priceMap,materialId,city,side,maxAge);if(!q)continue;
     const fee=inputs.buyMode==='order'?(inputs.listingFee/100):0;
     const shipping=city===targetCity?0:inputs.materialShipping;
     const rate=q.price*(1+fee)+shipping;

@@ -5,6 +5,7 @@ import {CITIES,ALL_CITIES,CITY_COLORS,fmt,short,h,qualityQuote,freshnessLabel,ro
 import {iconSources,nextIconSource,FALLBACK_ICON} from './core/icons.js';
 import {BRANCHES,BRANCH_CATEGORIES,categoryForBranch,branchIsRoyalOnly,sortedBranches,branchByKey,recipesForBranch,registerPotionFamilies,registerMountFamilies} from './core/branches.js';
 import {refiningInputsFor,compareRefining,plannedRefining} from './core/refining-integration.js';
+import {materialPurchaseCities} from './core/material-cities.js';
 import {REFINERY_CHOICES,refinementScanIds,refiningPriceIds,createRefiningCandidates} from './core/refining-opportunities.js';
 import {itemStem,itemMatches,familyChoices} from './core/item-selection.js';
 import {blackMarketEligible,specialType} from './core/special-recipes.js';
@@ -121,9 +122,11 @@ function tradePage(){const bm=state.page==='negro';main.innerHTML=`${blockTitle(
 function tradeResult(r){return `<div class="page-grid"><div class="col-3">${stat('Oportunidades',fmt(r.all.length),'Con ganancia neta positiva','jade','↗')}</div><div class="col-3">${stat('ROI más alto',r.all.length?Math.max(...r.all.map(x=>x.roi)).toFixed(1)+'%':'—','No implica cantidad disponible','gold','%')}</div><div class="col-3">${stat('Profit máximo/unit.',r.all.length?short(Math.max(...r.all.map(x=>x.profit))):'—','Antes de riesgos y slippage','blue','◈')}</div><div class="col-3">${stat('Productos analizados',fmt(r.count),'Calidad normal, listado de muestra','','⌕')}</div>
  <div class="col-12"><div class="panel"><div class="toggleline"><h3 class="subheading">Oportunidades encontradas</h3><span class="pill neutral">${r.cached?'Caché horaria':'Datos consultados'}</span></div><div class="table-scroll">${r.all.length?`<table class="data-table"><thead><tr><th>Artículo</th><th>Comprar</th><th>Vender</th><th>Modo</th><th>Inversión</th><th>Profit neto</th><th>ROI</th><th>Antigüedad</th></tr></thead><tbody>${r.all.slice(0,75).map(x=>`<tr><td>${itemCell(x.id)}</td><td>${h(x.from)}</td><td>${h(x.to)}</td><td><span class="pill ${x.mode==='instant'?'green':'amber'}">${x.mode==='instant'?'Instantáneo':'Publicar'}</span></td><td>${moneyCell(x.cost)}</td><td>${moneyCell(x.profit,'positive')}</td><td class="positive">${x.roi.toFixed(1)}%</td><td>${x.ageHours.toFixed(1)} h</td></tr>`).join('')}</tbody></table>`:empty('No hay oportunidades verificadas','La API puede no tener precios recientes de estos artículos.')}</div><p class="explain">Un margen positivo no garantiza volumen ejecutable. El transporte se descuenta por unidad según Ajustes. Las oportunidades de publicación requieren esperar una compra.</p></div></div>${r.warning?`<div class="col-12"><div class="notice red">${h(r.warning)}</div></div>`:''}</div>`;}
 // Persistent beginner-friendly crafting defaults. Advanced inputs are optional.
-const craftDefaults={branch:'boots_plate',city:'auto',daily:0,focus:'no',budget:10000000,invest:'all',market:'black',tierMin:4,tierMax:7,ench:1,buy:'all',buyMode:'instant',saleMode:'listed',station:0,transport:0,cap:0,unknown:2,journals:true,goal:'balanced',minConfidence:0,focusBudget:10000,focusPerUnit:0,qualityMode:'normal',q1:100,q2:0,q3:0,q4:0,q5:0,priceStress:8,resourceStress:7,riskBM:0,riskRoyal:0,matShipping:0,bmTax:2.5,royalTax:4,listingFee:2.5,bmMode:'instant',requireBook:false,useWallet:false,refiningMode:'auto',refiningFee:0,refiningDaily:0,refiningFocus:false,refiningFocusUnit:0,tierExact:'all',enchExact:'all'};
+const craftDefaults={branch:'boots_plate',city:'auto',daily:0,focus:'no',budget:10000000,invest:'all',market:'black',tierMin:4,tierMax:7,ench:4,buy:'bonus',buyMode:'instant',saleMode:'listed',station:0,transport:0,cap:0,unknown:2,journals:true,goal:'balanced',minConfidence:0,focusBudget:10000,focusPerUnit:0,qualityMode:'normal',q1:100,q2:0,q3:0,q4:0,q5:0,priceStress:8,resourceStress:7,riskBM:0,riskRoyal:0,matShipping:0,bmTax:2.5,royalTax:4,listingFee:2.5,bmMode:'instant',requireBook:false,useWallet:false,refiningMode:'off',refiningFee:0,refiningDaily:0,refiningFocus:false,refiningFocusUnit:0,tierExact:'all',enchExact:'all'};
 let craftPrefs={...craftDefaults};
 try{Object.assign(craftPrefs,JSON.parse(localStorage.getItem('gildem-craft-simple-v2')||'{}'));}catch{}
+// v8.4: no interpretar preferencias antiguas como permiso para refinar insumos del crafting.
+craftPrefs.refiningMode='off'; craftPrefs.refiningFocus=false; craftPrefs.ench=4; if(craftPrefs.buy==='all')craftPrefs.buy='bonus';
 // Los filtros antiguos permanecen guardados, pero el plan manual ya no muestra ramas Royal-only ni agregados.
 const BM_CATEGORIES=['armor','weapons','accessories'];
 const isAggregateBranch=key=>key==='weapons_all'||key.endsWith('_all');
@@ -227,34 +230,35 @@ function craftPage(){const c=craftPrefs;
  ${selectField('¿Dónde fabricar?','craft-city',[['auto','En ciudad de bono de cada objeto'],['compare',categoryForBranch(c.branch)==='foods'?'Comparar Caerleon con Bridgewatch':'Comparar bono vs fabricar en Caerleon'],...CITIES.map(x=>[x,x])],c.city,'span6')}
  ${selectField('Tier inicial','craft-tiermin',[1,2,3,4,5,6,7,8].map(x=>[x,'T'+x]),c.tierMin,'span3')}
  ${selectField('Tier final','craft-tiermax',[1,2,3,4,5,6,7,8].map(x=>[x,'T'+x]),c.tierMax,'span3')}
- ${selectField('Encantamiento máximo','craft-ench',[[0,'.0'],[1,'.1'],[2,'.2'],[3,'.3'],[4,'.4']],c.ench,'span3')}
- ${selectField('Solo este encantamiento','craft-ench-exact',[['all','Todos hasta el máximo'],...Array.from({length:5},(_,n)=>[String(n),'.'+n+' exacto'])],c.enchExact,'span3')}
+ ${selectField('Solo este encantamiento','craft-ench-exact',[['all','Todos los encantamientos (.0 a .4)'],...Array.from({length:5},(_,n)=>[String(n),'.'+n+' exacto'])],c.enchExact,'span4')}
  <div class="field span12">${itemPickerHtml('craft')}</div>
  </div>
- <div class="refine-feature"><div class="refine-feature-header"><span class="refine-emblem">♧</span><div><h3>Refinamiento de materiales</h3><p>Decide si compras tela, cuero, lingotes, tablones y bloques, o si conviene refinarlos tú mismo. La lista de compras se actualiza con los recursos crudos.</p></div></div><div class="form-grid">${selectField('Cómo obtener materiales','craft-refining-mode',[['off','Comprar ya refinados'],['auto','Comparar compra vs refinar (recomendado)'],['always','Refinar cuando existan precios verificables']],c.refiningMode,'span6')}${numberField('Taller de refinado (silver por unidad)','craft-refining-fee',c.refiningFee,0,1,'span6')}</div></div>
+ <div class="craft-market-note">◈ Los materiales refinados se compran listos para fabricar. Lingotes: Thetford · Tablones: Fort Sterling · Tela: Lymhurst · Cuero: Martlock · Bloques: Bridgewatch. La ciudad de bono no garantiza el precio más bajo; puedes cambiar dónde comprar en Opciones avanzadas.</div>
+ <div class="craft-compact-grid">
+ <section class="craft-compact-card craft-bonus-card" aria-label="Bonificaciones del crafting">
  <div class="craft-step"><span class="craft-step-num">2</span><div><h3>¿Con qué bonificaciones?</h3><p>El retorno de materiales se calcula automáticamente.</p></div></div>
- <div class="form-grid craft-step-fields">
+ <div class="craft-mini-fields">
  ${selectField('Bono diario de producción','craft-daily',[[0,'Sin bono diario'],[10,'Bono diario +10%'],[20,'Bono diario +20%']],c.daily,'span6')}
  ${selectField('¿Usar Focus?','craft-focus',[['no','Sin Focus'],['yes','Con Focus']],c.focus,'span6')}
  </div><div class="craft-return-hint" id="craft-rate-preview"></div>
+ </section>
+ <section class="craft-compact-card craft-invest-card" aria-label="Presupuesto y ventas">
  <div class="craft-step"><span class="craft-step-num">3</span><div><h3>¿Cuánto quieres invertir y dónde vender?</h3><p>Elige el destino y deja que el sistema busque el margen neto y una distribución prudente.</p></div></div>
- <div class="form-grid craft-step-fields">
+ <div class="craft-mini-fields">
  ${numberField('Presupuesto en silver','craft-budget',c.budget,1000,1,'span4')}
  
  ${selectField('Uso del presupuesto','craft-invest',[['all','Usar todo lo posible'],['safe','Invertir con cautela']],c.invest,'span4')}
  ${selectField('Destino de venta','craft-market',[['black','Mercado Negro'],['royal','Mejores mercados Royal'],['mixed','Black Market y Royal']],branchIsRoyalOnly(c.branch)?'royal':c.market,'span4')}
- </div><div class="form-grid craft-step-fields" style="margin-top:12px">
- ${selectField('Prioridad del plan','craft-goal',[['balanced','Profit + rotación (recomendado)'],['daily','Priorizar lo que rota bien según mis ventas'],['profit','Mayor beneficio total'],['roi','Mayor ROI (%)'],['focus','Mayor silver por Focus']],c.goal,'span6')}
- ${selectField('Confianza mínima','craft-confidence',[[0,'Mostrar también oportunidades de riesgo'],[45,'Media o alta'],[75,'Solo alta confianza']],c.minConfidence,'span6')}
+ </div><div class="craft-mini-fields craft-secondary-fields">
+ ${selectField('Prioridad del plan','craft-goal',[['balanced','Profit + rotación'],['daily','Priorizar lo que rota bien según mis ventas'],['profit','Mayor beneficio total'],['roi','Mayor ROI (%)'],['focus','Mayor silver por Focus']],c.goal,'span6')}
+ ${selectField('Confianza mínima','craft-confidence',[[0,'Todas (incluye riesgo)'],[45,'Confianza media o alta'],[75,'Solo confianza alta']],c.minConfidence,'span6')}
  </div><div class="craft-simple-notes"><span id="craft-invest-preview"></span><span id="craft-destination-preview"></span></div>
+ </section></div>
  <details class="craft-advanced"><summary>⚙ Opciones avanzadas (opcional)</summary><div class="form-grid" style="margin-top:17px">
- ${selectField('Comprar materiales en','craft-buy',[['all','Más barato en Royal'],...CITIES.map(x=>[x,x])],c.buy,'span6')}
+ ${selectField('Comprar materiales refinados en','craft-buy',[['bonus','Ciudades de bono (recomendado)'],['all','Comparar todos los mercados Royal'],...CITIES.map(x=>[x,x])],c.buy,'span6')}
  ${selectField('Cómo comprar materiales','craft-buy-mode',[['instant','Comprar al precio de venta (inmediato)'],['order','Poner órdenes de compra (no garantizadas)']],c.buyMode,'span6')}
  ${selectField('Forma de venta en Royal','craft-sale-mode',[['listed','Publicar orden de venta'],['instant','Vender inmediatamente']],c.saleMode,'span6')}
  ${numberField('Costo del taller por fabricación/lote','craft-station',c.station,0,1,'span4')}
- ${selectField('Bono diario de refinado (si está activo)','craft-refining-daily',[[0,'Sin bono'],[10,'+10%'],[20,'+20%']],c.refiningDaily,'span4')}
- ${selectField('Focus al refinar (independiente del craft)','craft-refining-focus',[['false','Sin Focus al refinar'],['true','Usar Focus verificado']],c.refiningFocus?'true':'false','span4')}
- ${numberField('Focus exacto por unidad refinada','craft-refining-focus-unit',c.refiningFocusUnit,0,1,'span4')}
  ${numberField('Transporte por unidad vendida y trayecto','craft-transport',c.transport,0,1,'span4')}
  ${numberField('Transporte de materiales por unidad fuera de la ciudad de fabricación','craft-mat-shipping',c.matShipping,0,1,'span4')}
  ${numberField('Riesgo estimado de pérdida BM (%)','craft-risk-bm',c.riskBM,0,.1,'span4')}
@@ -283,8 +287,10 @@ function craftPage(){const c=craftPrefs;
 }
 
 const AUTO_CATEGORIES=[['armor','Armaduras','Botas, cascos y pecheras'],['weapons','Armas','Todas las líneas de armas'],['accessories','Accesorios','Capas, bolsas y secundarios'],['gathering','Recolección','Equipo de recolección · Royal'],['potions','Pociones','Alquimia · Royal'],['mounts','Monturas','Ensillado · Royal'],['foods','Comidas','Cocina · Royal'],['refining','Refinamiento','Recursos refinados · Royal']];
-const autoDefaults={budget:20000000,market:'mixed',goal:'balanced',focus:false,deep:false,daily:0,tierMin:4,tierMax:8,ench:1,requireBook:false,categories:AUTO_CATEGORIES.filter(x=>x[0]!=='refining').map(x=>x[0]),refineFamilies:REFINERY_CHOICES.map(x=>x.key),refineSale:'listed',refineDaily:0,refineStation:0,refineFreight:0,refineDelivery:0,branchMode:'all',branchKeys:[],itemMode:'all',itemKeys:[],tierExact:'all',enchExact:'all',refiningMode:'auto',refiningFee:0,focusUnit:0};
+const autoDefaults={budget:20000000,market:'mixed',goal:'balanced',focus:false,deep:false,daily:0,tierMin:4,tierMax:8,ench:4,requireBook:false,categories:AUTO_CATEGORIES.filter(x=>x[0]!=='refining').map(x=>x[0]),refineFamilies:REFINERY_CHOICES.map(x=>x.key),refineSale:'listed',refineDaily:0,refineStation:0,refineFreight:0,refineDelivery:0,branchMode:'all',branchKeys:[],itemMode:'all',itemKeys:[],tierExact:'all',enchExact:'all',refiningMode:'off',refiningFee:0,focusUnit:0};
 const autoPrefs={...autoDefaults};try{Object.assign(autoPrefs,JSON.parse(localStorage.getItem('gildem-v8-autocraft')||'{}'));}catch{}
+// El escáner también compra refinados para el crafting; refinar para vender sigue disponible como categoría independiente.
+autoPrefs.ench=4; autoPrefs.refiningMode='off';
 function saveAutoSelections(){try{localStorage.setItem('gildem-v8-autocraft',JSON.stringify(autoPrefs));}catch{}}
 function readAutoCategories(){const inputs=[...document.querySelectorAll('input[name="auto-category"]')];return inputs.length?inputs.filter(x=>x.checked).map(x=>x.value):autoPrefs.categories;}
 function renderAutoBranches(){const el=control('auto-branch-options');if(!el)return;
@@ -324,13 +330,11 @@ function autoPage(){
   <div class="branch-filter"><input type="search" id="auto-branch-search" class="input" placeholder="Buscar rama: caballo, hacha, poción…" autocomplete="off"><span>⌕</span></div>
   <div id="auto-branch-options" class="branch-multi-grid"></div><p id="auto-branch-help" class="explain"></p></div>
   <div class="field span12">${itemPickerHtml('auto')}</div></div>
- <div id="auto-input-refining" class="field span12"><div class="refine-feature"><div class="refine-feature-header"><span class="refine-emblem">♧</span><div><h3>Cómo comprar los insumos de crafting</h3><p>Esta opción solo afecta a los materiales necesarios para fabricar equipos y consumibles. Para refinar recursos y venderlos, activa la categoría «Refinamiento» arriba.</p></div></div><div class="form-grid">${selectField('Modo de materiales','auto-refining-mode',[['off','Comprar refinados'],['auto','Comparar compra vs refinamiento'],['always','Refinar si hay datos verificables']],autoPrefs.refiningMode,'span6')}${numberField('Estación de refinado por unidad','auto-refining-fee',autoPrefs.refiningFee,0,1,'span6')}</div></div></div>
  <div id="auto-refinery-category-panel" class="field span12" hidden><div class="refine-feature refinery-investment"><div class="refine-feature-header"><span class="refine-emblem">▦</span><div><h3>Refinar y vender: oportunidades independientes</h3><p>Analizar el costo de comprar recursos crudos, refinar en la ciudad con bono y vender el producto refinado en Royal. Comparte el mismo presupuesto con el crafting.</p></div></div><div class="refining-family-grid">${REFINERY_CHOICES.map(f=>`<label class="refining-family-choice"><input type="checkbox" name="auto-refine-family" value="${h(f.key)}" ${autoPrefs.refineFamilies?.includes(f.key)?'checked':''}>${itemimg(f.iconId,38,true)}<span><strong>${h(f.label)}</strong><small>${h(f.city)} · bono</small></span></label>`).join('')}</div><div class="form-grid" style="margin-top:13px">${selectField('Venta del material refinado','auto-refine-sale',[['listed','Publicar orden en Royal'],['instant','Vender a la mejor compra Royal']],autoPrefs.refineSale,'span6')}${selectField('Bono diario de refinado','auto-refine-daily',[[0,'Sin bono adicional'],[10,'+10% confirmado'],[20,'+20% confirmado']],autoPrefs.refineDaily,'span6')}${numberField('Costo de estación por unidad refinada','auto-refine-station',autoPrefs.refineStation,0,1,'span4')}${numberField('Traslado de materia prima (silver/u)','auto-refine-freight',autoPrefs.refineFreight,0,1,'span4')}${numberField('Transporte a ciudad de venta (silver/u)','auto-refine-delivery',autoPrefs.refineDelivery,0,1,'span4')}</div><p id="auto-refine-market-tip" class="notice amber" hidden>El Mercado Negro no compra recursos refinados. Cambia el destino a <strong>Royal + Black Market</strong> o <strong>Solo Royal</strong> para que el escáner incluya refinamiento.</p><p class="explain">Sin Focus de refinamiento. Introduce el costo real de estación y transporte; los precios y órdenes observados no garantizan venta. No se incluyen variantes de piedra encantada sin receta compatible.</p></div></div>
  </div><div class="panel choice-filters"><div class="form-grid">
   ${selectField('Tier inicial','auto-tiermin',[1,2,3,4,5,6,7,8].map(t=>[t,'T'+t]),autoPrefs.tierMin,'span3')}
   ${selectField('Tier final','auto-tiermax',[1,2,3,4,5,6,7,8].map(t=>[t,'T'+t]),autoPrefs.tierMax,'span3')}
-  ${selectField('Encantamiento máximo','auto-ench',[0,1,2,3,4].map(t=>[t,'.'+t]),autoPrefs.ench,'span3')}
-  ${selectField('Solo este encantamiento','auto-ench-exact',[['all','Todos hasta el máximo'],...Array.from({length:5},(_,n)=>[String(n),'.'+n+' exacto'])],autoPrefs.enchExact,'span3')}
+  ${selectField('Solo este encantamiento','auto-ench-exact',[['all','Todos los encantamientos (.0 a .4)'],...Array.from({length:5},(_,n)=>[String(n),'.'+n+' exacto'])],autoPrefs.enchExact,'span6')}
   </div></div><details class="craft-advanced"><summary>⚙ Filtros extra (opcional)</summary><div class="form-grid" style="margin-top:14px">
   <div class="field span12"><label class="checkbox-row"><input type="checkbox" id="auto-require-book" ${autoPrefs.requireBook?'checked':''}> Exigir profundidad de órdenes observadas para BM (puede eliminar todas las oportunidades BM)</label></div>
  </div></details>
@@ -345,14 +349,14 @@ function autoResults(p){const meta=p.autoMeta||{};
 async function runAutoScan(force=false){
  if(state.autoRunning)return;
  const budget=num('auto-budget',20000000),market=val('auto-market','mixed'),goal=val('auto-goal','balanced'),focus=val('auto-focus','no')==='yes';
- const tierMin=num('auto-tiermin',4),tierMax=num('auto-tiermax',8),enchant=num('auto-ench',1),deep=val('auto-deep','quick')==='wide',daily=num('auto-daily',0);
+ const tierMin=num('auto-tiermin',4),tierMax=num('auto-tiermax',8),enchant=4,deep=val('auto-deep','quick')==='wide',daily=num('auto-daily',0);
  const cats=[...document.querySelectorAll('input[name="auto-category"]:checked')].map(x=>x.value);
  const craftCats=cats.filter(x=>x!=='refining'),wantsRefining=cats.includes('refining');
  const refineFamilies=[...document.querySelectorAll('input[name="auto-refine-family"]:checked')].map(x=>x.value);
  const refineSale=val('auto-refine-sale','listed'),refineDaily=num('auto-refine-daily',0),refineStation=num('auto-refine-station',0),refineFreight=num('auto-refine-freight',0),refineDelivery=num('auto-refine-delivery',0);
  const branchMode=val('auto-branch-mode','all'),branchKeys=(autoPrefs.branchKeys||[]).filter(x=>BRANCHES.some(b=>b.key===x&&cats.includes(categoryForBranch(x))));
  const itemMode=autoPrefs.itemMode||'all',itemKeys=autoPrefs.itemKeys||[];
- const refiningMode=val('auto-refining-mode','auto'),refiningFee=num('auto-refining-fee',0),enchExact=val('auto-ench-exact','all'),focusUnit=num('auto-focus-unit',0);
+ const refiningMode='off',refiningFee=0,enchExact=val('auto-ench-exact','all'),focusUnit=num('auto-focus-unit',0);
  if(!Number.isSafeInteger(budget)||budget<1000||budget>1000000000000||tierMin>tierMax||!cats.length){showToast('Comprueba el presupuesto, tiers y categorías.',true);return;}
  if(goal==='focus'&&!focus){showToast('Activa Focus para optimizar silver por Focus.',true);return;}
  if(wantsRefining&&focus&&goal==='focus'&&!craftCats.length){showToast('Para maximizar silver por Focus, elige también una rama de crafting. El refinamiento directo de este escáner usa 0 Focus.',true);return;}
@@ -363,7 +367,7 @@ async function runAutoScan(force=false){
  if(!['off','auto','always'].includes(refiningMode)||refiningFee<0){showToast('Configuración de refinamiento inválida.',true);return;}
  const focusProfile=loadFocusProfile();if(craftCats.length&&focus&&!(focusUnit>0)&&!Object.values(focusProfile).some(x=>Number(x.focus)>0)){showToast('Introduce el costo real de Focus por fabricación o configura los costos por objeto en Ajustes.',true);return;}
  const input={...craftPrefs,market,goal,focus,budget,city:'auto',buyMode:'instant',tierMin,tierMax,enchant,daily,focusPerUnit:0,
-  cities:CITIES,saleMode:craftPrefs.saleMode||'listed',materialShipping:Number(craftPrefs.matShipping)||0,station:Number(craftPrefs.station)||0,transport:Number(craftPrefs.transport)||0,
+  cities:CITIES,saleMode:craftPrefs.saleMode||'listed',materialShipping:Number(craftPrefs.matShipping)||0,materialPurchase:'bonus',station:Number(craftPrefs.station)||0,transport:Number(craftPrefs.transport)||0,
   bmTax:Number(craftPrefs.bmTax)||2.5,royalTax:Number(craftPrefs.royalTax)||4,listingFee:Number(craftPrefs.listingFee)||2.5,riskBM:Number(craftPrefs.riskBM)||0,riskRoyal:Number(craftPrefs.riskRoyal)||0,priceStress:Number(craftPrefs.priceStress)||8,resourceStress:Number(craftPrefs.resourceStress)||7,refiningMode,refiningFee,refiningDaily:Number(craftPrefs.refiningDaily)||0,refiningFocus:false,refiningFocusUnit:0};
  Object.assign(autoPrefs,{budget,market,goal,focus,focusUnit,deep,daily,tierMin,tierMax,ench:enchant,enchExact,refiningMode,refiningFee,refineFamilies,refineSale,refineDaily,refineStation,refineFreight,refineDelivery,requireBook:checked('auto-require-book'),categories:cats,branchMode,branchKeys,itemMode,itemKeys});
  localStorage.setItem('gildem-v8-autocraft',JSON.stringify(autoPrefs));
@@ -563,8 +567,8 @@ async function runTrade(force=false){const kind=val('trade-kind','popular'),dest
 function calcInputs(){const tierMin=num('craft-tiermin',4),tierMax=num('craft-tiermax',7);
  if(tierMin>tierMax)throw Error('El tier inicial no puede superar al final.');
  const selectedBranch=val('craft-branch','boots_plate');
- return {branch:selectedBranch,city:val('craft-city','auto'),daily:num('craft-daily',0),focus:val('craft-focus','no')==='yes',budget:num('craft-budget',10000000),invest:val('craft-invest','all'),market:branchIsRoyalOnly(selectedBranch)?'royal':val('craft-market','black'),tierMin,tierMax,ench:num('craft-ench',1),tierExact:'all',enchExact:val('craft-ench-exact','all'),buy:val('craft-buy','all'),buyMode:val('craft-buy-mode','instant'),goal:val('craft-goal','balanced'),minConfidence:num('craft-confidence',0),focusBudget:num('craft-focus-budget',10000),focusPerUnit:num('craft-focus-unit',0),qualityMode:['mounts','potions','foods'].includes(categoryForBranch(selectedBranch))?'normal':val('craft-quality-mode','normal'),qualityWeights:[1,2,3,4,5].map(i=>num('craft-q'+i,i===1?100:0)),priceStress:num('craft-price-stress',8),resourceStress:num('craft-resource-stress',7),riskBM:num('craft-risk-bm',0),riskRoyal:num('craft-risk-royal',0),matShipping:num('craft-mat-shipping',0),bmTax:num('craft-bm-tax',2.5),royalTax:num('craft-royal-tax',4),listingFee:num('craft-listing-fee',2.5),bmMode:val('craft-bm-mode','instant'),requireBook:checked('craft-require-book'),useWallet:false,saleMode:val('craft-sale-mode','listed'),station:num('craft-station',0),transport:num('craft-transport',0),cap:num('craft-cap',0),unknownCap:num('craft-unknown',2),journals:!['mounts','potions','foods'].includes(categoryForBranch(selectedBranch))&&checked('craft-journals'),refiningMode:val('craft-refining-mode','off'),refiningFee:num('craft-refining-fee',0),refiningDaily:num('craft-refining-daily',0),refiningFocus:val('craft-refining-focus','false')==='true',refiningFocusUnit:num('craft-refining-focus-unit',0)};}
-function getMaterialFinder(map,input,craftCity=''){return id=>{const allowed=input.buy==='all'?CITIES:[input.buy];let best=null;
+ return {branch:selectedBranch,city:val('craft-city','auto'),daily:num('craft-daily',0),focus:val('craft-focus','no')==='yes',budget:num('craft-budget',10000000),invest:val('craft-invest','all'),market:branchIsRoyalOnly(selectedBranch)?'royal':val('craft-market','black'),tierMin,tierMax,ench:4,tierExact:'all',enchExact:val('craft-ench-exact','all'),buy:val('craft-buy','all'),buyMode:val('craft-buy-mode','instant'),goal:val('craft-goal','balanced'),minConfidence:num('craft-confidence',0),focusBudget:num('craft-focus-budget',10000),focusPerUnit:num('craft-focus-unit',0),qualityMode:['mounts','potions','foods'].includes(categoryForBranch(selectedBranch))?'normal':val('craft-quality-mode','normal'),qualityWeights:[1,2,3,4,5].map(i=>num('craft-q'+i,i===1?100:0)),priceStress:num('craft-price-stress',8),resourceStress:num('craft-resource-stress',7),riskBM:num('craft-risk-bm',0),riskRoyal:num('craft-risk-royal',0),matShipping:num('craft-mat-shipping',0),bmTax:num('craft-bm-tax',2.5),royalTax:num('craft-royal-tax',4),listingFee:num('craft-listing-fee',2.5),bmMode:val('craft-bm-mode','instant'),requireBook:checked('craft-require-book'),useWallet:false,saleMode:val('craft-sale-mode','listed'),station:num('craft-station',0),transport:num('craft-transport',0),cap:num('craft-cap',0),unknownCap:num('craft-unknown',2),journals:!['mounts','potions','foods'].includes(categoryForBranch(selectedBranch))&&checked('craft-journals'),refiningMode:'off',refiningFee:0,refiningDaily:0,refiningFocus:false,refiningFocusUnit:0};}
+function getMaterialFinder(map,input,craftCity=''){return id=>{const allowed=materialPurchaseCities(id,input.buy,CITIES);let best=null;
  const side=input.buyMode==='order'?'buy_price_max':'sell_price_min';
  for(const city of allowed){const q=quote(map,id,city,side,prefs.maxAge);if(!q)continue;const fee=input.buyMode==='order'?prefs.setup/100:0;const effective=q.price*(1+fee)+(city!==craftCity?input.matShipping:0);if(!best||effective<best.price)best={...q,price:effective,originalPrice:q.price,city,mode:input.buyMode,shippingPerUnit:city!==craftCity?input.matShipping:0};}return best;};}
 async function runCraft(force=false){
@@ -603,7 +607,7 @@ async function runCraft(force=false){
  try{
   const materialIds=[...new Set(ids.flatMap(id=>recipes[id].materials.map(m=>m.id)))];
   const journalSet=new Set();if(input.journals){for(const id of ids){const j=journalInfo(id,recipes[id],input.branch,journalFor(id));if(j&&j.ratio>0){journalSet.add(j.empty);journalSet.add(j.full);}}}
-  const refinementIds=input.refiningMode!=='off'?refiningInputsFor(materialIds):[];
+  const refinementIds=[]; // Insumos de equipo: siempre comprar refinados, nunca refinar antes del crafting.
   const response=await prices([...new Set([...ids,...materialIds,...refinementIds,...journalSet])],prefs.region,force);
   updateStatus(response);
   const map=rowMap(response.rows);
@@ -628,11 +632,7 @@ async function runCraft(force=false){
    for(const city of craftCities){
     if(!city)continue;
     const marketFind=getMaterialFinder(map,input,city);
-    const find=id=>{const direct=marketFind(id);if(input.refiningMode==='off')return direct;
-      const compared=compareRefining({id,craftCity:city,buyRefined:direct,findMarket:(rawId,targetCity)=>getMaterialFinder(map,input,targetCity)(rawId),
-       mode:input.refiningMode,stationFee:input.refiningFee,transferFee:input.matShipping,
-       focus:input.refiningFocus,focusPerRefine:input.refiningFocusUnit,dailyBonus:input.refiningDaily});
-      return compared.source?{...compared.source,refinementComparison:compared.comparison}:null;};
+    const find=id=>marketFind(id); // compra el material refinado en el mercado elegido
     const specialty=rec.specialtyEnabled!==false&&city===rec.city;
     const rate=craftingReturnRate({specialty,dailyBonus:dailyForRecipe,focus:input.focus});
     const without=craftingReturnRate({specialty,dailyBonus:dailyForRecipe,focus:false});
@@ -1212,12 +1212,12 @@ document.addEventListener('change',e=>{
  }
  if(e.target.closest('#auto-form')){
   if(e.target.id==='auto-market')refreshAutoCategoryPanels();
-  Object.assign(autoPrefs,{tierMin:num('auto-tiermin',4),tierMax:num('auto-tiermax',8),ench:num('auto-ench',1),enchExact:val('auto-ench-exact','all'),refiningMode:val('auto-refining-mode','auto'),refiningFee:num('auto-refining-fee',0),refineSale:val('auto-refine-sale','listed'),refineDaily:num('auto-refine-daily',0),refineStation:num('auto-refine-station',0),refineFreight:num('auto-refine-freight',0),refineDelivery:num('auto-refine-delivery',0)});
+  Object.assign(autoPrefs,{tierMin:num('auto-tiermin',4),tierMax:num('auto-tiermax',8),ench:4,enchExact:val('auto-ench-exact','all'),refiningMode:'off',refiningFee:0,refineSale:val('auto-refine-sale','listed'),refineDaily:num('auto-refine-daily',0),refineStation:num('auto-refine-station',0),refineFreight:num('auto-refine-freight',0),refineDelivery:num('auto-refine-delivery',0)});
   saveAutoSelections();return;
  }
  if(e.target.closest('#craft-form')){
   craftRateHelp();try{saveCraftPrefs({...calcInputs(),focus:val('craft-focus','no'),unknown:num('craft-unknown',2)});}catch{}
-  if(['craft-tiermin','craft-tiermax','craft-ench','craft-ench-exact'].includes(e.target.id))renderItemChoices('craft');return;
+  if(['craft-tiermin','craft-tiermax','craft-ench-exact'].includes(e.target.id))renderItemChoices('craft');return;
  }
  if(e.target.id==='settings-premium'){const tax=control('settings-tax');if(tax)tax.value=e.target.value==='premium'?4:8;}
 });

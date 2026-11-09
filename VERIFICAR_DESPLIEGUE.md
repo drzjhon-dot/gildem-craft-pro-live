@@ -1,6 +1,6 @@
-# Pruebas prácticas después de publicar v8.3
+# Pruebas prácticas después de publicar v8.4
 
-1. **Versión**: `/version.json` = `8.3.0`.
+1. **Versión**: `/version.json` = `8.4.0`.
 2. **Backend**: `/.netlify/functions/health` devuelve `status: ok`.
 3. **Plan de crafting**: aparecen únicamente Armaduras, Armas y Accesorios. Al seleccionar Armaduras aparecen Botas de placas, Zapatos de tela, Zapatos de cuero, etc., pero **no** «Todas las botas y zapatos», «Todos los cascos y capuchas» ni «Todas las pecheras».
 4. **Encontrar oportunidades**: aparecen ocho categorías legibles, con icono, título y subtítulo completos. Los nombres no deben truncarse.

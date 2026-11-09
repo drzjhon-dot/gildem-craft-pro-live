@@ -1,7 +1,7 @@
 {
   "name": "gildem-craft-pro",
   "private": true,
-  "version": "8.3.0",
+  "version": "8.4.0",
   "type": "module",
   "description": "Plan de crafting especializado en Mercado Negro; Encontrar oportunidades con refinamiento como inversión, selector legible y categorías Royal",
   "scripts": {

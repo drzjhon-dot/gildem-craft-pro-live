@@ -1,4 +1,15 @@
-# Gildem Craft Pro v8.3.0
+# Gildem Craft Pro v8.4.0 · Manual BM + oportunidades
+
+**Cambios principales**
+- Filtro único de encantamiento para ambas pestañas: todos .0 a .4 o uno exacto.
+- Plan de crafting: siempre compra materiales ya refinados, por defecto en la ciudad con bono de refinamiento (Thetford, Fort Sterling, Lymhurst, Martlock, Bridgewatch). Artefactos y demás insumos se cotizan en Royal. El usuario puede comparar ciudades en Opciones avanzadas.
+- Refinamiento como **inversión de venta independiente** permanece en Encontrar oportunidades.
+- Se eliminaron los paneles para refinar insumos antes del crafting.
+- Los pasos de bonificaciones e inversión usan tarjetas compactas, adaptables a PC y móvil.
+
+Para actualizar la página actual consulta ACTUALIZAR_EN_GITHUB_NETLIFY.md.
+
+# Gildem Craft Pro v8.4.0
 
 Planificador económico de Albion Online, concebido para el servidor **América (West)** y ejecutado en **GitHub + Netlify**.
 
@@ -9,14 +20,14 @@ Planificador económico de Albion Online, concebido para el servidor **América 
 - Ramas específicas de **Armas, Armaduras y Accesorios**. No muestra botones «Todas las botas/cascos/pecheras/armas».
 - Filtra objetos, tiers, encantamientos, ciudades de fabricación y venta. El destino inicial recomendado es Mercado Negro, pero permite Royal cuando se elige manualmente.
 - Calcula materiales, retorno, Focus según perfil, diarios cuando proceda, presupuesto bruto, margen, límites conservadores y lista de compras.
-- **Refinamiento de insumos** opcional: comparar compra directa con producir materiales refinados antes de fabricar el objeto.
+- **Compra de materiales ya refinados**, por defecto en las ciudades con bono de refinamiento. Esta preferencia se puede cambiar en Opciones avanzadas.
 
 ### Encontrar oportunidades
 
 - Comparación entre ramas de armas, armaduras, accesorios, recolección, pociones, monturas y comidas.
 - **Refinamiento como negocio**: lingotes, tablones, cuero, tela y bloques. Puedes activar esta categoría en exclusiva o combinarla con las anteriores. Solo vende en Royal.
 - Precios observados de AODP, materiales y costos con fecha. Una cartera comparte el mismo presupuesto entre todas las rutas elegidas.
-- El refinamiento de insumos y la inversión en refinado para venta son **dos conceptos separados** y tienen controles diferenciados.
+- La opción de refinar insumos para fabricar equipos se ha retirado. Refinar para vender permanece como inversión independiente.
 - Los filtros que elijas se respetan; no se completan con objetos ajenos.
 
 ## Despliegue
