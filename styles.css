@@ -357,3 +357,13 @@
 
 /* Keep the optional price re-check invisible until it has a result. */
 #preflight-results:empty{display:none}
+
+/* Level Craft follows the compact category picker language of Royal Craft. */
+.level-categories { margin: 12px 0 18px; }
+.level-family-panel { margin: 10px 0 18px; }
+.level-family-grid { max-height: 330px; overflow: auto; }
+.level-picked { display:flex; align-items:center; gap:10px; margin-top:10px; padding:10px 12px; border-radius:10px; background:var(--surface-soft,rgba(255,255,255,.035)); font-size:.9rem; }
+.level-family { min-width:0; }
+.level-family span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.level-results .panel { min-width:0; }
+@media(max-width:700px){.level-family-grid{max-height:310px}.level-results .data-table{font-size:.8rem}}

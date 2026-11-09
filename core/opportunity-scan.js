@@ -79,7 +79,7 @@ export function createUniversalCandidates({selected,recipes,priceMap,inputs,prof
     const riskCost=cost.total*lost/100;
     const tax=dest==='Black Market'?inputs.bmTax:inputs.royalTax;
     const result=craftProfit(cost,sale.price*products,{tax:tax/100,setup:inputs.listingFee/100,mode,transport});
-    if(!result||result.profit-riskCost<=0)continue;
+    if(!result||(!inputs.allowLoss&&result.profit-riskCost<=0))continue;
     const upfront=cost.rawMaterials+inputs.station+transport;
     if(upfront<=0)continue;
     const stress=scenarioProfit({sale:sale.price*products,cost:cost.total,tax:tax/100,setup:inputs.listingFee/100,mode,transport,materialCost:cost.materialCost,journal:0,drop:inputs.priceStress/100,materialsRise:inputs.resourceStress/100});
