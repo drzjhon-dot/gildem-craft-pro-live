@@ -1,6 +1,6 @@
-# Verificación v8.5.0
+# Verificación v8.5.2
 
-1. `/version.json` y `/.netlify/functions/health` indican `8.5.0`.
+1. `/version.json` y `/.netlify/functions/health` indican `8.5.2`.
 2. La navegación muestra **Black Craft**, **Royal Craft** y **Level Craft**.
 3. Royal Craft conserva el selector **Royal + Black Market** y los filtros de fabricación/bono.
 4. Level Craft muestra nombres de objetos en español por familia, sin IDs técnicos. Permite elegir spec, fama exacta opcional, presupuesto, mercado y estudio opcional.

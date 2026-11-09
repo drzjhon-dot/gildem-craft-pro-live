@@ -22,9 +22,17 @@ export function historyMetrics(data,days=14,now=Date.now()){
  const prices=[...byDay.values()].flatMap(x=>x.prices);
  const mean=prices.length?prices.reduce((a,b)=>a+b,0)/prices.length:null;
  const stdev=prices.length>1?Math.sqrt(prices.reduce((a,b)=>a+(b-mean)**2,0)/prices.length):null;
+ // A single abnormal quote can distort an arithmetic average.  First reduce
+ // multiple observations within the SAME UTC day to one median, then use the
+ // median of those days. This is NOT a claim of executed sale prices.
+ const median=values=>{const a=[...values].sort((x,y)=>x-y);return a.length?a.length%2?a[(a.length-1)/2]:(a[a.length/2-1]+a[a.length/2])/2:null;};
+ const dailyMedians=[...byDay.values()].map(day=>median(day.prices)).filter(x=>x>0);
+ const medianPrice=dailyMedians.length>=4?median(dailyMedians):null;
+ const absoluteDeviation=medianPrice!==null?median(dailyMedians.map(p=>Math.abs(p-medianPrice))):null;
  const activeDays=byDay.size;
  return {days,observations:observations.length,activeDays,coverage:activeDays/days,count,observedDaily:count/days,
   volatility:mean&&stdev!=null?stdev/mean:null,avgPrice:mean,
+  medianPrice,priceDays:dailyMedians.length,priceVariation:medianPrice>0?absoluteDeviation/medianPrice:null,
   // This deliberately does not expose "sales per day" or "time to sell".
   isSalesData:false};
 }

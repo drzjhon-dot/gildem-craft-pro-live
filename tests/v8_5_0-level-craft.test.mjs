@@ -16,7 +16,7 @@ const quotes=()=>rowMap([
 ]);
 const route=(id=sword,city='Martlock',profit=100,capacity=20,observedDaily=500)=>({id,craftCity:'Lymhurst',city,profit,capitalPerUnit:900,cost:850,sell:1500,mode:city==='Black Market'?'instant':'listed',
  materials:recipe.materials.map(m=>({...m,unitPrice:50,used:m.count*.75,city:'Lymhurst'})),craftAmount:1,stationCost:0,
- activity:observedDaily===null?null:{observations:14,observedDaily},depthVerified:city==='Black Market',marketCapacity:capacity,focusPerUnit:0});
+ activity:observedDaily===null?null:{observations:14,activeDays:14,observedDaily},ageHours:.5,stressProfit:profit*.6,confidence:{score:86},depthVerified:city==='Black Market',marketCapacity:capacity,focusPerUnit:0,saleTaxPercent:0,setupRate:0,orderLevels:city==='Black Market'?[{price:1500,amount:capacity}]:undefined});
 
 test('Destiny total references distinguish weapons, armor, shoes, bags and siege',()=>{
  assert.equal(specFameTotal(sword),25758944);
@@ -50,19 +50,19 @@ test('Level Craft sells first and does not duplicate selected units across citie
  assert.equal(plan.sales.every(s=>['Martlock','Thetford'].includes(s.city)),true);
 });
 
-test('unconfirmed BM depth is allowed only one craft, never renewed in later rounds',()=>{
+test('unconfirmed BM depth is rejected, even when a positive bid quote exists',()=>{
  const b={...route(sword,'Black Market',80),depthVerified:false,marketCapacity:1};
  const plan=planLevelCraft({routes:[b],recipes,goalFame:10000,budget:20000,maxStages:12});
- assert.equal(plan.sales.reduce((s,r)=>s+r.qty,0),1);
- assert.equal(plan.stages.length,1);
+ assert.equal(plan.sales.reduce((s,r)=>s+r.qty,0),0);
+ assert.equal(plan.stages.length,0);
  assert.equal(plan.completed,false);
 });
 
 test('unobserved Royal activity cannot be treated as repeated confirmed sales',()=>{
  const a=route(sword,'Martlock',90,50,null);
  const plan=planLevelCraft({routes:[a],recipes,goalFame:20000,budget:20000,maxStages:12});
- assert.equal(plan.sales.reduce((s,r)=>s+r.qty,0),2);
- assert.equal(plan.stages.length,1);
+ assert.equal(plan.sales.reduce((s,r)=>s+r.qty,0),0);
+ assert.equal(plan.stages.length,0);
 });
 
 test('optional study consumes products and earns craft plus study fame with fee, never sells',()=>{
@@ -114,11 +114,11 @@ test('navigational tabs renamed, Royal keeps Black Market optional and Level has
 });
 
 
-test('Black Market orderbook deeper levels change realized profit for craft batches',()=>{
+test('Black Market deeper bid levels causing a loss are excluded from the craft batch',()=>{
  const b={...route(sword,'Black Market',100,2),depthVerified:true,marketCapacity:2,saleTaxPercent:0,sell:1000,
   orderLevels:[{price:1000,amount:1},{price:400,amount:1}]};
- const p=planLevelCraft({routes:[b],recipes,goalFame:1700,budget:3000,maxStages:2});
- assert.equal(p.sales[0].qty,2);
- assert.equal(p.netProfit,-400);
- assert.equal(p.stages[0].investment,1800);
+ const p=planLevelCraft({routes:[b],recipes,goalFame:1700,budget:10000,maxStages:2});
+ assert.equal(p.sales[0].qty,1);
+ assert(p.netProfit>0);
+ assert.equal(p.stages[0].investment,900);
 });
