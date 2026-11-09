@@ -288,7 +288,7 @@ function craftPage(){const c=craftPrefs;
  craftRateHelp();void refreshCraftItems();
 }
 
-const AUTO_CATEGORIES=[['armor','Armaduras','Botas, cascos y pecheras'],['weapons','Armas','Todas las líneas de armas'],['accessories','Accesorios','Capas, bolsas y secundarios'],['gathering','Recolección','Equipo de recolección · Royal'],['potions','Pociones','Alquimia · Royal'],['mounts','Monturas','Ensillado · Royal'],['foods','Comidas','Cocina · Royal'],['refining','Refinamiento','Recursos refinados · Royal']];
+const AUTO_CATEGORIES=[['armor','Armaduras','Botas, cascos y pecheras'],['weapons','Armas','Todas las líneas de armas'],['accessories','Accesorios','Capas, bolsas y secundarios'],['gathering','Recolección','Equipo, mochilas y herramientas · Royal'],['potions','Pociones','Alquimia · Royal'],['mounts','Monturas','Ensillado · Royal'],['foods','Comidas','Cocina · Royal'],['refining','Refinamiento','Recursos refinados · Royal']];
 const autoDefaults={budget:20000000,market:'mixed',goal:'balanced',focus:false,deep:false,daily:0,tierMin:4,tierMax:8,ench:4,requireBook:false,categories:AUTO_CATEGORIES.filter(x=>x[0]!=='refining').map(x=>x[0]),refineFamilies:REFINERY_CHOICES.map(x=>x.key),refineSale:'listed',refineDaily:0,refineStation:0,refineFreight:0,refineDelivery:0,branchMode:'all',branchKeys:[],itemMode:'all',itemKeys:[],tierExact:'all',enchExact:'all',refiningMode:'off',refiningFee:0,focusUnit:0};
 const autoPrefs={...autoDefaults};try{Object.assign(autoPrefs,JSON.parse(localStorage.getItem('gildem-v8-autocraft')||'{}'));}catch{}
 // El escáner también compra refinados para el crafting; refinar para vender sigue disponible como categoría independiente.
@@ -300,7 +300,7 @@ function renderAutoBranches(){const el=control('auto-branch-options');if(!el)ret
  const all=BRANCHES.filter(x=>!isAggregateBranch(x.key)&&cats.includes(categoryForBranch(x.key))&&normalized(x.label+' '+x.key).includes(term));
  el.innerHTML=all.length?all.slice(0,120).map(b=>`<label class="branch-multi-choice"><input type="checkbox" data-auto-branch value="${h(b.key)}" ${autoPrefs.branchKeys?.includes(b.key)?'checked':''}>${itemimg(b.iconId||'T4_BAG',32)}<span><strong>${h(b.label)}</strong><small>${h(categoryForBranch(b.key))}</small></span></label>`).join(''):'<p class="muted tiny">No hay ramas para los filtros elegidos. Comprueba la categoría o descarga las recetas especiales.</p>';
  const status=control('auto-branch-summary');if(status)status.textContent=`${all.length} ramas visibles · ${autoPrefs.branchMode==='selected'?(autoPrefs.branchKeys||[]).length+' seleccionadas':'todas las ramas de las categorías activas'}`;
- const help=control('auto-branch-help');if(help)help.textContent=all.length>120?'Mostrando 120; busca por nombre para localizar otras ramas.':'Las monturas y pociones nuevas aparecen aquí cuando se carga el catálogo actualizado del juego.';
+ const help=control('auto-branch-help');if(help)help.textContent=all.length>120?'Mostrando 120; busca por nombre para localizar otras ramas.':'Herramientas, monturas y pociones nuevas aparecen al cargar el catálogo del juego.';
 }
 function refreshAutoCategoryPanels(){
  const cats=readAutoCategories(),hasCraft=cats.some(x=>x!=='refining');

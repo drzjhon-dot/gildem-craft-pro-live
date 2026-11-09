@@ -21,13 +21,13 @@ async function loadCacheFile(name,force=false){const prev=await get(name);if(!fo
 // Se carga únicamente al elegir monturas / pociones / recolección. La primera vez
 // descarga el dump oficial, extrae recetas reales y guarda SOLO el resultado
 // pequeño en IndexedDB (14 días). Los datos de equipo tradicionales permanecen.
-export const SPECIAL_VERSION='special-recipes-v3-food';
+export const SPECIAL_VERSION='special-recipes-v4-tools';
 export const SPECIAL_TTL=24*3600000;
 let recipeSourceState={downloadedAt:null,sourceRevision:null,source:'No comprobada',cached:false};
 export function recipeCatalogStatus(){return {...recipeSourceState};}
 let specialPromise=null;
 function validSpecial(value){
- return value&&typeof value==='object'&&Object.keys(value).length>0&&['potion','mount','gather','food'].every(type=>Object.values(value).some(x=>x?.kind===type));
+ return value&&typeof value==='object'&&Object.keys(value).length>0&&['potion','mount','gather','food'].every(type=>Object.values(value).some(x=>x?.kind===type))&&Object.keys(value).some(id=>/^T[2-8]_2H_TOOL_(?:AXE|PICK|SICKLE|KNIFE|HAMMER|FISHINGROD|TRACKING)/.test(id));
 }
 async function remoteSpecial(onProgress,force=false){
  const url=new URL('./.netlify/functions/recipes',window.location.href);
@@ -51,7 +51,7 @@ async function browserSpecial(onProgress){
    const res=await fetch(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(45000)});
    if(!res.ok)throw Error('HTTP '+res.status);
    const dump=await res.json();
-   onProgress('Extrayendo recetas de comidas, monturas, pociones y recolección…');
+   onProgress('Extrayendo recetas de comidas, monturas, pociones, equipo y herramientas de recolección…');
    const data=extractSpecialRecipes(dump);
    if(!validSpecial(data))throw Error('El archivo no incluye suficientes recetas especiales');
    return {recipes:data,source:url,sourceRevision:null,downloadedAt:new Date().toISOString(),cached:false};
@@ -66,7 +66,7 @@ export async function loadSpecialCatalog(onProgress=()=>{},force=false){
  if(specialLoaded&&!force&&Date.now()-specialLoadedAt<SPECIAL_TTL)return Object.keys(recipes).length;
  if(specialPromise&&!force)return specialPromise;
  const perform=async()=>{
-  const latest=await get(SPECIAL_VERSION),previous=latest||await get('special-recipes-7');
+  const previous=await get(SPECIAL_VERSION);
   if(!force&&previous&&Date.now()-previous.ts<SPECIAL_TTL&&validSpecial(previous.value)){
    const storedMeta=(await get(SPECIAL_VERSION+'-metadata'))?.value;
    Object.assign(recipes,previous.value);specialLoaded=true;specialLoadedAt=Date.now();recipeSourceState={...storedMeta,cached:true,downloadedAt:storedMeta?.downloadedAt||new Date(previous.ts).toISOString(),source:storedMeta?.source||'Recetas locales',sourceRevision:storedMeta?.sourceRevision||null};

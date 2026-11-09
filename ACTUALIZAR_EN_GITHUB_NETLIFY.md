@@ -1,11 +1,13 @@
-# Actualizar Gildem Craft Pro a v8.4.1
+# Actualizar a v8.4.2 sin cambiar tu página
 
-1. Descargar y descomprimir el ZIP.
-2. Abrir el repositorio `drzjhon-dot/gildem-craft-pro-live` en GitHub Desktop.
-3. Copiar el contenido del ZIP a la carpeta clonada del repositorio, reemplazando los archivos antiguos. No eliminar `.git`.
-4. Escribir `Update UI compacta v8.4.1`, hacer **Commit to main** y **Push origin**.
-5. Comprobar en Netlify que el último deploy está **Published**.
-6. Verificar `/version.json` (8.4.1) y `/.netlify/functions/health` (`status: ok`).
-7. Actualizar la pestaña del navegador; si queda una versión previa por service worker, recargar forzadamente.
+1. Descomprime el ZIP.
+2. Abre GitHub Desktop y clona o selecciona el repositorio `drzjhon-dot/gildem-craft-pro-live`.
+3. Copia **todo el contenido** de la carpeta descomprimida a la raíz local del repositorio. Reemplaza archivos anteriores y conserva `.git`. No hace falta subir `dist` (lo compila Netlify).
+4. En GitHub Desktop: **Commit to main** y **Push origin**.
+5. Abre Netlify > Deploys, espera el estado **Published**.
+6. En `https://endearing-piroshki-ea4758.netlify.app/version.json` comprueba `8.4.2`.
+7. En `/.netlify/functions/health` comprueba `status: ok`.
+8. En Encontrar oportunidades marca Recolección y abre ramas: ahora aparecen Picos, Hachas, Cañas, etc.
+9. Si la lista de objetos aparece vacía al principio, permite que carguen las recetas especiales desde el backend y comprueba que las cotizaciones de AODP no estén caducadas.
 
-Este ZIP contiene el proyecto completo y conserva el backend, las rutas de API y la configuración de Netlify.
+Un deploy completo podría producir un pequeño intervalo sin datos de recetas mientras se crea el nuevo cache; es normal.

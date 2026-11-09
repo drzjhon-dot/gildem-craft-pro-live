@@ -1,11 +1,9 @@
-# Gildem Craft Pro v8.4.1
+# Gildem Craft Pro v8.4.2
 
-Planificador Royal y Mercado Negro para el servidor América (West). Esta entrega mantiene el motor y las funciones de v8.4.0 y compacta el selector manual de **Plan de crafting**.
+Actualización de herramientas de recolección en **Encontrar oportunidades → Recolección**.
 
-## Ejecutar pruebas y compilar
+- Descubre equipo y mochilas, además de hachas, picos, hoces, cuchillos de desollar, martillos de piedra, cañas de pescar y kits de rastreo. Incluye herramientas avalonianas cuando el catálogo del juego declara una receta válida.
+- Selecciona una profesión completa o **Herramientas · todas las especialidades**, o marca una rama precisa como **Picos**.
+- El cálculo usa recetas del dump oficial y precios observados AODP (América / West predeterminado). No inventa ganancias ni ventas.
 
-Node 22: `npm run build`. Publicar `dist/` en Netlify y mantener `netlify/functions/`.
-
-## Publicación
-
-Ver `ACTUALIZAR_EN_GITHUB_NETLIFY.md`.
+Para actualizar, lee `ACTUALIZAR_EN_GITHUB_NETLIFY.md`.

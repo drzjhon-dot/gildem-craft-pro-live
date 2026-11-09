@@ -37,11 +37,11 @@ export default async function handler(request){
  if(request.method!=='GET')return reply({error:'Método no permitido'},405);
  const now=Date.now();const refresh=new URL(request.url).searchParams.get('refresh')==='1';
  const rev=await gameRevision(fetch,refresh);
- const validCache=v=>v?.recipes&&Date.now()-Date.parse(v.updatedAt)<TTL&&(!rev?.sha||v.sourceRevision===rev.sha);
+ const validCache=v=>v?.recipes&&Object.keys(v.recipes).some(id=>/^T[2-8]_2H_TOOL_(?:AXE|PICK|SICKLE|KNIFE|HAMMER|FISHINGROD|TRACKING)/.test(id))&&Date.now()-Date.parse(v.updatedAt)<TTL&&(!rev?.sha||v.sourceRevision===rev.sha);
  if(!refresh&&validCache(memory))return reply(memory);
  const savedStore=await store();
  try{
-  if(savedStore){const saved=await savedStore.get('special-recipes-v3-food',{type:'json'});
+  if(savedStore){const saved=await savedStore.get('special-recipes-v4-tools',{type:'json'});
    if(!refresh&&validCache(saved)){memory=saved;return reply(saved);}
    if(saved?.recipes)memory=saved;
   }
@@ -51,7 +51,7 @@ export default async function handler(request){
   const fresh=await fetching;
   fresh.sourceRevision=rev?.sha||null;fresh.sourceCommitDate=rev?.date||null;
   memory=fresh;
-  try{if(savedStore)await savedStore.setJSON('special-recipes-v3-food',fresh);}catch(e){console.warn('No se pudo guardar caché:',String(e.message||e));}
+  try{if(savedStore)await savedStore.setJSON('special-recipes-v4-tools',fresh);}catch(e){console.warn('No se pudo guardar caché:',String(e.message||e));}
   return reply(fresh);
  }catch(e){
   console.error('Error cargando recetas especiales:',String(e.message||e));

@@ -59,15 +59,29 @@ export const BRANCHES=[
  {key:'weapons_all',label:'Todas las armas',city:null,test:byId(/^T[4-8]_(MAIN_|2H_)/)},
 ];
 
-// Nuevas profesiones y familias, con restricción de venta Royal cuando aplica.
-const gatheringFamily=resource=>id=>new RegExp('^T[4-8]_(?:HEAD|SHOES|ARMOR|BACKPACK)_GATHERER_'+resource+'(?:@\\d+)?$').test(id);
+// Recolección: profesiones + herramientas fabricables (normales y avalonianas).
+// Sus identificadores oficiales empiezan por 2H_TOOL_, no por TOOL_.
+// Martillo de asedio no es una herramienta para recolectar materiales.
+const gatheringTools=/^T[2-8]_2H_TOOL_(?:AXE|PICK|SICKLE|KNIFE|HAMMER|FISHINGROD|TRACKING)(?:_AVALON)?(?:@\d+)?$/;
+const gatheringTool=type=>id=>new RegExp('^T[2-8]_2H_TOOL_'+type+'(?:_AVALON)?(?:@\\d+)?$').test(id);
+const gatheringFamily=(resource,tool)=>id=>new RegExp('^T[4-8]_(?:HEAD|SHOES|ARMOR|BACKPACK)_GATHERER_'+resource+'(?:@\\d+)?$').test(id)||gatheringTool(tool)(id);
+const gatheringGearOrTool=id=>/^T[4-8]_(?:HEAD|SHOES|ARMOR|BACKPACK)_GATHERER_/.test(id)||gatheringTools.test(id);
 BRANCHES.push(
- {key:'gather_wood',label:'Leñador · equipo y mochila',city:'Caerleon',test:gatheringFamily('WOOD'),market:'royal'},
- {key:'gather_hide',label:'Desollador · equipo y mochila',city:'Caerleon',test:gatheringFamily('HIDE'),market:'royal'},
- {key:'gather_ore',label:'Minero · equipo y mochila',city:'Caerleon',test:gatheringFamily('ORE'),market:'royal'},
- {key:'gather_fiber',label:'Cosechador · equipo y mochila',city:'Caerleon',test:gatheringFamily('FIBER'),market:'royal'},
- {key:'gather_rock',label:'Cantero · equipo y mochila',city:'Caerleon',test:gatheringFamily('ROCK'),market:'royal'},
- {key:'gather_all',label:'Todo el equipo de recolección',city:'Caerleon',test:byId(/^T[4-8]_(HEAD|SHOES|ARMOR|BACKPACK)_GATHERER_/),market:'royal'},
+ {key:'gather_wood',label:'Leñador · equipo, mochila y hacha',city:'Caerleon',test:gatheringFamily('WOOD','AXE'),market:'royal'},
+ {key:'gather_hide',label:'Desollador · equipo, mochila y cuchillo',city:'Caerleon',test:gatheringFamily('HIDE','KNIFE'),market:'royal'},
+ {key:'gather_ore',label:'Minero · equipo, mochila y pico',city:'Caerleon',test:gatheringFamily('ORE','PICK'),market:'royal'},
+ {key:'gather_fiber',label:'Cosechador · equipo, mochila y hoz',city:'Caerleon',test:gatheringFamily('FIBER','SICKLE'),market:'royal'},
+ {key:'gather_rock',label:'Cantero · equipo, mochila y martillo',city:'Caerleon',test:gatheringFamily('ROCK','HAMMER'),market:'royal'},
+ {key:'gather_fish',label:'Pescador · equipo, mochila y caña',city:'Caerleon',test:gatheringFamily('FISH','FISHINGROD'),market:'royal'},
+ {key:'gather_tools',label:'Herramientas · todas las especialidades',city:'Caerleon',test:id=>gatheringTools.test(id),market:'royal'},
+ {key:'gather_tool_axe',label:'Hachas de leñador · normales y avalonianas',city:'Caerleon',test:gatheringTool('AXE'),market:'royal'},
+ {key:'gather_tool_pick',label:'Picos · normales y avalonianos',city:'Caerleon',test:gatheringTool('PICK'),market:'royal'},
+ {key:'gather_tool_sickle',label:'Hoces · normales y avalonianas',city:'Caerleon',test:gatheringTool('SICKLE'),market:'royal'},
+ {key:'gather_tool_knife',label:'Cuchillos de desollar · normales y avalonianos',city:'Caerleon',test:gatheringTool('KNIFE'),market:'royal'},
+ {key:'gather_tool_hammer',label:'Martillos de piedra · normales y avalonianos',city:'Caerleon',test:gatheringTool('HAMMER'),market:'royal'},
+ {key:'gather_tool_fishing',label:'Cañas de pescar · normales y avalonianas',city:'Caerleon',test:gatheringTool('FISHINGROD'),market:'royal'},
+ {key:'gather_tool_tracking',label:'Kits de rastreo',city:'Caerleon',test:gatheringTool('TRACKING'),market:'royal'},
+ {key:'gather_all',label:'Todo el equipo y herramientas de recolección',city:'Caerleon',test:gatheringGearOrTool,market:'royal'},
  {key:'potion_all',label:'Todas las pociones',city:'Brecilien',test:byId(/^T[2-8]_POTION_/),market:'royal'},
  {key:'potion_heal',label:'Pociones de curación',city:'Brecilien',test:byId(/^T[2-8]_POTION_HEAL(?:@|$)/),market:'royal'},
  {key:'potion_energy',label:'Pociones de energía',city:'Brecilien',test:byId(/^T[2-8]_POTION_ENERGY(?:@|$)/),market:'royal'},
@@ -118,7 +132,7 @@ export const BRANCH_CATEGORIES=[
  {key:'armor',label:'Armaduras',icon:'♜',description:'Botas, cascos y pecheras'},
  {key:'weapons',label:'Armas',icon:'⚔',description:'Todas las líneas de armas'},
  {key:'accessories',label:'Accesorios',icon:'◇',description:'Bolsas, capas y manos secundarias'},
- {key:'gathering',label:'Recolección',icon:'♧',description:'Equipos y mochilas Royal'},
+ {key:'gathering',label:'Recolección',icon:'♧',description:'Equipos, mochilas y herramientas · Royal'},
  {key:'potions',label:'Pociones',icon:'⚗',description:'Alquimia · Royal'},
  {key:'mounts',label:'Monturas',icon:'♞',description:'Ensillado · Royal'},
  {key:'foods',label:'Comidas',icon:'♨',description:'Cocina · Royal'}
@@ -150,7 +164,8 @@ const BRANCH_ICON_MAP={
  axe:'T4_MAIN_AXE',sword:'T4_MAIN_SWORD',bow:'T4_2H_BOW',crossbow:'T4_2H_CROSSBOW',dagger:'T4_MAIN_DAGGER',spear:'T4_MAIN_SPEAR',mace:'T4_MAIN_MACE',hammer:'T4_MAIN_HAMMER',quarterstaff:'T4_2H_QUARTERSTAFF',
  fire:'T4_MAIN_FIRESTAFF',ice:'T4_MAIN_FROSTSTAFF',holy:'T4_MAIN_HOLYSTAFF',nature:'T4_MAIN_NATURESTAFF',curse:'T4_MAIN_CURSEDSTAFF',arcane:'T4_MAIN_ARCANESTAFF',shapeshifter:'T4_2H_SHAPESHIFTER_SET1',gloves:'T4_2H_KNUCKLES_SET1',
  offhand:'T4_OFF_TORCH',bags:'T4_BAG',capes:'T4_CAPE',weapons_all:'T4_MAIN_AXE',
- gather_wood:'T4_ARMOR_GATHERER_WOOD',gather_hide:'T4_ARMOR_GATHERER_HIDE',gather_ore:'T4_ARMOR_GATHERER_ORE',gather_fiber:'T4_ARMOR_GATHERER_FIBER',gather_rock:'T4_ARMOR_GATHERER_ROCK',gather_all:'T4_ARMOR_GATHERER_WOOD',
+ gather_wood:'T4_ARMOR_GATHERER_WOOD',gather_hide:'T4_ARMOR_GATHERER_HIDE',gather_ore:'T4_ARMOR_GATHERER_ORE',gather_fiber:'T4_ARMOR_GATHERER_FIBER',gather_rock:'T4_ARMOR_GATHERER_ROCK',gather_fish:'T4_ARMOR_GATHERER_FISH',gather_all:'T4_ARMOR_GATHERER_WOOD',
+ gather_tools:'T4_2H_TOOL_AXE',gather_tool_axe:'T4_2H_TOOL_AXE',gather_tool_pick:'T4_2H_TOOL_PICK',gather_tool_sickle:'T4_2H_TOOL_SICKLE',gather_tool_knife:'T4_2H_TOOL_KNIFE',gather_tool_hammer:'T4_2H_TOOL_HAMMER',gather_tool_fishing:'T4_2H_TOOL_FISHINGROD',gather_tool_tracking:'T4_2H_TOOL_TRACKING',
  potion_all:'T4_POTION_HEAL',potion_heal:'T4_POTION_HEAL',potion_energy:'T4_POTION_ENERGY',potion_poison:'T4_POTION_COOLDOWN',
  potion_gigant:'T5_POTION_REVIVE',potion_resist:'T5_POTION_STONESKIN',potion_sticky:'T5_POTION_SLOWFIELD',potion_invis:'T8_POTION_CLEANSE',potion_calm:'T5_POTION_MOB_RESET',potion_cleanse:'T5_POTION_CLEANSE2',potion_acid:'T5_POTION_ACID',potion_berserk:'T6_POTION_BERSERK',potion_fire:'T6_POTION_LAVA',potion_gather:'T6_POTION_GATHER',potion_tornado:'T6_POTION_TORNADO',
  mount_all:'T4_MOUNT_HORSE',mount_horse:'T4_MOUNT_HORSE',mount_ox:'T4_MOUNT_OX',
