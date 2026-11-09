@@ -1,12 +1,17 @@
-# Comprobación de Gildem Craft Pro v8.1
+# Verificación Gildem Craft Pro v8.2.0
 
-| Ruta | Resultado esperado | Si da error |
-|---|---|---|
-| `/` | Plan de crafting y menú con Encontrar oportunidades | Comprueba **Publish directory = dist** |
-| `/version.json` | JSON que incluye `"version":"8.1.0"` | Si ves 7.4.3, el cambio no se ha publicado |
-| `/.netlify/functions/health` | JSON que incluye `"status":"ok"` | Comprueba despliegue conectado a GitHub y Functions |
-| `/.netlify/functions/recipes` | JSON de recetas (puede tardar la primera vez) | Verifica Deploy/Functions Logs y conectividad |
-| **Pociones** | 14 familias conocidas, más las añadidas por parches | Pulsa «Actualizar recetas tras parche» |
-| **Refinamiento integrado** | Materia cruda, tier anterior, ciudad bonus y detalle de materiales | Comprueba precios observados y tarifas reales |
+| Enlace | Resultado esperado |
+|---|---|
+| https://endearing-piroshki-ea4758.netlify.app/version.json | JSON con `"version": "8.2.0"` |
+| https://endearing-piroshki-ea4758.netlify.app/.netlify/functions/health | JSON con `"status": "ok"`, `"version": "8.2.0"` |
+| https://endearing-piroshki-ea4758.netlify.app/ | Tres pestañas: Plan de crafting, Encontrar oportunidades y Ajustes y datos |
 
-**No supone que todo el mercado sea en tiempo real:** los datos de AODP dependen de las capturas de jugadores y de cuándo se enviaron. No confundir actividad histórica con ventas confirmadas.
+## Pruebas funcionales
+
+- **Plan de crafting:** filtros de familias de objeto, búsqueda en español, tier y encantamiento; tarjeta de refinado visible.
+- **Encontrar oportunidades:** categorías → ramas que yo marque → objetos específicos; filtros aplicados a la selección real de recetas.
+- **Encontrar oportunidades:** refinamiento compare/forzar/apagado afectando costo y lista de materiales si hay datos verificables.
+- **Monturas:** aparecen familias detectadas del catálogo especial y no se mezclan cuando se selecciona una sola.
+- **Avisos:** sin cotizaciones suficientes, el plan no inventa un precio ni promete ventas.
+
+Si aparecen datos antiguos, comprueba primero `/version.json`. Si dice `8.2.0` pero la interfaz no, haz una recarga forzada; usa limpieza del service worker solo después de exportar respaldo de datos locales.

@@ -1,9 +1,9 @@
 {
   "name": "gildem-craft-pro",
   "private": true,
-  "version": "8.1.0",
+  "version": "8.2.0",
   "type": "module",
-  "description": "Plan de crafting con refinamiento integrado y 14 familias de pociones; escáner independiente, inventario y sincronización opcional",
+  "description": "Plan de crafting y Encontrar oportunidades: selección por rama y artículo, monturas específicas, refinamiento integrado y filtros de tiers y encantamientos",
   "scripts": {
     "start": "python3 -m http.server 8080",
     "test": "node --test tests/*.test.mjs",

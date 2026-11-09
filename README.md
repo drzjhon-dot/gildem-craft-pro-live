@@ -1,39 +1,42 @@
-# Gildem Craft Pro v8.1.0 · Royal + Black Market
+# Gildem Craft Pro v8.2.0 · Royal + Black Market
 
-Web en español diseñada para despliegue automático **GitHub → Netlify**. Por defecto utiliza **América (West)** y datos públicos AODP cuya antigüedad se comprueba en cada cotización.
+Proyecto web en español para **América (West)** publicado con **GitHub → Netlify**. Los datos comunitarios de precios (AODP) tienen antigüedad variable: comprueba siempre su fecha y verifica dentro del juego antes de invertir.
 
-## Pestañas principales
+## Navegación principal
 
-- **Plan de crafting**: selecciona una rama concreta, ciudad, Focus, presupuesto y mercado. Compara Royal y Mercado Negro, muestra tiers, cantidades, lista de compras y diario cuando corresponda.
-- **Refinar materiales antes del crafting** (dentro de Plan de crafting): comprar refinados, usar refinado propio solo si conviene, o forzarlo si hay precios. Incluye mineral→lingotes, madera→tablones, piel→cuero, fibra→tela, piedra→bloques. El refino tiene bono por ciudad (+40% de producción), retorno esperado, costo de estación y traslado.
-- **Pociones**: 14 familias conocidas, con selector en español e iconos. Detecta nuevas familias al actualizar el catálogo después de parches. Pociones, monturas, comidas y equipamiento de recolección se venden solo en Royal.
-- **Encontrar oportunidades**: escáner de múltiples ramas, en su propia pestaña, sin cambiar la configuración del planificador manual.
-- **Mi negocio**: inventario, capital libre, inversiones, registro de ventas y caja.
-- **Sincronización privada opcional**, alertas, comparación de ciudades, logística y comprobación de cambios de recetas tras parches.
+Solo hay tres entradas en la barra lateral:
 
-## Cálculo de refinado dentro del plan
+1. **Plan de crafting**: planea un lote en una rama concreta. Ahora tiene un selector de **objetos específicos** con búsqueda por nombre español, filtros de tier y encantamiento, y una tarjeta visible de **Refinamiento de materiales**.
+2. **Encontrar oportunidades**: escáner independiente que permite elegir categorías, **ramas concretas**, **objetos concretos**, tiers y encantamientos. También incorpora **Refinamiento integrado al escáner**, y un único presupuesto compartido entre las recomendaciones.
+3. **Ajustes y datos**: configuraciones avanzadas, inventario, costos de Focus y acceso opcional a datos de inversiones anteriores. Se quitaron de la barra lateral *Mis inversiones*, *Focus y specs* y *Alertas de crafting*; **no se borran los datos previamente guardados en el navegador**.
 
-Se compara el **costo neto esperado** de comprar material refinado con el de refinar comprando recursos crudos y el refinado del tier anterior. El **presupuesto inicial** reserva los materiales brutos y todos los gastos configurados, aunque el retorno se aplique al consumo económico esperado. El refinado se hace en la ciudad de especialidad correspondiente. **Se modela una etapa:** el refinado del tier previo se compra, no se produce recursivamente. El modelo no cubre refinado de piedra encantada, recetas especiales de facción o retornos redondeados por lote en el juego.
+### Monturas y pociones
 
-Para usar Focus al refinar, introduce el costo **verificado en el juego** por unidad refinada. Focus usado para craftear y para refinar se descuenta del mismo presupuesto de Focus. Un costo 0 de estación/transporte es una hipótesis gratuita, no una tarifa verificada.
+Las monturas pueden elegirse individualmente por sus familias reales de recetas de juego: el catálogo especial se carga al entrar en la categoría y agrega las familias fabricables detectadas. La búsqueda de objetos distingue monturas específicas (por ejemplo, un alce blindado frente a caballo o buey). Las pociones incluyen familias conocidas y pueden descubrir familias posteriores cuando la fuente de recetas se actualice. **Solo se incluyen recetas con materiales verificables**. Estas categorías especiales se venden en Royal, no Black Market.
 
-Los precios proceden de AODP; órdenes e historial son observaciones y **no garantizan ventas ejecutadas**. La app bloquea cotizaciones antiguas o faltantes en las rutas verificadas. Las recetas especiales se descargan de ao-bin-dumps y pueden tardar en reflejar el parche oficial.
+### Refinamiento económico
 
-## Desplegar
+Modos: comprar material refinado; comparar compra versus refinamiento propio; priorizar refinado cuando existan datos verificables. Aplica a lingotes, tablas, tela, cuero y bloques, considerando insumos sin refinar y refinado del tier anterior, ciudad, retorno estimado, tarifa de taller y capital inicial. Si se usa refinado, la lista de compras y ruta logística se adaptan a sus insumos. El modelo refina **una sola etapa** (compra el refinado del tier anterior), no garantiza retorno exacto por redondeos del juego y no estima Focus de refino sin costos introducidos y verificados explícitamente en Plan de crafting.
 
-1. Sustituye los archivos del repositorio GitHub enlazado a Netlify por los del ZIP de v8.1, conservando el directorio `.git` al usar GitHub Desktop.
-2. Haz **Commit** y **Push** a `main`. Netlify compilará automáticamente el mismo sitio.
-3. `npm run build` → publica `dist/`, y `netlify/functions/` queda como backend. Se recomienda Node 22.
-4. Comprueba `/version.json` (8.1.0) y `/.netlify/functions/health` (`status: ok`).
+Los precios de AODP, la profundidad observada y la demanda histórica no son garantía de que las órdenes sigan disponibles ni de que un producto se venda. No se debe invertir sin revisar costos del taller y transporte, y validar los precios de los mercados en el juego.
 
-Lee **ACTUALIZAR_EN_GITHUB_NETLIFY.md** para las instrucciones detalladas. Exporta respaldo de Mi negocio antes de cambiar de dominio o navegador: los datos personales locales no se migran entre dominios automáticamente.
+## Despliegue en el sitio EXISTENTE
 
-## Tests y herramientas
+- Repositorio: https://github.com/drzjhon-dot/gildem-craft-pro-live
+- Sitio: https://endearing-piroshki-ea4758.netlify.app/
+- **No crees otro sitio ni uses Netlify Drop**. Copia el contenido descomprimido de este paquete a tu clon del repositorio, conservando la carpeta oculta `.git`.
+- Haz **Commit to main → Push origin** desde GitHub Desktop. Netlify publicará automáticamente el mismo sitio.
+- Build command: `npm run build`; Publish directory: `dist`; Functions directory: `netlify/functions` (en `netlify.toml`); Node 22.
+- Comprueba `/version.json` (**8.2.0**) y `/.netlify/functions/health` (**status ok**, versión **8.2.0**). Una versión anterior significa que este paquete todavía no se publicó o está en otro proyecto/branch.
+
+Lee **ACTUALIZAR_EN_GITHUB_NETLIFY.md** para los pasos completos. Haz respaldo de los datos del navegador antes de limpiarlos o cambiar de dominio: los datos locales no se transfieren automáticamente.
+
+## Pruebas de desarrollo
 
 ```bash
-npm test
 npm run preflight
+npm test
 npm run build
 ```
 
-La compilación local y las pruebas automáticas son verificables; el acceso a AODP, el backend y el aspecto visual en la página pública deben confirmarse después del despliegue. Para sincronización privada no compartas tu clave personal: se guarda cifrada fuera del navegador únicamente si decides utilizar la función.
+Estas pruebas son locales; la interacción real con AODP y los servidores de Netlify requiere una comprobación posterior al despliegue.

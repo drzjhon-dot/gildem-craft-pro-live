@@ -3,15 +3,20 @@
 import {itemTier,itemEnch,craftCost,craftProfit,craftingReturnRate,quote} from './engine.js';
 import {specialType,blackMarketEligible} from './special-recipes.js';
 import {scenarioProfit} from './optimizer.js';
+import {itemMatches} from './item-selection.js';
+import {compareRefining} from './refining-integration.js';
 
 const mainBranch = (branches,id)=>branches.find(b=>b.test(id)&&!(/_all$/.test(b.key)||b.key==='weapons_all'))||branches.find(b=>b.test(id));
-export function selectUniversalRecipes(recipes,branches,{categories=['armor','weapons','accessories','gathering','potions','mounts','foods'],tierMin=4,tierMax=8,enchant=1,limit=240,categoryForBranch}={}){
+export function selectUniversalRecipes(recipes,branches,{categories=['armor','weapons','accessories','gathering','potions','mounts','foods'],tierMin=4,tierMax=8,enchant=1,limit=240,categoryForBranch,branchKeys=null,itemFilter=null}={}){
  const offered=new Map();const seen=new Set();
  for(const [id,rec] of Object.entries(recipes||{})){
   if(!rec?.materials?.length||!rec.city)continue;
   const tier=itemTier(id),ench=itemEnch(id);
   if(tier<tierMin||tier>tierMax||ench>enchant)continue;
-  const b=mainBranch(branches,id);if(!b)continue;
+  if(itemFilter&&!itemMatches(id,itemFilter))continue;
+  const eligibleBranches=branches.filter(b=>b.test(id)&&categories.includes(categoryForBranch(b.key))&&(!branchKeys||branchKeys.includes(b.key)));
+  const b=eligibleBranches.find(b=>!(/_all$/.test(b.key)||b.key==='weapons_all'))||eligibleBranches[0];
+  if(!b)continue;
   const category=categoryForBranch(b.key);if(!categories.includes(category))continue;
   let lane=offered.get(b.key);if(!lane){lane=[];offered.set(b.key,lane);}
   lane.push(id);seen.add(id);
@@ -40,18 +45,26 @@ export function createUniversalCandidates({selected,recipes,priceMap,inputs,prof
   const craftCities=noSpecial?inputs.cities:[r.city];
   let best=null;
   for(const craftCity of craftCities){
-   const finder=materialId=>{let b=null;for(const city of inputs.cities){const q=quote(priceMap,materialId,city,side,maxAge);if(!q)continue;
+   const marketFinder=(materialId,targetCity)=>{let b=null;for(const city of inputs.cities){const q=quote(priceMap,materialId,city,side,maxAge);if(!q)continue;
     const fee=inputs.buyMode==='order'?(inputs.listingFee/100):0;
-    const shipping=city===craftCity?0:inputs.materialShipping;
+    const shipping=city===targetCity?0:inputs.materialShipping;
     const rate=q.price*(1+fee)+shipping;
     if(!b||rate<b.price)b={...q,price:rate,originalPrice:q.price,shippingPerUnit:shipping,city};
    }return b;};
+   const finder=materialId=>{const direct=marketFinder(materialId,craftCity);
+    if(!inputs.refiningMode||inputs.refiningMode==='off')return direct;
+    const compared=compareRefining({id:materialId,craftCity,buyRefined:direct,findMarket:marketFinder,
+      mode:inputs.refiningMode,stationFee:inputs.refiningFee||0,transferFee:inputs.materialShipping||0,
+      focus:!!inputs.refiningFocus,focusPerRefine:inputs.refiningFocusUnit||0,dailyBonus:inputs.refiningDaily||0});
+    return compared.source?{...compared.source,refinementComparison:compared.comparison}:null;
+   };
    const specialty=!noSpecial&&r.city===craftCity;
    const bonus=r.dailyEnabled===false?0:inputs.daily;
    const returnRate=craftingReturnRate({specialty,dailyBonus:bonus,focus:inputs.focus}).returnRate;
    const without=craftingReturnRate({specialty,dailyBonus:bonus,focus:false}).returnRate;
    const cost=craftCost(r,finder,returnRate,inputs.station);
    if(!cost){missing.material++;continue;}
+   const refiningFocusCost=cost.materials.reduce((sum,m)=>sum+m.count*(m.refining?.focusPerRefine||0),0);
    const focusGain=inputs.focus?cost.materials.reduce((sum,m)=>sum+(m.ret?m.count*m.unitPrice*(returnRate-without)/100:0),0):0;
    for(const dest of targets){if(dest==='Black Market'&&!blackMarketEligible(id))continue;
     const mode=dest==='Black Market'?'instant':inputs.saleMode;
@@ -69,7 +82,7 @@ export function createUniversalCandidates({selected,recipes,priceMap,inputs,prof
     const age=Math.max(sale.ageHours,...cost.materials.map(m=>m.at?(Date.now()-m.at)/3600000:0));
     const candidate={id,itemName:nameOf(id),branch,craftCity,city:dest,mode,sell:sale.price,profit:result.profit-riskCost,cost:result.cost+riskCost,capitalPerUnit:upfront,roi:100*(result.profit-riskCost)/(result.cost+riskCost),
      returnRate,materials:cost.materials,rawMaterials:cost.rawMaterials,at:sale.at,ageHours:age,activity:null,confidence:null,personalLearning:experience.get(id+'|'+dest)||null,
-     focusPerUnit,focusGain,stressProfit:stress.stressed-riskCost,taxRate:tax/100,saleTaxPercent:tax,craftAmount:products,recipeKind:kind||'equipo',setupRate:mode==='listed'?inputs.listingFee/100:0,transportCost:transport,transportRiskPct:lost,expectedRiskCost:riskCost,stationCost:inputs.station,buyMode:inputs.buyMode,buySetup:inputs.listingFee/100,qualityMode:'normal',qualityWeights:[100,0,0,0,0],journal:null,journalBonus:0};
+     focusPerUnit:focusPerUnit+refiningFocusCost,focusGain,stressProfit:stress.stressed-riskCost,taxRate:tax/100,saleTaxPercent:tax,craftAmount:products,recipeKind:kind||'equipo',setupRate:mode==='listed'?inputs.listingFee/100:0,transportCost:transport,transportRiskPct:lost,expectedRiskCost:riskCost,stationCost:inputs.station,buyMode:inputs.buyMode,buySetup:inputs.listingFee/100,qualityMode:'normal',qualityWeights:[100,0,0,0,0],journal:null,journalBonus:0};
     // Retain one production location for the same item and destination; prevent double counting market depth.
     const key=id+'|'+dest+'|'+mode;const score=candidate.profit;
     if(!best)best=new Map();

@@ -1,16 +1,16 @@
-# Gildem Craft Pro v8.1 · Cómo actualizar
+# Gildem Craft Pro v8.2.0 · Empieza aquí
 
-Esta versión se instala sobre el sitio y repositorio que ya tienes funcionando. **No crees otro proyecto en Netlify.**
+Este ZIP **actualiza el sitio existente**, no crea un sitio nuevo.
 
-- Proyecto de GitHub: https://github.com/drzjhon-dot/gildem-craft-pro-live
-- Sitio publicado: https://endearing-piroshki-ea4758.netlify.app/
-- Lee primero **ACTUALIZAR_EN_GITHUB_NETLIFY.md**. Contiene las instrucciones con GitHub Desktop, Commit y Push.
+- **GitHub:** https://github.com/drzjhon-dot/gildem-craft-pro-live
+- **Netlify:** https://endearing-piroshki-ea4758.netlify.app/
+- **Guía:** abre `ACTUALIZAR_EN_GITHUB_NETLIFY.md`.
 
-La nueva v8.1 contiene la pestaña **Encontrar oportunidades** independiente, compras y refinamiento de materiales integrado en **Plan de crafting**, 14 familias de pociones, manejo de inventario y sincronización cifrada opcional.
+Novedades importantes:
 
-Comprueba después de desplegar:
-1. `https://endearing-piroshki-ea4758.netlify.app/version.json` → `"version":"8.1.0"`.
-2. `https://endearing-piroshki-ea4758.netlify.app/.netlify/functions/health` → `"status":"ok"`.
-3. En Plan de crafting, prueba **Pociones → Tornados en botella** y **Refinar materiales → Comparar y refinar si ahorra silver**.
+- Menú reducido a **Plan de crafting**, **Encontrar oportunidades** y **Ajustes y datos**.
+- Selector de **objetos concretos** en las dos pestañas, con monturas específicas, tier y encantamiento.
+- Selección **por ramas** dentro de Encontrar oportunidades.
+- Refinamiento visible en **ambas pestañas**, con materiales de compras y costos de presupuesto incorporados en la decisión.
 
-Recuerda introducir costo de estación y transporte reales. En un plan rentable, los precios y la capacidad de compra deben confirmarse en el juego antes de invertir.
+**Primero publica el ZIP mediante GitHub y confirma que `/version.json` devuelva `8.2.0`.** Si sigue mostrando la anterior, no estás viendo este código aún. Las pruebas locales no verifican el mercado en tiempo real.

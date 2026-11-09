@@ -98,10 +98,11 @@ BRANCHES.push(
  {key:'food_avalon',label:'Comidas avalonianas',city:'Caerleon',test:byId(/^T[1-8]_MEAL_.*_AVALON(?:@|$)/),market:'royal'}
 );
 export function branchByKey(key){return BRANCHES.find(b=>b.key===key)||BRANCHES[0];}
-export function recipesForBranch(recipes,key,minTier=4,maxTier=7,maxEnchant=1,limit=110,city='auto'){
+export function recipesForBranch(recipes,key,minTier=4,maxTier=7,maxEnchant=1,limit=110,city='auto',itemFilter=null){
   const b=branchByKey(key);
   const ids=Object.keys(recipes).filter(id=>{
     const m=id.match(/^T([1-8])_/);if(!m||!b.test(id))return false;
+    if(itemFilter&&!itemFilter(id))return false;
     const tier=Number(m[1]),ench=Number(id.split('@')[1]||0);
     return tier>=minTier&&tier<=maxTier&&ench<=maxEnchant&&recipes[id]?.materials?.length&&!!recipes[id]?.city&&(city==='auto'||recipes[id].city===city);
   });
@@ -179,4 +180,24 @@ export function registerPotionFamilies(catalogRecipes={},spanishNames={}){
   BRANCHES.push(branch);covered.push(branch);added++;
  }
  return added;
+}
+
+// Genera ramas de monturas a partir de recetas REALES del dump.
+// No incluye skins, monturas no fabricables ni inventa recetas.
+export function registerMountFamilies(catalogRecipes={},spanishNames={}){
+ const known=new Set(BRANCHES.map(b=>b.key));let count=0;
+ const stems=new Map();
+ for(const [id,rec] of Object.entries(catalogRecipes)){
+  const m=id.match(/^T[3-8]_MOUNT_([A-Z0-9_]+?)(?:@\d+)?$/);
+  if(!m||!rec?.materials?.length||!rec?.city||/(?:_SKIN|_UNIQUE)/.test(m[1]))continue;
+  const stem=m[1];if(!stems.has(stem)||id.startsWith('T4_'))stems.set(stem,id);
+ }
+ for(const [stem,id] of stems){
+  if(stem==='HORSE'||stem==='OX')continue; // Ya existen subramas estáticas para estas familias.
+  const key='mount_auto_'+stem.toLowerCase();if(known.has(key))continue;
+  const label=spanishNames[id]||spanishNames[id.split('@')[0]]||stem.replaceAll('_',' ');
+  const test=byId(new RegExp('^T[3-8]_MOUNT_'+stem+'(?:@\\d+)?$'));
+  BRANCHES.push({key,label:'Monturas · '+label,city:null,test,market:'royal',iconId:id.split('@')[0]});
+  known.add(key);count++;
+ }return count;
 }
