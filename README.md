@@ -1,42 +1,37 @@
-# Gildem Craft Pro v8.2.0 · Royal + Black Market
+# Gildem Craft Pro v8.3.0
 
-Proyecto web en español para **América (West)** publicado con **GitHub → Netlify**. Los datos comunitarios de precios (AODP) tienen antigüedad variable: comprueba siempre su fecha y verifica dentro del juego antes de invertir.
+Planificador económico de Albion Online, concebido para el servidor **América (West)** y ejecutado en **GitHub + Netlify**.
 
-## Navegación principal
+## Las dos herramientas principales
 
-Solo hay tres entradas en la barra lateral:
+### Plan de crafting · Mercado Negro
 
-1. **Plan de crafting**: planea un lote en una rama concreta. Ahora tiene un selector de **objetos específicos** con búsqueda por nombre español, filtros de tier y encantamiento, y una tarjeta visible de **Refinamiento de materiales**.
-2. **Encontrar oportunidades**: escáner independiente que permite elegir categorías, **ramas concretas**, **objetos concretos**, tiers y encantamientos. También incorpora **Refinamiento integrado al escáner**, y un único presupuesto compartido entre las recomendaciones.
-3. **Ajustes y datos**: configuraciones avanzadas, inventario, costos de Focus y acceso opcional a datos de inversiones anteriores. Se quitaron de la barra lateral *Mis inversiones*, *Focus y specs* y *Alertas de crafting*; **no se borran los datos previamente guardados en el navegador**.
+- Ramas específicas de **Armas, Armaduras y Accesorios**. No muestra botones «Todas las botas/cascos/pecheras/armas».
+- Filtra objetos, tiers, encantamientos, ciudades de fabricación y venta. El destino inicial recomendado es Mercado Negro, pero permite Royal cuando se elige manualmente.
+- Calcula materiales, retorno, Focus según perfil, diarios cuando proceda, presupuesto bruto, margen, límites conservadores y lista de compras.
+- **Refinamiento de insumos** opcional: comparar compra directa con producir materiales refinados antes de fabricar el objeto.
 
-### Monturas y pociones
+### Encontrar oportunidades
 
-Las monturas pueden elegirse individualmente por sus familias reales de recetas de juego: el catálogo especial se carga al entrar en la categoría y agrega las familias fabricables detectadas. La búsqueda de objetos distingue monturas específicas (por ejemplo, un alce blindado frente a caballo o buey). Las pociones incluyen familias conocidas y pueden descubrir familias posteriores cuando la fuente de recetas se actualice. **Solo se incluyen recetas con materiales verificables**. Estas categorías especiales se venden en Royal, no Black Market.
+- Comparación entre ramas de armas, armaduras, accesorios, recolección, pociones, monturas y comidas.
+- **Refinamiento como negocio**: lingotes, tablones, cuero, tela y bloques. Puedes activar esta categoría en exclusiva o combinarla con las anteriores. Solo vende en Royal.
+- Precios observados de AODP, materiales y costos con fecha. Una cartera comparte el mismo presupuesto entre todas las rutas elegidas.
+- El refinamiento de insumos y la inversión en refinado para venta son **dos conceptos separados** y tienen controles diferenciados.
+- Los filtros que elijas se respetan; no se completan con objetos ajenos.
 
-### Refinamiento económico
+## Despliegue
 
-Modos: comprar material refinado; comparar compra versus refinamiento propio; priorizar refinado cuando existan datos verificables. Aplica a lingotes, tablas, tela, cuero y bloques, considerando insumos sin refinar y refinado del tier anterior, ciudad, retorno estimado, tarifa de taller y capital inicial. Si se usa refinado, la lista de compras y ruta logística se adaptan a sus insumos. El modelo refina **una sola etapa** (compra el refinado del tier anterior), no garantiza retorno exacto por redondeos del juego y no estima Focus de refino sin costos introducidos y verificados explícitamente en Plan de crafting.
+- GitHub repo existente: `drzjhon-dot/gildem-craft-pro-live`.
+- Netlify: `https://endearing-piroshki-ea4758.netlify.app/`.
+- Node 22; `npm run build` construye el directorio `dist/` y ejecuta los tests.
+- `dist/` es la carpeta pública, `netlify/functions` contiene el backend.
+- `npm run preflight` valida ficheros y configuración de Netlify.
+- `@netlify/blobs: 11.1.7` y `@netlify/otel: 7.0.6` (override) están fijados por compatibilidad con el despliegue anterior.
 
-Los precios de AODP, la profundidad observada y la demanda histórica no son garantía de que las órdenes sigan disponibles ni de que un producto se venda. No se debe invertir sin revisar costos del taller y transporte, y validar los precios de los mercados en el juego.
+Consulta **`ACTUALIZAR_EN_GITHUB_NETLIFY.md`** para sustituir la versión anterior sin crear otro sitio ni cambiar tu URL.
 
-## Despliegue en el sitio EXISTENTE
+## Fuentes, costos y seguridad
 
-- Repositorio: https://github.com/drzjhon-dot/gildem-craft-pro-live
-- Sitio: https://endearing-piroshki-ea4758.netlify.app/
-- **No crees otro sitio ni uses Netlify Drop**. Copia el contenido descomprimido de este paquete a tu clon del repositorio, conservando la carpeta oculta `.git`.
-- Haz **Commit to main → Push origin** desde GitHub Desktop. Netlify publicará automáticamente el mismo sitio.
-- Build command: `npm run build`; Publish directory: `dist`; Functions directory: `netlify/functions` (en `netlify.toml`); Node 22.
-- Comprueba `/version.json` (**8.2.0**) y `/.netlify/functions/health` (**status ok**, versión **8.2.0**). Una versión anterior significa que este paquete todavía no se publicó o está en otro proyecto/branch.
+AODP observa precios, órdenes e historial aportado por terceros. No representa compras o ventas garantizadas y no confirma las órdenes del Mercado Negro en tiempo real. Muestra la antigüedad de las cotizaciones y aplica topes cuando la actividad es insuficiente. Verifica los precios en Albion antes de invertir. La estación, costos de transporte, impuestos y bonos deben concordar con el juego. El catálogo de recetas se obtiene de fuentes públicas con fecha; tras cada parche comprueba las revisiones.
 
-Lee **ACTUALIZAR_EN_GITHUB_NETLIFY.md** para los pasos completos. Haz respaldo de los datos del navegador antes de limpiarlos o cambiar de dominio: los datos locales no se transfieren automáticamente.
-
-## Pruebas de desarrollo
-
-```bash
-npm run preflight
-npm test
-npm run build
-```
-
-Estas pruebas son locales; la interacción real con AODP y los servidores de Netlify requiere una comprobación posterior al despliegue.
+El almacenamiento de datos personales es local por defecto y el sistema de sincronización cifrada es opcional. No es necesaria una cuenta personal para las dos herramientas principales.

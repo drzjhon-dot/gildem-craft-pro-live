@@ -30,7 +30,7 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  const capFraction=opts.capFraction??.1,unknownCap=opts.unknownCap??2,goal=opts.goal||'balanced';
  const minConfidence=opts.minimumConfidence||0,exposureLimit=opts.useAll?Infinity:budgetValue*(opts.maxPerItemFraction??.30);
  if(!(budgetValue>0)||focusLimit<0)return {rows:[],capital:budgetValue,totalCost:0,totalNetCost:0,totalProfit:0,focusUsed:0,remaining:budgetValue};
- const valid=(candidates||[]).filter(x=>x?.id&&x?.city&&f(x.profit)>0&&f(x.capitalPerUnit)>0&&f(x.cost)>0&&f(x.confidence?.score)>=minConfidence&&(!Number.isFinite(focusLimit)||f(x.focusPerUnit)>0));
+ const valid=(candidates||[]).filter(x=>x?.id&&x?.city&&f(x.profit)>0&&f(x.capitalPerUnit)>0&&f(x.cost)>0&&f(x.confidence?.score)>=minConfidence);
  // Un mismo mercado y objeto no puede consumir DOS veces el mismo libro de órdenes
  // al comparar ciudades de fabricación alternativas.
  const byRoute=new Map();for(const x of valid){const key=x.id+'|'+x.city+'|'+x.mode;
@@ -51,7 +51,7 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
   const maxFor=x=>{
    const previous=quantities.get(x)||0;
    const capitalRoom=Math.floor((budgetValue-spent+1e-8)/x.capitalPerUnit);
-   const focRoom=Number.isFinite(focusLimit)?Math.floor((focusLimit-focus+1e-8)/x.focusPerUnit):Infinity;
+   const focRoom=Number.isFinite(focusLimit)&&f(x.focusPerUnit)>0?Math.floor((focusLimit-focus+1e-8)/x.focusPerUnit):Infinity;
    const itemRoom=Number.isFinite(exposureLimit)?Math.floor((exposureLimit-(byItem.get(x.id)||0)+1e-8)/x.capitalPerUnit):Infinity;
    const routeRoom=capacityFor(x,capFraction,unknownCap)-previous;
    return Math.max(0,Math.min(routeRoom,capitalRoom,focRoom,itemRoom));

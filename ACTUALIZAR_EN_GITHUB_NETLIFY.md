@@ -1,33 +1,33 @@
-# Actualizar Gildem Craft Pro a v8.2.0 sin cambiar la URL
+# Cómo publicar v8.3 sin perder tu página
 
-**Página actual:** https://endearing-piroshki-ea4758.netlify.app/  
-**Repositorio GitHub:** https://github.com/drzjhon-dot/gildem-craft-pro-live
+**No necesitas otra URL.** Tu sitio actual es:
 
-No crees un repositorio nuevo ni otro sitio en Netlify. El ZIP es **código fuente para GitHub**, no un paquete de Netlify Drop.
+- Repositorio: https://github.com/drzjhon-dot/gildem-craft-pro-live
+- Página Netlify: https://endearing-piroshki-ea4758.netlify.app/
 
-## Método recomendado: GitHub Desktop
+## Recomendado: GitHub Desktop
 
-1. Descarga y descomprime `Gildem_Craft_Pro_v8_2_GITHUB_NETLIFY.zip` en tu computadora.
-2. Abre **GitHub Desktop** (https://desktop.github.com/). Usa **File → Clone repository** si no tienes el repositorio clonado y selecciona `drzjhon-dot/gildem-craft-pro-live`.
-3. En GitHub Desktop, usa **Repository → Show in Finder/Explorer** para abrir la carpeta clonada.
-4. Copia **los archivos y subcarpetas DENTRO del ZIP descomprimido** a esa carpeta del repositorio. Debes reemplazar `app.js`, `index.html`, `styles.css`, `sw.js`, `package.json`, carpetas `core`, `netlify`, `scripts` y `tests`, y los archivos de documentación. **No copies el ZIP como archivo único, y no coloques una carpeta anidada llamada `Gildem_Craft_Pro_v8_2`.** No borres la carpeta oculta `.git`.
-5. Confirma que en la **raíz** del repositorio estén `package.json`, `index.html`, `netlify.toml` y las carpetas `core`, `netlify`, `scripts`, `tests`.
-6. GitHub Desktop mostrará los cambios. Escribe `Gildem Craft Pro v8.2: filtros y refinamiento` → **Commit to main** → **Push origin**.
-7. En https://app.netlify.com/ abre el proyecto existente `endearing-piroshki-ea4758`, pestaña **Deploys**, y comprueba que el despliegue del último commit quede como **Published**.
+1. Descarga `Gildem_Craft_Pro_v8_3_GITHUB_NETLIFY.zip` y **descomprímelo**.
+2. Abre [GitHub Desktop](https://desktop.github.com/) y selecciona el repositorio `drzjhon-dot/gildem-craft-pro-live`. Si aún no lo tienes en tu equipo, usa `File → Clone repository`.
+3. En GitHub Desktop, utiliza `Repository → Show in Explorer`. Verás la carpeta local del repositorio.
+4. Copia **el contenido** de la carpeta descomprimida de v8.3 dentro de esa carpeta. Confirma **Reemplazar archivos** cuando te lo pida. Copia `app.js`, `styles.css`, `index.html`, `package.json`, `netlify.toml`, las carpetas `core`, `netlify`, `scripts`, `icons` y `tests` y los demás archivos de la raíz. **No borres `.git`.** No subas solo `dist/` ni un ZIP cerrado.
+5. Revisa los cambios en GitHub Desktop. Escribe `Update Gildem Craft Pro v8.3` y haz clic en **Commit to main**.
+6. Haz clic en **Push origin**. GitHub enviará los archivos a la rama `main`.
+7. En [Netlify](https://app.netlify.com/) abre el sitio que ya tienes, entra a **Deploys** y observa la nueva compilación hasta que indique **Published**.
 
-Netlify utiliza `npm run build`, publica `dist` y despliega las funciones de `netlify/functions`. La rama de producción debe ser `main` y Node.js 22. No necesitas arrastrar archivos a Netlify ni ejecutar `npm install` manualmente.
+## Ajustes que deben conservarse en Netlify
 
-## Comprobación de la actualización
+- Build command: `npm run build`
+- Publish directory: `dist`
+- Functions directory: `netlify/functions` (definido en `netlify.toml`)
+- Node.js: `22`
+- Base directory: vacío
 
-1. Abre https://endearing-piroshki-ea4758.netlify.app/version.json y confirma que diga **`"version": "8.2.0"`**.
-2. Abre https://endearing-piroshki-ea4758.netlify.app/.netlify/functions/health y confirma **`"status": "ok"`** y versión **8.2.0**.
-3. Recarga la página con `Ctrl+Shift+R` (Windows) o `Cmd+Shift+R` (Mac). En el menú solo debe aparecer **Plan de crafting**, **Encontrar oportunidades**, **Ajustes y datos**.
-4. En **Plan de crafting**, selecciona una rama y busca **Elegir objetos específicos** y **Refinamiento de materiales**. Elige algunas variantes y genera un plan.
-5. En **Encontrar oportunidades**, selecciona categorías y **Solo las ramas que yo marque**. Marca ramas, luego cambia **Elegir objetos específicos → Solo los objetos que yo marque**, ajusta tiers/encantamientos, activa el refinamiento y ejecuta el escáner.
-6. Prueba **Monturas** y confirma que aparecen tipos específicos cuando se cargan las recetas del servidor. Si no aparecen, revisa `/.netlify/functions/recipes`.
+## Verificación
 
-Si `/version.json` sigue siendo una versión antigua, **Netlify no ha publicado la v8.2 en esa URL**. Comprueba que estás editando el repo y rama correctos, y mira el Deploy log.
+- https://endearing-piroshki-ea4758.netlify.app/version.json → `"version": "8.3.0"`
+- https://endearing-piroshki-ea4758.netlify.app/.netlify/functions/health → `"status": "ok"` y `"functions": true`
+- En la pantalla principal, Plan de crafting ya no debe mostrar Recolección, Pociones, Monturas, Comidas ni los botones genéricos «Todas las…».
+- En Encontrar oportunidades, la categoría Refinamiento abre un segundo panel para elegir los cinco recursos.
 
-**Datos personales:** si guardaste inversiones o inventario en el navegador, exporta un respaldo antes de borrar cookies, almacenamiento de sitio o service workers. Cambiar de dominio tampoco transfiere localStorage automáticamente.
-
-**Si el deploy falla**, ve a **Deploys → Deploy log**, copia las líneas del primer error y compártelas. No cambies versiones de dependencias por valores no publicados.
+Si ves la versión anterior a pesar de Published: recarga con `Ctrl + Shift + R`, cierra y vuelve a abrir la pestaña y revisa `/version.json` para distinguir un caché antiguo de un deploy incorrecto.

@@ -1,17 +1,13 @@
-# Verificación Gildem Craft Pro v8.2.0
+# Pruebas prácticas después de publicar v8.3
 
-| Enlace | Resultado esperado |
-|---|---|
-| https://endearing-piroshki-ea4758.netlify.app/version.json | JSON con `"version": "8.2.0"` |
-| https://endearing-piroshki-ea4758.netlify.app/.netlify/functions/health | JSON con `"status": "ok"`, `"version": "8.2.0"` |
-| https://endearing-piroshki-ea4758.netlify.app/ | Tres pestañas: Plan de crafting, Encontrar oportunidades y Ajustes y datos |
+1. **Versión**: `/version.json` = `8.3.0`.
+2. **Backend**: `/.netlify/functions/health` devuelve `status: ok`.
+3. **Plan de crafting**: aparecen únicamente Armaduras, Armas y Accesorios. Al seleccionar Armaduras aparecen Botas de placas, Zapatos de tela, Zapatos de cuero, etc., pero **no** «Todas las botas y zapatos», «Todos los cascos y capuchas» ni «Todas las pecheras».
+4. **Encontrar oportunidades**: aparecen ocho categorías legibles, con icono, título y subtítulo completos. Los nombres no deben truncarse.
+5. **Refinar para vender**: marca solo `Refinamiento`; marca `Lingotes`, tier T5 a T5, encantamiento .0, destino `Solo Royal`, venta por orden. Introduce tu tarifa de estación y transporte. Ejecuta el escáner.
+6. **Lista de compras del refinado**: si los precios recientes permiten recomendar T5 lingotes, debe mostrar T5 mineral y lingotes T4 (tier anterior), no pedir el lingote T5 terminado como compra adicional. La inversión bruta debe cubrir todos los insumos.
+7. **Combinado**: selecciona `Armaduras` y `Refinamiento` en Royal + Mercado Negro, con el presupuesto que elijas. La suma de rutas no debe superar el capital, aunque ambas secciones tengan márgenes positivos.
+8. **Mercado Negro exclusivo**: si eliges solo Refinamiento y solo Mercado Negro, la app debe pedirte cambiar el destino. Si hay otras categorías además, el refinamiento se omite con una explicación.
+9. **Calidad del dato**: confirma siempre la fecha de los precios, la tasa de retorno, la tarifa de estaciones y el costo de transportar. AODP puede no tener cotizaciones recientes; no fabriques usando precios ausentes o históricos como si fueran en vivo.
 
-## Pruebas funcionales
-
-- **Plan de crafting:** filtros de familias de objeto, búsqueda en español, tier y encantamiento; tarjeta de refinado visible.
-- **Encontrar oportunidades:** categorías → ramas que yo marque → objetos específicos; filtros aplicados a la selección real de recetas.
-- **Encontrar oportunidades:** refinamiento compare/forzar/apagado afectando costo y lista de materiales si hay datos verificables.
-- **Monturas:** aparecen familias detectadas del catálogo especial y no se mezclan cuando se selecciona una sola.
-- **Avisos:** sin cotizaciones suficientes, el plan no inventa un precio ni promete ventas.
-
-Si aparecen datos antiguos, comprueba primero `/version.json`. Si dice `8.2.0` pero la interfaz no, haz una recarga forzada; usa limpieza del service worker solo después de exportar respaldo de datos locales.
+Este documento es un **procedimiento manual**. Las pruebas automáticas no equivalen a una comprobación visual y de precios en el sitio en producción.

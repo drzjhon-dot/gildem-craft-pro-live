@@ -1,9 +1,9 @@
 {
   "name": "gildem-craft-pro",
   "private": true,
-  "version": "8.2.0",
+  "version": "8.3.0",
   "type": "module",
-  "description": "Plan de crafting y Encontrar oportunidades: selección por rama y artículo, monturas específicas, refinamiento integrado y filtros de tiers y encantamientos",
+  "description": "Plan de crafting especializado en Mercado Negro; Encontrar oportunidades con refinamiento como inversión, selector legible y categorías Royal",
   "scripts": {
     "start": "python3 -m http.server 8080",
     "test": "node --test tests/*.test.mjs",

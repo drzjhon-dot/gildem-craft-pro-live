@@ -35,7 +35,7 @@ export function verifyPlannedPrices(rows,priceRows,{budget,focusLimit=null,maxAg
    }
    const q=quote(map,m.id,m.city,side,maxAgeHours);
    if(!q){blockers.push(`${r.id}: falta precio reciente de ${m.id} en ${m.city}`);stale=true;break;}
-   const shipping=m.city!==r.craftCity?materialShipping:0;
+   const shipping=r.recipeKind==='refining'?(Number(m.shippingPerUnit)||0):(m.city!==r.craftCity?materialShipping:0);
    const effective=q.price*(1+(r.buyMode==='order'?finite(r.buySetup):0))+shipping;
    const updated={...m,unitPrice:effective,used:netUse,at:q.at,returned:m.count-netUse,cost:netUse*effective};
    materials.push(updated);netMaterials+=updated.cost;grossMaterials+=updated.count*effective;
