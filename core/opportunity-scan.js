@@ -43,7 +43,10 @@ export function createUniversalCandidates({selected,recipes,priceMap,inputs,prof
   if(inputs.focus&&focusPerUnit<=0){missing.focus++;continue;}
   // Royal only products cannot be sold at BM, regardless of user selection.
   if(inputs.market==='black'&&!blackMarketEligible(id))continue;
-  const craftCities=noSpecial?inputs.cities:[r.city];
+  const craftCities=inputs.city==='compare'
+   ?(noSpecial?inputs.cities:[...new Set([r.city,'Caerleon'])])
+   :inputs.city&&inputs.city!=='auto'?[inputs.city]
+   :(noSpecial?inputs.cities:[r.city]);
   let best=null;
   for(const craftCity of craftCities){
    const marketFinder=(materialId,targetCity)=>{let b=null;for(const city of materialPurchaseCities(materialId,inputs.materialPurchase||'all',inputs.cities)){const q=quote(priceMap,materialId,city,side,maxAge);if(!q)continue;

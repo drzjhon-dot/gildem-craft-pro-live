@@ -1,22 +1,21 @@
-# Gildem Craft Pro v8.4.5
+# Gildem Craft Pro v8.4.6
 
-**Corrección de categorías: Manos secundarias, Kits y Asedio.**
+Herramienta de crafting para **Albion Online, servidor América/West**, preparada para GitHub + Netlify. Conserva Plan de crafting para Mercado Negro y Encontrar oportunidades para Royal, Black Market y refinamiento.
 
-Esta versión conserva los cálculos de crafting y el HUD compacto, pero corrige los filtros que impedían que algunas categorías aparecieran o cargaran sus recetas.
+## Cambios v8.4.6
 
-## Categorías del Plan de crafting
+- **Iconos para todos los objetos:** primera fuente común en la función Netlify `item-image`, con caché HTTP/CDN y fuentes alternativas. No almacena una selección limitada de imágenes durante el build. En una primera consulta dependemos de la red y de los proveedores de iconos; ninguna CDN garantiza carga instantánea.
+- Selector de objetos específicos con nombres de familia en español, sin el engañoso sufijo `4.4` ni ID técnico debajo.
+- Resultado más sencillo, sin paneles de rotación/silver por día, economía del lote, inventario/desembolso y logística.
+- **Encontrar oportunidades → ¿Dónde fabricar?**: especialidad de cada objeto, comparar Caerleon o seleccionar ciudad concreta. La ciudad de bono solo otorga retorno extra a las recetas cuya especialidad realmente coincide.
 
-- **Armaduras**: botas, cascos, pecheras.
-- **Armas**: líneas de armas del juego.
-- **Accesorios**: solamente bolsas y capas.
-- **Manos secundarias**: escudos, antorchas, libros, orbes y otros secundarios (`T*_OFF_*`).
-- **Kits**: kits de rastreo (`T3–T8_2H_TOOL_TRACKING`). **Solo Royal.**
-- **Asedio**: martillos normales/avalonianos y estandartes (`T*_2H_TOOL_SIEGEHAMMER`, `T*_2H_TOOL_SIEGEHAMMER_AVALON`, `T*_SIEGE_BANNER`). **Solo Royal.**
+## Publicación
 
-## Encontrar oportunidades
+1. Usa Node.js 22.
+2. Conecta el repositorio a Netlify, con `npm run build`, directorio `dist`, funciones en `netlify/functions` y base vacía.
+3. **No subas `dist/` a GitHub**: Netlify lo genera durante el despliegue.
+4. Revisa `/version.json` y `/.netlify/functions/health` en tu dominio tras publicar.
 
-Las categorías **Manos secundarias, Kits y Asedio** también están separadas y disponibles en el explorador. El filtro `Recolección` ya no absorbe kits de rastreo y el filtro `Armas` no arrastra los martillos de asedio.
+Para pruebas locales ejecuta `npm test`, `npm run preflight` y `npm run build`.
 
-Las recetas de Kits y Asedio proceden del dump oficial de objetos cuando existen sus `craftingrequirements`; el motor consulta después precios observados por AODP. No se inventan recetas, precios ni demanda.
-
-**Para actualizar:** lee `ACTUALIZAR_EN_GITHUB_NETLIFY.md`.
+La app consume observaciones de precios AODP fechadas. Las cotizaciones y órdenes observadas no garantizan demanda o ventas efectivas.

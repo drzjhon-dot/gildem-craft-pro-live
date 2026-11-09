@@ -1,14 +1,11 @@
-# Lista de comprobación después de instalar 8.4.5
+# Comprobar actualización v8.4.6
 
-- [ ] `version.json` en la URL pública indica `8.4.5`.
-- [ ] `/.netlify/functions/health` indica `"status":"ok"` y versión `8.4.5`.
-- [ ] En Plan de crafting hay 6 categorías visibles: Armaduras, Armas, Accesorios, Manos secundarias, Kits, Asedio.
-- [ ] Accesorios muestra solo Bolsas y Capas, no Manos secundarias.
-- [ ] Manos secundarias muestra su subrama y puede filtrar escudos/antorchas en T4–T8.
-- [ ] Kits muestra Kits de rastreo y venta Royal.
-- [ ] Asedio muestra **Martillos de asedio** (incluye avalonianos) y **Estandartes de asedio**, con venta Royal.
-- [ ] En Encontrar oportunidades aparecen las 3 categorías nuevas, se puede seleccionar únicamente Kits y las recetas cargan.
-- [ ] Al seleccionar solo Asedio no aparecen hachas de leñador, kits de rastreo ni armas normales.
-- [ ] El plan de crafting y el escáner muestran beneficios solo cuando se recibieron cotizaciones AODP recientes suficientes.
+- `/version.json` indica `8.4.6`.
+- `/.netlify/functions/health` responde con `status: ok`, `functions: true` y versión `8.4.6`.
+- En ambas pestañas, **Elegir objetos específicos** muestra nombres sin `.4.4` fijo ni códigos internos en subtítulos.
+- En **Encontrar oportunidades**, `¿Dónde fabricar?` ofrece bono por receta, comparación con Caerleon y ciudades concretas.
+- Tras generar un plan ya no aparecen los cuatro paneles eliminados, pero sí la lista de compras y la verificación bajo demanda.
+- Prueba un icono, por ejemplo `/.netlify/functions/item-image?id=T4_BAG&size=96`: debería devolver una imagen si algún proveedor está accesible. En una segunda visita, el header `Cache-Status` puede mostrar un acierto CDN, según región y caché activa.
+- Un `404` del icono indica que no se pudo obtener de los proveedores; no significa que los precios hayan fallado.
 
-Este listado es una verificación práctica posterior al despliegue. Las pruebas automáticas no equivalen a confirmar ventas reales en los mercados.
+**Criterio:** no invertir silver basándose únicamente en pruebas locales: valida precios, tarifas y órdenes recientes dentro del juego.

@@ -11,9 +11,9 @@ const headers={get:key=>key==='content-type'?'image/png':'0'};
 test('v7.3 iconos usan CDN externo verificado, proxy, render oficial y respaldo local',()=>{
  const sources=iconSources('T4_BAG',84);
  assert.equal(sources.length,4);
- assert.match(sources[0],/^https:\/\/cdn\.albionfreemarket\.com\/item\/T4_BAG\.png/);
- assert.match(sources[1],/^\.\/\.netlify\/functions\/item-image/);
- assert.match(sources[2],/^https:\/\/render\.albiononline\.com\/v1\/item\//);
+ assert.match(sources[0],/^\.\/\.netlify\/functions\/item-image/);
+ assert.match(sources[1],/^https:\/\/render\.albiononline\.com\/v1\/item\//);
+ assert.match(sources[2],/^https:\/\/cdn\.albionfreemarket\.com\/item\//);
  assert.equal(sources[3],FALLBACK_ICON);
 });
 test('v7.3 icono local precede las fuentes externas cuando compilado en Netlify',()=>{
@@ -26,7 +26,7 @@ test('v7.3 protege IDs de ítems y tamaños, sin URLs externas arbitrarias',()=>
  assert.equal(validIconId('T4_BAG@1'),true);
  assert.equal(validIconId('https://example.com/mal.png'),false);
  assert.deepEqual(iconSources('../evil',84),[FALLBACK_ICON]);
- assert.match(iconSources('T4_BAG',9999)[0],/size=217/);
+ assert.match(iconSources('T4_BAG',9999)[0],/size=192/);
 });
 test('v7.3 fallback avanza sin cambiar el ID del objeto',()=>{
  const first=nextIconSource('T4_BAG@1',90,0);

@@ -354,3 +354,6 @@
   #craft-form .branch-choice {flex-basis:calc((100% - 6px)/2);width:calc((100% - 6px)/2)}
   #craft-form .branch-group strong {font-size:10px}
 }
+
+/* Keep the optional price re-check invisible until it has a result. */
+#preflight-results:empty{display:none}
