@@ -1,0 +1,38 @@
+/* Gildem Craft Pro v8.5.4. UI compacta en Black Craft y Royal Craft solamente. */
+.qc-form{display:grid;gap:18px;padding:18px;max-width:1320px}
+.qc-form .qc-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 10px}
+.qc-form .qc-title h3{font-size:1rem;margin:0;font-weight:800;letter-spacing:.01em}
+.qc-form .qc-title p,.qc-small{font-size:.76rem;color:var(--muted,#91a0b6);line-height:1.5;margin:4px 0 0}
+.qc-form .qc-count,.qc-automatic{font-size:.72rem;font-weight:700;color:var(--muted,#9baec4);white-space:nowrap}
+.qc-form .qc-branch,.qc-form .qc-items,.qc-form .qc-config{background:rgba(13,24,41,.3);border:1px solid rgba(155,175,210,.15);border-radius:15px;padding:16px}
+.qc-category-tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.qc-category,.qc-branch-choice{color:inherit;border:1px solid rgba(145,168,199,.20);background:rgba(21,34,52,.8);display:inline-flex;gap:7px;align-items:center;cursor:pointer;border-radius:9px;padding:7px 11px;font:inherit;font-size:.79rem;min-height:40px}
+.qc-category.active,.qc-branch-choice.selected{background:rgba(188,148,72,.16);border-color:rgba(224,184,91,.75);color:#f1d39b}
+.qc-category .item-icon,.qc-branch-choice .item-icon{flex-shrink:0;object-fit:contain}
+.qc-branches{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:7px;max-height:210px;overflow:auto;padding:2px}
+.qc-branch-choice{width:100%;text-align:left}
+.qc-branch-check,.qc-item{display:flex;align-items:center;gap:9px;cursor:pointer;border:1px solid rgba(145,168,199,.2);border-radius:9px;padding:8px;font-size:.78rem;background:rgba(20,34,53,.5);min-height:48px}
+.qc-branch-check:has(input:checked),.qc-item:has(input:checked){background:rgba(100,155,127,.10);border-color:rgba(112,179,146,.45)}
+.qc-form input[type=checkbox]{accent-color:#e0b764;width:16px;height:16px;flex-shrink:0;cursor:pointer}
+.qc-branch-check .item-icon,.qc-item .item-icon{flex-shrink:0}
+.qc-items-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:7px;max-height:248px;overflow:auto;padding:1px}
+.qc-all{white-space:nowrap}
+.qc-settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.qc-field{background:rgba(20,32,48,.60);border-radius:12px;padding:12px;border:1px solid rgba(140,164,195,.12);min-width:0}
+.qc-field h4{font-size:.78rem;color:#bfcede;font-weight:700;margin:0 0 9px}
+.qc-field small{display:block;color:var(--muted,#93a7be);font-size:.69rem;margin-top:6px}
+.qc-full{grid-column:1/-1}
+.qc-options{display:flex;gap:6px;flex-wrap:wrap}
+.qc-option{cursor:pointer;min-width:52px;user-select:none}
+.qc-option input{position:absolute;opacity:0;pointer-events:none}
+.qc-option span{display:block;text-align:center;border:1px solid rgba(143,163,195,.3);border-radius:8px;background:rgba(14,27,43,.8);padding:8px 10px;font-size:.78rem;transition:.15s ease}
+.qc-option input:checked+span{color:#f6d99d;border-color:#cba156;background:rgba(214,167,80,.18);font-weight:800}
+.qc-option input:focus-visible+span{outline:2px solid #e2b768;outline-offset:2px}
+.qc-toggle{display:flex;gap:9px;align-items:center;font-size:.83rem;cursor:pointer;color:#e8edf6}
+.qc-bottom-note{font-size:.76rem;color:var(--muted,#9eb2c7);display:flex;gap:18px;flex-wrap:wrap;border-top:1px solid rgba(150,170,200,.13);padding:12px 2px 2px}
+.qc-bottom-note strong{color:#eecb8a}
+.qc-return{display:inline-flex;align-items:center;flex-wrap:wrap;gap:5px}
+.qc-return strong{color:#e5c887}.qc-return span{font-size:.71rem}
+.qc-form .craft-submit{display:flex;justify-content:flex-start;margin:0}.qc-form .craft-main-submit{width:auto;min-width:265px}
+@media(max-width:800px){.qc-settings-grid{grid-template-columns:1fr}.qc-branches{grid-template-columns:repeat(2,minmax(0,1fr))}.qc-items-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:510px){.qc-form{padding:12px;gap:12px}.qc-form .qc-branch,.qc-form .qc-items,.qc-form .qc-config{padding:11px}.qc-category-tabs{gap:5px}.qc-category{font-size:.7rem;padding:5px 7px}.qc-branches,.qc-items-grid{grid-template-columns:1fr 1fr}.qc-branch-choice,.qc-branch-check,.qc-item{font-size:.73rem;min-width:0;padding:6px}.qc-item .item-icon{width:28px;height:28px}.qc-form .craft-main-submit{width:100%;min-width:0}.qc-form .qc-title{align-items:start}}

@@ -1,0 +1,17 @@
+function autoPage(){qcAutoBranchInit();
+ main.innerHTML=`${blockTitle('Royal Craft','Busca oportunidades en los mercados Royal, sin mezclar ventas del Mercado Negro. Selecciona una rama, sus objetos y las opciones esenciales.')}
+ <form id="auto-form" class="panel qc-form">
+ ${qcRoyalBranchPicker()}
+ ${itemPickerHtml('auto')}
+ ${qcControls('auto')}
+ <input type="hidden" id="auto-goal" value="balanced">
+ <input type="hidden" id="auto-focus-unit" value="${Number(autoPrefs.focusUnit)||0}">
+ <input type="hidden" id="auto-deep" value="wide">
+ <input type="hidden" id="auto-max-cities" value="${h(autoPrefs.maxCraftCities||'1')}">
+ <input type="hidden" id="auto-branch-mode" value="selected">
+ <div class="qc-bottom-note">Destino fijo: <strong>Mercados Royal</strong>. Se comparan sus ciudades y se descuentan costos e impuestos conocidos.</div>
+ <div class="craft-submit"><button class="btn gold craft-main-submit" type="submit" ${state.autoRunning?'disabled':''}>Generar mi plan Royal Craft</button></div>
+ </form>
+ <div id="auto-results" style="margin-top:18px">${state.autoPlan?autoResults(state.autoPlan):empty('Tu plan Royal aparecerá aquí','La herramienta buscará oportunidades dentro de la rama seleccionada.')}</div>`;
+ qcSync('auto');void refreshAutoPickers();
+}

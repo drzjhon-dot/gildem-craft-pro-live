@@ -1,0 +1,32 @@
+// Royal Craft: solo una rama a la vez, nunca una búsqueda en categorías completas.
+let autoBranchCategory='armor';
+function qcAutoBranchInit(){
+ // Migración única del selector antiguo (categorías múltiples) al modo de una rama.
+ if(autoPrefs.compactUiVersion!=='8.5.4'){autoPrefs.itemMode='all';autoPrefs.itemKeys=[];autoPrefs.compactUiVersion='8.5.4';saveAutoSelections();}
+ const existing=(autoPrefs.branchKeys||[])[0];
+ const valid=BRANCHES.some(b=>b.key===existing&&!isAggregateBranch(b.key)&&categoryForBranch(b.key)!=='refining');
+ const selected=valid?existing:(BRANCHES.find(b=>b.key==='boots_plate')||BRANCHES.find(b=>!isAggregateBranch(b.key)&&categoryForBranch(b.key)!=='refining'))?.key;
+ if(!selected)return;
+ autoBranchCategory=categoryForBranch(selected);
+ autoPrefs.branchMode='selected';autoPrefs.branchKeys=[selected];autoPrefs.categories=[autoBranchCategory];autoPrefs.market='royal';
+}
+function renderAutoBranches(){const el=control('auto-branch-options');if(!el)return;
+ qcAutoBranchInit();
+ const all=BRANCHES.filter(b=>!isAggregateBranch(b.key)&&categoryForBranch(b.key)===autoBranchCategory);
+ const selected=autoPrefs.branchKeys[0];
+ el.innerHTML=all.map(b=>`<label class="qc-branch-check"><input type="checkbox" data-auto-branch value="${h(b.key)}" ${selected===b.key?'checked':''}>${itemimg(b.iconId||'T4_BAG',30,true)}<span>${h(b.label)}</span></label>`).join('')||'<span class="qc-small">No hay ramas en esta categoría.</span>';
+ document.querySelectorAll('[data-auto-group]').forEach(x=>x.classList.toggle('active',x.dataset.autoGroup===autoBranchCategory));
+ const help=control('auto-branch-help');if(help)help.textContent='Una rama individual por plan. Puedes marcar sus objetos abajo.';
+}
+function qcChooseAutoBranch(key){const b=BRANCHES.find(x=>x.key===key&&!isAggregateBranch(x.key));if(!b)return;
+ autoPrefs.branchMode='selected';autoPrefs.branchKeys=[key];autoPrefs.categories=[categoryForBranch(key)];autoBranchCategory=categoryForBranch(key);
+ autoPrefs.itemMode='all';autoPrefs.itemKeys=[];saveAutoSelections();
+ renderAutoBranches();renderItemChoices('auto');qcSync('auto');void refreshAutoPickers();
+}
+function qcChooseAutoGroup(group){
+ const first=BRANCHES.find(b=>categoryForBranch(b.key)===group&&!isAggregateBranch(b.key));
+ if(first)qcChooseAutoBranch(first.key);
+}
+function qcRoyalBranchPicker(){qcAutoBranchInit();
+ return `<section class="qc-branch"><div class="qc-title"><h3>1. Elige una rama</h3><span class="qc-count">Solo una rama por plan</span></div><div class="qc-category-tabs">${AUTO_CATEGORIES.filter(x=>x[0]!=='refining').map(([key,label])=>{const g=BRANCH_CATEGORIES.find(x=>x.key===key);return `<button type="button" class="qc-category ${autoBranchCategory===key?'active':''}" data-auto-group="${h(key)}">${itemimg(g?.iconId||'T4_BAG',27,true)}<span>${h(label)}</span></button>`;}).join('')}</div><div id="auto-branch-options" class="qc-branches"></div><p class="qc-small" id="auto-branch-help"></p></section>`;
+}

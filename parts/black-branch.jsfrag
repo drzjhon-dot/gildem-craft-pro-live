@@ -1,0 +1,16 @@
+// Categoría -> una rama individual, sin búsqueda de texto.
+function branchPicker(){
+ const selected=branchByKey(craftPrefs.branch);
+ return `<section class="qc-branch"><div class="qc-title"><h3>1. Elige una rama</h3><span class="qc-count">Individual</span></div><input id="craft-branch" type="hidden" value="${h(selected.key)}"><div class="qc-category-tabs">${BRANCH_CATEGORIES.filter(g=>BM_CATEGORIES.includes(g.key)).map(g=>`<button type="button" class="qc-category ${branchCategory===g.key?'active':''}" data-branch-group="${h(g.key)}">${itemimg(g.iconId||'T4_BAG',29,true)}<span>${h(g.label)}</span></button>`).join('')}</div><div class="qc-branches" id="craft-branch-options">${branchOptions()}</div><div id="craft-branch-selected" class="qc-small">Rama: <strong>${h(selected.label)}</strong></div></section>`;
+}
+function branchOptions(){return manualBranches(branchCategory).map(b=>`<button type="button" class="qc-branch-choice ${val('craft-branch',craftPrefs.branch)===b.key?'selected':''}" data-branch-choice="${h(b.key)}">${itemimg(b.iconId||'T4_BAG',32,true)}<span>${h(b.label)}</span></button>`).join('')||'<p class="qc-small">No hay ramas en esta categoría.</p>';}
+function chooseBranch(key){const b=branchByKey(key);if(!isManualBranch(key)||b.key!==key)return;
+ control('craft-branch').value=key;branchCategory=categoryForBranch(key);
+ document.querySelectorAll('[data-branch-group]').forEach(el=>el.classList.toggle('active',el.dataset.branchGroup===branchCategory));
+ const options=control('craft-branch-options');if(options)options.innerHTML=branchOptions();
+ const selected=control('craft-branch-selected');if(selected)selected.innerHTML=`Rama: <strong>${h(b.label)}</strong>`;
+ saveCraftPrefs({branch:key,market:'black'});qcSync('craft');void refreshCraftItems();
+}
+function changeBranchGroup(group){if(!BM_CATEGORIES.includes(group))return;
+ branchCategory=group;const first=manualBranches(group)[0];if(first)chooseBranch(first.key);
+}

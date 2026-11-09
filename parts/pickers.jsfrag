@@ -1,0 +1,24 @@
+// Un único control "Todos los objetos". Desmarcar una tarjeta genera una selección parcial.
+function itemPickerHtml(prefix){const all=prefix==='craft'?craftItemChoice(val('craft-branch',craftPrefs.branch)).mode!=='selected':autoPrefs.itemMode!=='selected';
+ return `<section class="qc-items"><div class="qc-title"><div><h3>Objetos de esta rama</h3><p>Marca los que quieras analizar.</p></div><label class="qc-toggle qc-all"><input type="checkbox" data-qc-all="${prefix}" ${all?'checked':''}><span>Todos los objetos</span></label></div><div id="${prefix}-item-options" class="qc-items-grid"><p class="muted tiny">Cargando objetos de la rama…</p></div><p class="qc-small" id="${prefix}-item-help"></p><span class="qc-count" id="${prefix}-item-total"></span></section>`;
+}
+function renderItemChoices(prefix){const el=control(prefix+'-item-options');if(!el)return;
+ const key=prefix==='craft'?val('craft-branch',craftPrefs.branch):(autoPrefs.branchKeys||[])[0];
+ const branch=branchByKey(key||'boots_plate');
+ const ids=Object.keys(recipes).filter(id=>branch.test(id)&&recipes[id]?.materials?.length&&recipes[id]?.city);
+ const families=familyChoices(ids,itemName),selected=prefix==='craft'?craftItemChoice(key):{mode:autoPrefs.itemMode||'all',stems:autoPrefs.itemKeys||[]};
+ el.innerHTML=families.length?families.map(x=>`<label class="qc-item"><input type="checkbox" data-pick-item="${prefix}" value="${h(x.stem)}" ${selected.mode!=='selected'||selected.stems.includes(x.stem)?'checked':''}>${itemimg(x.iconId,34)}<span>${h(x.label)}</span></label>`).join(''):'<p class="muted tiny">No hay recetas verificadas en esta rama. Revisa la conexión del catálogo.</p>';
+ const all=control(prefix+'-item-options')?.querySelectorAll('input[data-pick-item]').length||0;
+ const chosen=[...el.querySelectorAll('input[data-pick-item]:checked')].length;
+ const allSwitch=document.querySelector(`[data-qc-all="${prefix}"]`);if(allSwitch)allSwitch.checked=all>0&&all===chosen;
+ const total=control(prefix+'-item-total');if(total)total.textContent=`${chosen} de ${all} objetos seleccionados`;
+ const help=control(prefix+'-item-help');if(help)help.textContent=!chosen?'Selecciona al menos un objeto para generar un plan.':'Los tiers y encantamientos se filtrarán al calcular, no necesitas elegir cada variante.';
+}
+function qcSaveObjectChecks(prefix){
+ const el=control(prefix+'-item-options');if(!el)return;
+ const options=[...el.querySelectorAll('input[data-pick-item]')];const stems=options.filter(x=>x.checked).map(x=>x.value);
+ const all=options.length>0&&stems.length===options.length;
+ if(prefix==='craft')saveCraftItemChoice(val('craft-branch',craftPrefs.branch),{mode:all?'all':'selected',stems});
+ else{autoPrefs.itemMode=all?'all':'selected';autoPrefs.itemKeys=stems;saveAutoSelections();}
+ renderItemChoices(prefix);
+}

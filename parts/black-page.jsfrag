@@ -1,0 +1,12 @@
+function craftPage(){const c=craftPrefs;
+ main.innerHTML=`${blockTitle('Black Craft','Un solo destino: Mercado Negro de Caerleon. Elige tu rama y las casillas esenciales; el motor revisa profit, costos y liquidez.')}
+ <form id="craft-form" class="panel qc-form">
+ ${branchPicker()}
+ ${itemPickerHtml('craft')}
+ ${qcControls('craft')}
+ <div class="qc-bottom-note"><span id="craft-rate-preview" class="qc-return"></span><span>Venta automática: <strong>Mercado Negro</strong>. La rentabilidad se verifica antes de recomendar.</span></div>
+ <div class="craft-submit"><button class="btn gold craft-main-submit" type="submit">Generar mi plan Black Craft</button></div>
+ </form>
+ <div id="craft-results" style="margin-top:18px">${state.plan?craftResult(state.plan):empty('Tu plan aparecerá aquí','Objetos, cantidades, costos, diarios y lista de compras según las condiciones del mercado.')}</div>`;
+ qcSync('craft');void refreshCraftItems();
+}
