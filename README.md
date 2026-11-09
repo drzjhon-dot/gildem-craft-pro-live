@@ -1,4 +1,4 @@
-# Gildem Craft Pro v8.4.4
+# Gildem Craft Pro v8.4.5
 
 **Corrección de categorías: Manos secundarias, Kits y Asedio.**
 

@@ -37,6 +37,6 @@ if(prefetch){
  }
  await Promise.all(Array.from({length:Math.min(8,ids.length)},()=>worker()));
 }
-await writeFile(join(OUTPUT,'version.json'),JSON.stringify({app:'Gildem Craft Pro',version:'8.4.4',build:'github-netlify',api:'west / AODP',publishedAt:new Date().toISOString()},null,2)+'\n');
+await writeFile(join(OUTPUT,'version.json'),JSON.stringify({app:'Gildem Craft Pro',version:'8.4.5',build:'github-netlify',api:'west / AODP',publishedAt:new Date().toISOString()},null,2)+'\n');
 await writeFile(join(OUTPUT,'core/icon-manifest.js'),`export const LOCALLY_CACHED_ICONS = new Set(${JSON.stringify(stored)});\n`);
 console.log(`Gildem Craft Pro: dist/ preparado. Iconos locales del selector: ${stored.length}. Fuentes en vivo con respaldo automático.`);

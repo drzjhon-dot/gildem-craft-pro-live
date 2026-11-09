@@ -128,8 +128,8 @@ try{Object.assign(craftPrefs,JSON.parse(localStorage.getItem('gildem-craft-simpl
 // v8.4: no interpretar preferencias antiguas como permiso para refinar insumos del crafting.
 craftPrefs.refiningMode='off'; craftPrefs.refiningFocus=false; craftPrefs.ench=4; if(craftPrefs.buy==='all')craftPrefs.buy='bonus';
 // Los filtros antiguos permanecen guardados, pero el plan manual ya no muestra ramas Royal-only ni agregados.
-// Kits y asedio se pueden elegir aquí, pero utilizan mercados Royal.
-const BM_CATEGORIES=['armor','weapons','accessories','offhands','kits','siege'];
+// Plan de crafting manual: solo categorías pensadas para Mercado Negro.
+const BM_CATEGORIES=['armor','weapons','accessories','offhands'];
 const isAggregateBranch=key=>key==='weapons_all'||key.endsWith('_all');
 const isManualBranch=key=>BM_CATEGORIES.includes(categoryForBranch(key))&&!isAggregateBranch(key);
 if(!isManualBranch(craftPrefs.branch)){craftPrefs.branch='boots_plate';craftPrefs.market='black';}
@@ -223,9 +223,9 @@ function craftRateHelp(){
  const use=control('craft-invest-preview');if(use)use.textContent=val('craft-invest','all')==='all'?'Intentaremos asignar todo el presupuesto sin fabricar objetos con pérdida ni ignorar la liquidez.':'Reservaremos capital y aplicaremos límites más conservadores por objeto y mercado.';
 }
 function craftPage(){const c=craftPrefs;
- main.innerHTML=`${blockTitle('Plan de crafting · Mercado Negro','Elige armas, armaduras, accesorios, manos secundarias, kits o asedio; el destino se adapta a la categoría.',`<button class="btn sm" data-action="advanced">✧ Sincronizar diarios</button>`)}
+ main.innerHTML=`${blockTitle('Plan de crafting · Mercado Negro','Elige armas, armaduras, accesorios y manos secundarias para crear un plan centrado en el Mercado Negro.',`<button class="btn sm" data-action="advanced">✧ Sincronizar diarios</button>`)}
  <form id="craft-form" class="panel craft-wizard">
- <div class="craft-step"><span class="craft-step-num">1</span><div><h3>Elige tu rama para el Mercado Negro</h3><p>Armas, armaduras, accesorios y secundarios para el Mercado Negro. Kits y asedio para Royal. Más productos en «Encontrar oportunidades».</p></div></div>
+ <div class="craft-step"><span class="craft-step-num">1</span><div><h3>Elige tu rama para el Mercado Negro</h3><p>Armas, armaduras, accesorios y manos secundarias. Para kits, asedio, recolección, pociones, monturas, comidas y refinamiento utiliza «Encontrar oportunidades».</p></div></div>
  <div class="form-grid craft-step-fields">
  ${branchPicker()}
  <div class="craft-filter-row" role="group" aria-label="Filtros de fabricación: ciudad, tiers y encantamiento">

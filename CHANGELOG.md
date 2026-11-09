@@ -1,4 +1,4 @@
-# v8.4.4 · Categorías de crafting completas
+# v8.4.5 · Categorías de crafting completas
 
 - Manos secundarias separadas de Accesorios en **ambas pestañas**.
 - Kits de rastreo disponibles como categoría propia tanto en Plan de crafting como en Encontrar oportunidades.

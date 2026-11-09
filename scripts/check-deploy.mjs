@@ -8,7 +8,7 @@ const must=['package.json','netlify.toml','index.html','app.js','styles.css',
 'netlify/functions/hourly-prices.mjs','netlify/functions/snapshot.mjs'];
 for(const path of must)await access(join(process.cwd(),path));
 const pkg=JSON.parse(await readFile('package.json','utf8'));
-assert.equal(pkg.version,'8.4.4');
+assert.equal(pkg.version,'8.4.5');
 const health=await readFile('netlify/functions/health.mjs','utf8');
 assert.ok(health.includes("version:'"+pkg.version+"'"),'La función health tiene una versión distinta al package.json');
 assert.equal(pkg.dependencies['@netlify/blobs'],'11.1.7');

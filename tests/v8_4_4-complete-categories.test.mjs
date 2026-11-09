@@ -81,11 +81,11 @@ test('v8.4.4: planes de asedio y kits pasan por cálculo económico Royal',()=>{
  }
 });
 
-test('v8.4.4: ambos selectores y carga de recetas incluyen kits y asedio',()=>{
+test('v8.4.5: kits y asedio solo aparecen en Encontrar oportunidades, no en Plan BM',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  const catalog=readFileSync(new URL('../core/catalog.js',import.meta.url),'utf8');
  const backend=readFileSync(new URL('../netlify/functions/recipes.mjs',import.meta.url),'utf8');
- assert(app.includes("const BM_CATEGORIES=['armor','weapons','accessories','offhands','kits','siege']"));
+ assert(app.includes("const BM_CATEGORIES=['armor','weapons','accessories','offhands']"));
  assert(app.includes("['kits','Kits'"));
  assert(app.includes("['siege','Asedio'"));
  assert.equal((app.match(/\['gathering','potions','mounts','foods','kits','siege'\]\.includes\(x\)/g)||[]).length,2);

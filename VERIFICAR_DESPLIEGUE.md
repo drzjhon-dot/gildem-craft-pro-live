@@ -1,7 +1,7 @@
-# Lista de comprobación después de instalar 8.4.4
+# Lista de comprobación después de instalar 8.4.5
 
-- [ ] `version.json` en la URL pública indica `8.4.4`.
-- [ ] `/.netlify/functions/health` indica `"status":"ok"` y versión `8.4.4`.
+- [ ] `version.json` en la URL pública indica `8.4.5`.
+- [ ] `/.netlify/functions/health` indica `"status":"ok"` y versión `8.4.5`.
 - [ ] En Plan de crafting hay 6 categorías visibles: Armaduras, Armas, Accesorios, Manos secundarias, Kits, Asedio.
 - [ ] Accesorios muestra solo Bolsas y Capas, no Manos secundarias.
 - [ ] Manos secundarias muestra su subrama y puede filtrar escudos/antorchas en T4–T8.
