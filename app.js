@@ -227,10 +227,12 @@ function craftPage(){const c=craftPrefs;
  <div class="craft-step"><span class="craft-step-num">1</span><div><h3>Elige tu rama para el Mercado Negro</h3><p>Solo armas, armaduras y accesorios. Para pociones, monturas, comidas, recolección y refinamiento utiliza «Encontrar oportunidades».</p></div></div>
  <div class="form-grid craft-step-fields">
  ${branchPicker()}
+ <div class="craft-filter-row" role="group" aria-label="Filtros de fabricación: ciudad, tiers y encantamiento">
  ${selectField('¿Dónde fabricar?','craft-city',[['auto','En ciudad de bono de cada objeto'],['compare',categoryForBranch(c.branch)==='foods'?'Comparar Caerleon con Bridgewatch':'Comparar bono vs fabricar en Caerleon'],...CITIES.map(x=>[x,x])],c.city,'span6')}
  ${selectField('Tier inicial','craft-tiermin',[1,2,3,4,5,6,7,8].map(x=>[x,'T'+x]),c.tierMin,'span3')}
  ${selectField('Tier final','craft-tiermax',[1,2,3,4,5,6,7,8].map(x=>[x,'T'+x]),c.tierMax,'span3')}
- ${selectField('Solo este encantamiento','craft-ench-exact',[['all','Todos los encantamientos (.0 a .4)'],...Array.from({length:5},(_,n)=>[String(n),'.'+n+' exacto'])],c.enchExact,'span4')}
+ ${selectField('Solo este encantamiento','craft-ench-exact',[['all','Todos (.0 a .4)'],...Array.from({length:5},(_,n)=>[String(n),'.'+n+' exacto'])],c.enchExact,'span4')}
+ </div>
  <div class="field span12">${itemPickerHtml('craft')}</div>
  </div>
  <div class="craft-market-note">◈ Los materiales refinados se compran listos para fabricar. Lingotes: Thetford · Tablones: Fort Sterling · Tela: Lymhurst · Cuero: Martlock · Bloques: Bridgewatch. La ciudad de bono no garantiza el precio más bajo; puedes cambiar dónde comprar en Opciones avanzadas.</div>
@@ -334,7 +336,7 @@ function autoPage(){
  </div><div class="panel choice-filters"><div class="form-grid">
   ${selectField('Tier inicial','auto-tiermin',[1,2,3,4,5,6,7,8].map(t=>[t,'T'+t]),autoPrefs.tierMin,'span3')}
   ${selectField('Tier final','auto-tiermax',[1,2,3,4,5,6,7,8].map(t=>[t,'T'+t]),autoPrefs.tierMax,'span3')}
-  ${selectField('Solo este encantamiento','auto-ench-exact',[['all','Todos los encantamientos (.0 a .4)'],...Array.from({length:5},(_,n)=>[String(n),'.'+n+' exacto'])],autoPrefs.enchExact,'span6')}
+  ${selectField('Solo este encantamiento','auto-ench-exact',[['all','Todos (.0 a .4)'],...Array.from({length:5},(_,n)=>[String(n),'.'+n+' exacto'])],autoPrefs.enchExact,'span6')}
   </div></div><details class="craft-advanced"><summary>⚙ Filtros extra (opcional)</summary><div class="form-grid" style="margin-top:14px">
   <div class="field span12"><label class="checkbox-row"><input type="checkbox" id="auto-require-book" ${autoPrefs.requireBook?'checked':''}> Exigir profundidad de órdenes observadas para BM (puede eliminar todas las oportunidades BM)</label></div>
  </div></details>
