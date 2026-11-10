@@ -26,7 +26,7 @@ test('v6 no duplica libros de orden al comparar ciudades de fabricación',()=>{
  const a=allocatePortfolioV6([x,{...x,craftCity:'Caerleon',profit:500}],1e7,{useAll:true,unknownCap:4,capFraction:1});
  assert.equal(a.rows.length,1);assert.equal(a.rows[0].qty,3);
 });
-test('v8.6.0 admite un craft prudente de venta lenta, y BM instant requiere libro comprobado',()=>{
+test('v8.6.1 admite un craft prudente de venta lenta, y BM instant requiere libro comprobado',()=>{
  assert.equal(capacityFor(candidate({activity:{observations:8,observedDaily:0.1},city:'Lymhurst',mode:'listed'}),.1,2),1);
  assert.equal(capacityFor(candidate({activity:null,city:'Black Market',mode:'instant'}),.1,2),0);
 });

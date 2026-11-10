@@ -1,6 +1,7 @@
 // Hourly request cache while open and across reloads. Age of OBSERVATIONS checked separately.
 export const HOUR=3600000;
-const prefixes={west:'https://west.albion-online-data.com',europe:'https://europe.albion-online-data.com',east:'https://east.albion-online-data.com'};
+import {REGION,requireWest,AODP_WEST} from './server-policy.js';
+const prefixes={west:AODP_WEST};
 const inflight=new Map();
 const prefix='gildem-aodp-v2:';
 let lastCall=0;
@@ -11,7 +12,7 @@ function storageSet(k,v){try{localStorage.setItem(prefix+k,JSON.stringify(v));}c
   try{Object.keys(localStorage).filter(s=>s.startsWith(prefix)).slice(0,15).forEach(s=>localStorage.removeItem(s));localStorage.setItem(prefix+k,JSON.stringify(v));}catch{} }
 }
 function split(ids){const groups=[];let cur=[];for(const id of [...new Set(ids)]){if(cur.length>=45||cur.join(',').length+id.length>1200){groups.push(cur);cur=[];}cur.push(id);}if(cur.length)groups.push(cur);return groups;}
-async function fetchRaw(kind,ids,region,params,force=false){const base=prefixes[region]||prefixes.west;const path='/api/v2/stats/'+kind+'/'+ids.join(',')+'.json';const query=new URLSearchParams(params);const direct=base+path+'?'+query;
+async function fetchRaw(kind,ids,region,params,force=false){requireWest(region);const base=prefixes.west;const path='/api/v2/stats/'+kind+'/'+ids.join(',')+'.json';const query=new URLSearchParams(params);const direct=base+path+'?'+query;
   // Netlify proxy first. Falls back to direct request for locally hosted/static deployments.
   const proxy=new URL('./.netlify/functions/market',location.href);
   proxy.searchParams.set('kind',kind);proxy.searchParams.set('region',region);if(force)proxy.searchParams.set('refresh','1');proxy.searchParams.set('items',ids.join(','));for(const [k,v] of query)proxy.searchParams.set(k,v);
@@ -34,7 +35,7 @@ async function fetchRaw(kind,ids,region,params,force=false){const base=prefixes[
   if(!res.ok)throw new Error('Error de API '+res.status+' al consultar '+kind);
   const data=await res.json();if(!Array.isArray(data)&&!(kind==='orderbook'&&data&&typeof data==='object'))throw new Error('Respuesta inesperada del servidor');return data;
 }
-async function api(kind,ids,region='west',params={},force=false){if(!ids?.length)return {rows:[],cached:true,fetchedAt:Date.now()};
+async function api(kind,ids,region='west',params={},force=false){requireWest(region);if(!ids?.length)return {rows:[],cached:true,fetchedAt:Date.now()};
   const chunks=split(ids),sets=[],timestamps=[],errors=[];let anyFetched=false;
   for(const chunk of chunks){const key=[region,kind,[...chunk].sort().join(','),JSON.stringify(params)].join('|');const cache=storageGet(key);
     if(!force&&cache&&Date.now()-cache.ts<(kind==='orderbook'?300000:HOUR)){sets.push(cache.rows);timestamps.push(cache.ts);continue;}

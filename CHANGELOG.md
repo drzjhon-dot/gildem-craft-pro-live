@@ -1,6 +1,9 @@
-# Gildem Craft Pro v8.6.0 | Demanda primero en BM y Royal
+# Gildem Craft Pro v8.6.1 | Región West obligatoria
 
-## v8.6.0
+**v8.6.1:** correcciones en `core/server-policy.js`, referencias externas y selección única de servidor; restringidas las funciones Netlify market/snapshot/watch a West, y guard de datos externos. Las cinco fuentes se comprueban como enlaces, sin mezclar precios/volúmenes ajenos ni asumir servidor por accesibilidad. La fuente europea retirada. Nueva consulta opcional para investigación con IA, explícitamente no automática.
+
+
+## v8.6.1
 
 - Consulta historial de 7, 14 y 30 días de los objetos de **toda la rama elegida**, hasta 900 IDs, antes de asignar inversión. Incluye .0 en el mismo análisis que .1-.4. Evita el sesgo anterior hacia objetos caros con ROI aparente pero actividad mínima.
 - Nuevo selector compacto **Horizonte de venta por órdenes**: 7, 14 o 30 días (14 por defecto); la capacidad estratégica usa un porcentaje conservador del volumen histórico del horizonte, y no el volumen de un día que se redondeaba a cero. Eliminado el tope genérico de 12 crafts para todas las rutas pacientes.

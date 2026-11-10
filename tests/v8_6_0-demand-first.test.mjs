@@ -44,17 +44,19 @@ test('los rankings copiados de Hub se pueden importar con item, ciudad, volumen 
  const r=parseMarketRanking(text,{source:'hub'});
  assert.equal(r.length,2);assert.equal(r[0].daily,3696);assert.equal(r[1].daily,2401);
 });
-test('tablas de Albion Journal se leen por ID sin confundir ROI con volumen',()=>{
- const line='| [image](https://vanatoliyv.github.io/albion-craft-profit/ico/T5_SHOES_PLATE_SET2.webp) | **Expert Knight Boots TOP** | Martlock | 5 744 | 6 840 | BM by order | 1 096 | 19.1% | 2 642 | 2 894 815 | 273 635 | 18/18 d | 2 h |';
- const r=parseMarketRanking(line,{source:'journal',market:'Black Market'});
- assert.equal(r.length,1);assert.equal(r[0].daily,2642);
+test('la antigua fuente europea queda prohibida como importación numérica',()=>{
+ assert.equal(parseMarketRanking('| ico/T5_SHOES_PLATE_SET2.webp | 2642 |',{source:'journal'}).length,0);
 });
-test('no se mezclan datos externos de Europa con planes America y no se importan precios',()=>{
+test('una tabla externa europea nunca afecta planes West ni siquiera si tiene IDs reales',()=>{
  const row={id:'T5_SHOES_PLATE_SET2',city:bm,daily:3696,source:'Albion Online Hub'};
- const snap={source:'hub',region:'europe',observedAt:new Date(date).toISOString(),rows:[row]};
+ const snap={source:'hub',region:'europe',serverProof:'user-confirmed-west',observedAt:new Date(date).toISOString(),rows:[row]};
  assert.equal(validMarketSnapshot(snap,{region:'west',now:date}),false);
  assert.equal(externalDaily(snap,row.id,row.city,{region:'west',now:date}),null);
- assert.equal(externalDaily(snap,row.id,row.city,{region:'europe',now:date}).daily,3696);
+ assert.equal(externalDaily(snap,row.id,row.city,{region:'europe',now:date}),null);
+ const unconfirmed={...snap,region:'west',serverProof:null};
+ assert.equal(validMarketSnapshot(unconfirmed,{region:'west',now:date}),false);
+ const confirmed={...snap,region:'west'};
+ assert.equal(externalDaily(confirmed,row.id,row.city,{region:'west',now:date}).daily,3696);
  assert(!JSON.stringify(row).includes('sell_price'));
 });
 test('la interfaz conserva valor seleccionado y muestra el motivo de cantidades',()=>{

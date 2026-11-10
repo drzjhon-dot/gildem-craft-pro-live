@@ -2,13 +2,13 @@ import {access,readFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import assert from 'node:assert/strict';
 const must=['package.json','netlify.toml','index.html','app.js','styles.css',
-'core/catalog.js','core/special-recipes.js','core/market-discovery.js','core/demand-first.js','core/external-demand.js','core/procurement-liquidity.js','scripts/build.mjs',
+'core/catalog.js','core/special-recipes.js','core/market-discovery.js','core/demand-first.js','core/external-demand.js','core/server-policy.js','core/west-ai-brief.js','core/procurement-liquidity.js','scripts/build.mjs',
 'netlify/functions/health.mjs','netlify/functions/market.mjs',
 'netlify/functions/recipes.mjs','netlify/functions/catalog.mjs','netlify/functions/item-image.mjs','netlify/functions/market-references.mjs',
 'netlify/functions/hourly-prices.mjs','netlify/functions/snapshot.mjs'];
 for(const path of must)await access(join(process.cwd(),path));
 const pkg=JSON.parse(await readFile('package.json','utf8'));
-assert.match(pkg.version,/^8\.6\.0$/,'La distribución debe declarar la versión 8.6.0');
+assert.match(pkg.version,/^8\.6\.1$/,'La distribución debe declarar la versión 8.6.1');
 // Prevent the regression that sent only test files to GitHub while keeping
 // app.js/index.html on an older version. These checks run in every Netlify build.
 const html=await readFile('index.html','utf8');
@@ -18,9 +18,11 @@ const builder=await readFile('scripts/build.mjs','utf8');
 assert.ok(html.includes('data-nav="resultados"'),'La pestaña Resultados falta en index.html');
 assert.ok(source.includes('function resultsPage(){'),'La pantalla Resultados falta en app.js');
 assert.ok(source.includes("qcControls('craft')")&&source.includes("qcControls('auto')"),'Black/Royal no tienen controles compactos');
-assert.ok(source.includes('marketCoverageHtml(p)')&&source.includes('chosenDemandIds('),'Falta la exploración de mercados por demanda de la versión 8.6.0');
+assert.ok(source.includes('marketCoverageHtml(p)')&&source.includes('chosenDemandIds('),'Falta la exploración de mercados por demanda de la versión 8.6.1');
 assert.ok(html.includes('v'+pkg.version)&&sw.includes('gildem-craft-pro-v'+pkg.version),'Versión incorrecta en HTML o caché del navegador');
 assert.ok(builder.includes("version:'"+pkg.version+"'"),'Versión incorrecta en scripts/build.mjs');
+assert.ok(!source.includes('vanatoliyv.github.io'),'Referencia europea no debe estar en la aplicación');
+assert.ok(!html.includes('value="europe"'),'No ofrecer servidor Europa en el selector');
 for(const file of ['core/results-view.js','core/market-references.js','core/market-volume.js','core/procurement-liquidity.js','assets/results-banner.webp','assets/results-sidebar.webp'])await access(file);
 const health=await readFile('netlify/functions/health.mjs','utf8');
 assert.ok(health.includes("version:'"+pkg.version+"'"),'La función health tiene una versión distinta al package.json');

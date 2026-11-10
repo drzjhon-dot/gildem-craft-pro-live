@@ -1,10 +1,10 @@
 // Optional server-side AODP proxy for Netlify. One-hour shared cache + validation.
-const hosts={west:'https://west.albion-online-data.com',europe:'https://europe.albion-online-data.com',east:'https://east.albion-online-data.com'};
+const hosts={west:'https://west.albion-online-data.com'};
 const memory=new Map();
 export default async (request)=>{
  const u=new URL(request.url);const region=u.searchParams.get('region')||'west';const kind=u.searchParams.get('kind')||'prices';
  const items=(u.searchParams.get('items')||'').split(',').filter(Boolean);
- if(!(region in hosts)||!['prices','history','orderbook'].includes(kind)||items.length<1||items.length>60||items.some(s=>!/^[A-Z0-9_@-]{3,100}$/.test(s))){return json({error:'Parámetros inválidos'},400);}
+ if(region!=='west'||!['prices','history','orderbook'].includes(kind)||items.length<1||items.length>60||items.some(s=>!/^[A-Z0-9_@-]{3,100}$/.test(s))){return json({error:'Parámetros inválidos'},400);}
  const allowed={locations:u.searchParams.get('locations')||'',qualities:u.searchParams.get('qualities')||'1'};
  if(!/^[a-zA-Z ,]{0,240}$/.test(allowed.locations)||!/^[1-5,]{1,11}$/.test(allowed.qualities)){return json({error:'Filtros inválidos'},400);}
  if(kind==='history')allowed['time-scale']='24';

@@ -11,10 +11,10 @@ export const DEFAULT_WATCH=[
  'T4_CLOTH','T5_CLOTH','T6_CLOTH',
  'T4_MEAL_SALAD','T5_MEAL_PIE','T6_MEAL_STEW','T7_MEAL_OMELETTE','T4_MEAL_SALAD_FISH','T1_FISHSAUCE_LEVEL1','T4_POTION_HEAL','T4_MOUNT_HORSE'
 ];
-const hosts={west:'https://west.albion-online-data.com',europe:'https://europe.albion-online-data.com',east:'https://east.albion-online-data.com'};
+const hosts={west:'https://west.albion-online-data.com'};
 export function watchConfig(env=process.env){
  const ids=(env.GILDEM_WATCH_IDS||DEFAULT_WATCH.join(',')).split(',').map(x=>x.trim()).filter(x=>/^[A-Z0-9_@-]{3,100}$/.test(x)).slice(0,40);
- const region=hosts[env.GILDEM_WATCH_REGION]?env.GILDEM_WATCH_REGION:'west';
+ const region='west'; // Las configuraciones de despliegue heredadas no pueden cambiar el servidor.
  return {region,ids:[...new Set(ids)]};
 }
 export default async ()=>{

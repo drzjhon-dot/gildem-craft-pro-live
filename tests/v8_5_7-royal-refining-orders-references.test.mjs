@@ -55,19 +55,19 @@ test('BM acepta orden de venta con actividad suficiente, sin exigir profundidad 
  assert.equal(instant.ok,false);
  assert.match(instant.reasons.join(' '),/Mercado Negro sin compras verificadas/);
 });
-test('Las cuatro referencias se consultan pero NO se convierten en precios automáticos',async()=>{
- assert.equal(MARKET_REFERENCES.length,4);
+test('Las cinco referencias compatibles con West se comprueban sin convertirlas en precios',async()=>{
+ assert.equal(MARKET_REFERENCES.length,5);
  const urls=[];
  const probe=await verifyMarketReferences(async(url,opts)=>{urls.push(url);assert.equal(opts.method,'HEAD');return {ok:true,status:200};});
- assert.equal(urls.length,4);
- assert.equal(probe.numericSource,'Albion Online Data Project (AODP)');
+ assert.equal(urls.length,5);
+ assert.equal(probe.numericSource,'Albion Online Data Project (AODP West)');
  assert.equal(probe.usedForPrices,false);
  assert.equal(probe.usedForMarketVolume,false);
  assert.ok(marketReferenceSnapshot(probe).every(x=>x.status==='accessible'));
  const missing=marketReferenceSnapshot(null);
  assert.ok(missing.every(x=>x.status==='unverified'));
 });
-test('El formulario y los resultados muestran órdenes y cuatro referencias por plan',()=>{
+test('El formulario y los resultados muestran órdenes y fuentes por plan',()=>{
  assert.ok(source.includes('marketReferencesPromise=checkMarketReferences()'));
  assert.ok(source.includes('marketReferencesPanel(current.marketReferences)'));
  assert.ok(source.includes('bmMode:\'listed\''));

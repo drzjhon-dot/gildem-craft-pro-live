@@ -1,7 +1,7 @@
 import {getStore} from '@netlify/blobs';
 export default async(request)=>{
  const u=new URL(request.url);const region=u.searchParams.get('region')||'west';
- if(!['west','europe','east'].includes(region))return reply({error:'Región inválida'},400);
+ if(region!=='west')return reply({error:'Solo se permite América (West)'},400);
  try{
   const store=getStore({name:'gildem-public-prices'});
   const snapshot=await store.get('hourly-'+region,{type:'json'});

@@ -1,4 +1,7 @@
-# Publicar Gildem Craft Pro v8.6.0 desde Windows con GitHub Desktop
+# Publicar Gildem Craft Pro v8.6.1 en GitHub Desktop
+
+**Recomendación por los conflictos anteriores:** si GitHub Desktop muestra un Merge activo, cancélalo y haz respaldo de la carpeta antes de continuar. Pulsa **Fetch/Pull** para tener `main` actualizado y, después, copia en la carpeta raíz del repositorio los archivos extraídos de este ZIP. Comprueba que `package.json` marque 8.6.1, haz Commit y Push. Nunca selecciones "resolver automáticamente" los conflictos de `app.js` o `index.html` mezclando dos versiones: eso puede impedir que arranque la web. El ZIP contiene el proyecto íntegro; no subas el archivo ZIP como si fuera el código del sitio. GitHub Desktop evita el límite de 100 archivos de la carga web. Si ya tienes cambios locales sin publicar, guárdalos primero; no hagas Force Push.
+
 
 ## Pasos sin Python ni PowerShell
 
@@ -8,13 +11,13 @@
 4. Abre en otra ventana la carpeta extraída del ZIP. **Entra hasta ver `app.js`, `index.html`, `package.json`, `core`, `assets`, `netlify`, `.github` y `tests` juntos.**
 5. Dentro de esa carpeta, pulsa **Ctrl + A** para seleccionar todos los archivos; después **Ctrl + C**. Vuelve a la carpeta del repositorio y pulsa **Ctrl + V**, eligiendo **Reemplazar archivos**.
 6. Regresa a GitHub Desktop → **Changes**. Comprueba los archivos modificados `app.js`, `index.html`, `core/demand-first.js`, `core/external-demand.js`, `core/adaptive-planner.js`, `core/allocator-v6.js`, `styles.css`, `sw.js`, `package.json`, `tests/`.
-7. En **Summary** escribe `Gildem Craft Pro v8.6.0 · demanda 14 días BM y Royal`. Pulsa **Commit to main → Push origin**.
+7. En **Summary** escribe `Gildem Craft Pro v8.6.1 · demanda 14 días BM y Royal`. Pulsa **Commit to main → Push origin**.
 8. Abre https://github.com/drzjhon-dot/gildem-craft-pro-live/actions y espera una ejecución verde de **Gildem Craft Pro | Validar proyecto completo**.
 9. Abre Netlify y comprueba **Published** para ese nuevo commit. En tu web pulsa **Ctrl + Shift + R** una sola vez.
 
 ## Validación rápida
 
-- En GitHub, `package.json` debe indicar `"version": "8.6.0"`.
+- En GitHub, `package.json` debe indicar `"version": "8.6.1"`.
 - Las tabs visibles son **Black Craft**, **Royal Craft** y **Resultados**. Level Craft se mantiene fuera del menú.
 - En Black Craft → Botas de placas, activa **.0** y **T4/T5/T6**; busca el control plegable **Horizonte de venta por órdenes: 7/14/30 días**.
 - En Resultados, debajo de cada objeto, deben aparecer **uds./día · fuente · límite de crafts**.

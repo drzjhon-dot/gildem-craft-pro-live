@@ -1,26 +1,17 @@
 // Optional statistics manually copied from third-party market rankings.
 // Not a live API connection. Never use a copied reference price for profit.
-export const MARKET_SNAPSHOT_KEY='gildem-market-volume-snapshot-v1';
+export const MARKET_SNAPSHOT_KEY='gildem-market-volume-snapshot-west-v2';
 const CITIES=['Black Market','Bridgewatch','Fort Sterling','Lymhurst','Martlock','Thetford','Caerleon','Brecilien'];
 const ITEM=/T[4-8]_[A-Z0-9_]+(?:@\d)?/g;
 const normalizeCity=s=>CITIES.find(c=>c.toLowerCase()===String(s||'').toLowerCase())||null;
 const cleanNum=s=>Number(String(s||'').trim().replace(/[\s,]/g,''));
+export function conflictingServerLabel(text){return /\b(europe|europa|european server|asia|east server|servidor europeo|servidor asiático)\b/i.test(String(text||''));}
 export function parseMarketRanking(text,{source='hub',market='Black Market',maxRows=2000}={}){
  const input=String(text||'').slice(0,280000),rows=new Map();
- const sourceMode=['hub','journal'].includes(source)?source:'hub';
- if(sourceMode==='journal'){
-  for(const line of input.split(/\r?\n/)){
-   if(!line.includes('ico/T')||!line.includes('.webp'))continue;
-   const cells=line.split('|').map(x=>x.trim());
-   // Markdown table columns: icon, item, city, cost, sale, mode, profit, ROI,
-   // observed daily units, silver turnover, etc. The image URL has the real ID.
-   const id=(cells.find(x=>x.includes('ico/T'))||'').match(/ico\/(T[4-8]_[A-Z0-9_]+(?:@\d)?)\.webp/i)?.[1];
-   const daily=cleanNum(cells[9]); // leading Markdown pipe yields cells[0]==''
-   if(id&&Number.isFinite(daily)&&daily>=0&&daily<1e8){
-    const city=normalizeCity(market);if(city)rows.set(id+'|'+city,{id,city,daily,source:'Albion Journal · tabla pegada'});
-   }
-  }
- }else{
+ if(conflictingServerLabel(input))return []; // No aceptar una tabla marcada Europe/Asia ni con checkbox West.
+ const sourceMode=source==='hub'?'hub':null;
+ if(!sourceMode)return [];
+
   // Albion Hub copy can include either TSV rows or item/category/quantity on
   // separate lines. Anchor each block on the item ID, not on enchantment text.
   const matches=[...input.matchAll(ITEM)].filter(m=>!m[0].includes('LEVEL'));
@@ -36,13 +27,12 @@ export function parseMarketRanking(text,{source='hub',market='Black Market',maxR
    for(const candidate of candidates){const num=cleanNum(candidate);if(Number.isFinite(num)&&num>=0&&num<=1e7){daily=num;break;}}
    if(daily!==null)rows.set(id+'|'+city,{id,city,daily,source:'Albion Online Hub · tabla pegada'});
   }
- }
  return [...rows.values()].slice(0,Math.max(0,maxRows));
 }
 export function validMarketSnapshot(snapshot,{region='west',now=Date.now(),maxAgeDays=14}={}){
- if(!snapshot||snapshot.region!==region||!['hub','journal'].includes(snapshot.source))return false;
+ if(!snapshot||snapshot.region!=='west'||region!=='west'||snapshot.source!=='hub'||snapshot.serverProof!=='user-confirmed-west')return false;
  const date=Date.parse(snapshot.observedAt||'');
- return Number.isFinite(date)&&date<=now+3600000&&now-date<=maxAgeDays*86400000&&Array.isArray(snapshot.rows);
+ return Number.isFinite(date)&&date<=now+3600000&&now-date<=maxAgeDays*86400000&&Array.isArray(snapshot.rows)&&snapshot.rows.length>0&&snapshot.rows.every(r=>r.id&&r.city&&Number.isFinite(r.daily)&&r.daily>=0);
 }
 export function externalDaily(index,id,city,{region='west',now=Date.now()}={}){
  if(!validMarketSnapshot(index,{region,now}))return null;

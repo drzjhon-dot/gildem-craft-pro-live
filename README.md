@@ -1,8 +1,11 @@
-# Gildem Craft Pro v8.6.0 | Demanda primero, rentabilidad después
+# Gildem Craft Pro v8.6.1 | América West y procedencia de fuentes
+
+**Novedad v8.6.1:** planes Black/Royal exclusivos de América (West); AODP West como única API numérica automática; rechazo de datos Europa/Asia incluso en proxy Netlify; eliminación de Albion Journal como fuente; controles explícitos de West en importaciones manuales de Albion Hub; contraste con Royal Forge, Albion Online Tools, Albion Free Market y AO MCT sin prometer APIs públicas inexistentes. Botón de consulta para investigación con IA (copiar prompt; no búsqueda autónoma sin servicio conectado). Consulta `FUENTES_AMERICA_Y_VERIFICACION.md` para detalles.
+
 
 Herramienta web de crafting en español para **Albion Online**, configurada por defecto para **América (West)**. Proyecto completo para GitHub + Netlify, sin reparadores locales. Las tabs principales son **Black Craft**, **Royal Craft** y **Resultados**; Level Craft no aparece en la navegación.
 
-## Qué se corrigió en v8.6.0
+## Qué se corrigió en v8.6.1
 
 El motor anterior podía proponer una unidad de botas T5.4 aunque se observaran miles de unidades diarias de botas T4.0, T5.0 y T6.0. El problema no se limita a botas. Cambiamos la lógica de ambas tabs para que:
 
@@ -17,7 +20,7 @@ El motor anterior podía proponer una unidad de botas T5.4 aunque se observaran 
 
 Los precios y la actividad automática se consultan a **Albion Online Data Project (AODP)** por objeto y ciudad, para el servidor elegido. La API y su historia son registros públicos observados por clientes; **`item_count` no es una garantía de ventas completadas, de demanda futura ni de que el precio se mantenga**. Las ofertas pueden estar obsoletas. La puja BM de compra de NPC es referencia de precio para la propia orden de venta, no una ejecución confirmada.
 
-La aplicación conserva enlaces y comprobación de accesibilidad de estas cuatro referencias: [Albion Online Hub: Top Selling](https://albiononlinehub.com/top-selling-items), [Albion Journal: Craft Profit](https://vanatoliyv.github.io/albion-craft-profit/#craft), [Royal Forge Market](https://royalforge.app/market) y [Albion Online Tools Marketplace](https://albiononlinetools.com/marketplace/). **Comprobar que una web responde no equivale a importar sus estadísticas**. No se integran directamente los datos privados/dinámicos de estas páginas si no hay una API pública verificable.
+La aplicación conserva referencias compatibles con una selección América (West): [Albion Online Hub: Top Selling](https://albiononlinehub.com/top-selling-items), [Royal Forge Market](https://royalforge.app/market), [Albion Online Tools Marketplace](https://albiononlinetools.com/marketplace/), [Albion Free Market](https://albionfreemarket.com/topitems) y [AO MCT](https://aomct.app/). **Comprobar que una web responde no equivale a verificar West ni a importar sus estadísticas**. La fuente europea anterior queda excluida. No se integran directamente los datos privados/dinámicos de estas páginas si no hay una API pública verificable.
 
 ### Importación manual opcional de rankings
 
@@ -46,6 +49,6 @@ npm run preflight
 npm run build
 ```
 
-**Validación local v8.6.0:** 230 pruebas automáticas aprobadas; compilación y preflight correctos con Node 22. Navegador Chromium probado **con datos de mercado simulados**, no con ejecuciones o compras reales. Los resultados de prueba con cientos de unidades **no son un consejo de compra**. La publicación Netlify, cuotas y calidad de las APIs reales solo se verifican tras desplegar.
+**Validación local v8.6.1:** 230 pruebas automáticas aprobadas; compilación y preflight correctos con Node 22. Navegador Chromium probado **con datos de mercado simulados**, no con ejecuciones o compras reales. Los resultados de prueba con cientos de unidades **no son un consejo de compra**. La publicación Netlify, cuotas y calidad de las APIs reales solo se verifican tras desplegar.
 
 La comprobación previa no equivale a una reserva real de recursos ni a garantías de llenado en Royal o BM. Compra por tramos, valida tarifas y precio máximo, y no fabrique si el margen resulta negativo.
