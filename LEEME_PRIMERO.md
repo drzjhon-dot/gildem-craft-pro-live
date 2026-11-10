@@ -1,40 +1,62 @@
-# Gildem Craft Pro: motor por actividad observada
+# Gildem Craft Pro | Revisión por movimiento + integración `ao-bin-dumps`
 
-**Actualización de comportamiento para la base v8.7.0.** No modifica los datos guardados del navegador, ni publica automáticamente en Netlify.
+**Fecha:** 10 de noviembre de 2026  
+**Repositorio objetivo:** `drzjhon-dot/gildem-craft-pro-live` (rama `main`, distribución 8.7.0)
 
-## Qué cambia
+## Causa exacta del fallo de Netlify
 
-El viejo mensaje **«No hay beneficio neto verificable actualmente»** desaparece de los resultados. Ahora **Black Craft y Royal Craft muestran el plan de demanda** aun cuando ninguna ruta supera el antiguo margen mínimo. El motor clasifica artículos por actividad histórica observada en el mercado correspondiente y selecciona cantidades pequeñas, compatibles con presupuesto, exposición y movimiento del mercado.
+La prueba `tests/v8_7_1-demand-first.test.mjs` se subió al repositorio y exige `GCP_DEMAND_FIRST_871`. Sin embargo, el `app.js` publicado todavía era el original; la prueba de integración n.º 306 falló. No era un problema de Node, Netlify ni `npm install`.
 
-- **Primero, actividad:** más volumen de órdenes observadas y más continuidad. Un artículo con mucho movimiento ya no desaparece por tener ROI bajo o negativo.
-- **Profit visible pero no obligatorio:** los cálculos de beneficio y pérdida se muestran con signo; el **precio de equilibrio es informativo**, no una condición para crear el plan.
-- **Protección del silver:** las rutas con pérdida prevista reciben límites de cantidad y exposición mucho más estrictos; artículos demasiado caros no bloquean a otros asequibles.
-- **Plan detallado:** ítem, tier, fabricaciones, unidades para vender, ciudad de fabricación y venta, precio observado, actividad semanal, coste, estimación neta, advertencias y lista bruta de materias primas.
-- **Mi negocio:** puedes guardar como **pendiente** las rutas con precio y coste conocidos, incluidas las de beneficio negativo. **Guardar nunca consume silver**. La caja se modifica solo al confirmar que la compra se realizó. Antes de marcar una compra en planes por demanda, el sistema muestra una confirmación especial.
-- **Sin cifras ficticias:** si faltan cotizaciones, el plan solo muestra una unidad orientativa, no simula beneficio ni permite guardar esa ruta como compra real.
+**No es correcto arreglarlo agregando solo un comentario con el marcador.** La pantalla, el flujo de guardado y la generación por demanda también deben implementarse. Este paquete incorpora todo junto.
 
-> **Importante:** la fuente AODP ofrece observaciones comunitarias del mercado. Sus registros históricos **no prueban ventas completadas**, ni reservan órdenes o materiales. Revisar precio y profundidad del mercado antes de fabricar sigue siendo imprescindible.
+## Instalación segura con GitHub Desktop (Windows)
 
-## Instalación con GitHub Desktop, paso a paso (Windows)
+1. En GitHub Desktop, selecciona `drzjhon-dot/gildem-craft-pro-live` y pulsa **Repository > Show in Explorer**. Copia la ruta de la carpeta que contiene `app.js`, `core/` y `tests/`.
+2. Descomprime **este ZIP fuera del repositorio**, por ejemplo en Descargas. No copies solo los archivos `tests/` a GitHub: volvería a ocurrir el fallo 306.
+3. Instala **Python 3** y **Node.js 22**, si todavía no los tienes en tu PC.
+4. Haz doble clic en `ACTUALIZAR_Y_VERIFICAR_WINDOWS.bat` y pega la ruta de GitHub Desktop. Alternativa desde una terminal: `py -3 INSTALAR_REVISION.py "C:\ruta\gildem-craft-pro-live"`.
+5. El instalador verifica **sintaxis, preflight, TODOS los tests existentes y `npm run build`** en el repositorio local. Si algo falla, **restaura los archivos anteriores y devuelve código de error**. No hace `git push` ni instala un despliegue defectuoso.
+6. **Solo cuando aparezca `REVISIÓN OK`**, abre GitHub Desktop y comprueba que estén incluidos `app.js`, `core/always-plan.js`, `core/ao-gear-recipes.js`, `scripts/build.mjs`, `scripts/check-deploy.mjs` y los tests. Haz un único **Commit to main** y **Push origin**.
+7. Netlify debe compilar de nuevo. Confirma que los tests y el build terminen en verde. Abre la web y recarga `Ctrl+Shift+R`. Para probarlo, genera un plan de arcos T4–T6; la página debe indicar **PLAN POR ROTACIÓN · SIN FILTRO DE PROFIT MÍNIMO**.
 
-1. Descarga y **extrae este ZIP en una carpeta aparte** (por ejemplo `Descargas\Gildem_Demanda`). **No descomprimas los archivos directamente sobre tu repositorio**.
-2. En GitHub Desktop abre el repositorio `drzjhon-dot/gildem-craft-pro-live`. En `Repository > Show in Explorer`, copia la ruta de la carpeta que contiene `app.js`, `core/` y `package.json`.
-3. Haz doble clic en **`ACTUALIZAR_GILDEM_WINDOWS.bat`** dentro de la actualización extraída. Pega la ruta del repositorio cuando se solicite. El asistente necesita **Python 3** instalado.
-4. La actualización modifica solo `app.js` y `core/always-plan.js`, y añade `tests/v8_7_1-demand-first.test.mjs`. Guarda los archivos anteriores en una carpeta de respaldo **junto a tu repositorio**, llamada `gildem-craft-pro-live_backup_antes_demanda_8_7_1`.
-5. En la terminal de tu repositorio, si tienes Node 22: ejecuta `node --check app.js`, `npm test` y `npm run build`.
-6. Revisa los cambios en GitHub Desktop. Haz **Commit to main** y **Push origin**. Netlify volverá a construir la web si está enlazada a ese repositorio.
-7. Actualiza el navegador con `Ctrl + Shift + R`. Genera un plan de arcos u otra rama con historial conocido y verifica que aparezca **«PLAN POR ROTACIÓN · SIN FILTRO DE PROFIT MÍNIMO»**.
+## Motor de fabricación por movimiento
 
-**Alternativa sin .bat:** abre una terminal en la carpeta extraída y ejecuta `py -3 INSTALAR_DEMANDA.py "C:\RUTA\AL\gildem-craft-pro-live"`.
+- Elimina el veto global por precio de equilibrio o ROI mínimo **del nuevo plan visible** en Black Craft y Royal Craft. El beneficio/pérdida calculado sigue visible, con signo.
+- Elige recetas según **actividad observada en el mercado específico**, no por la mejor ganancia teórica. No presenta observaciones de AODP como ventas ya cobradas.
+- Limita cantidades con una participación orientativa del **6 % del volumen observado** en un horizonte de venta configurable, límite de concentración y presupuesto. Descuenta unidades pendientes ya registradas en **Mi negocio**.
+- Si un objeto es caro o los materiales faltan, no desplaza automáticamente a otros asequibles. Las pérdidas esperadas tienen límite de exposición muy reducido.
+- Muestra fabricación por ciudad, destino, cantidad, materiales brutos, rotación semanal, antigüedad de cotización y resultado neto orientativo.
+- Permite guardar como **plan pendiente** rutas que tengan precios y costes observados, incluso con profit negativo. **Guardar nunca descuenta silver**. Confirmar compra efectivamente realizada es una acción distinta y requiere confirmación adicional.
+- **NO se recomienda comprar sin revisar datos dentro del juego.** Los libros de órdenes y la materia prima pueden agotarse y el precio por unidad aumentar. El plan visible no reserva materiales ni garantiza venta.
 
-## Compatibilidad y pruebas
+## Integración `ao-data/ao-bin-dumps`
 
-El instalador valida cada sección a sustituir. Si el proyecto difiere de la versión observada, detiene la instalación en lugar de cambiar secciones equivocadas. Si tienes Node.js instalado, valida la sintaxis antes de finalizar y restaura las fuentes originales ante un error de sintaxis.
+Fuente: https://github.com/ao-data/ao-bin-dumps
 
-**Probado en esta entrega:** 10 pruebas del motor y de integración sobre una instalación de prueba (incluido un caso de precio inferior al equilibrio, límite de pérdidas, artículos caros y guardado pendiente). La compilación completa y las pruebas de todos los módulos de tu repositorio deben ejecutarse localmente o en Netlify después de aplicar el cambio. La conexión actual a GitHub permite lectura, pero rechazó la escritura automática, por lo que esta actualización **todavía no está publicada en tu web**.
+- `core/ao-gear-recipes.js` contiene un extractor probado para `items.json` RAW del juego. NO utiliza `formatted/items.json`: ese es un índice de objetos, no un archivo completo de recetas.
+- Cuando Netlify publica, `scripts/build.mjs` intenta descargar el RAW, extraer recetas T1–T8 de equipo tradicional y reconocer variantes encantadas, cantidades de materiales, artefactos sin devolución y cantidades producidas. **Si no puede leer/validar el RAW, conserva el catálogo previo**; el build no se cae por una caída de GitHub/CDN.
+- No inventa ciudad con bono cuando el mapeo de la familia no está identificado. Los mapas de ciudad deben revisarse cuando un parche cambie bonos.
+- Las recetas especiales de monturas, recolección, kits, asedio, comidas y pociones **ya usaban** `ao-bin-dumps` mediante `core/special-recipes.js` y `netlify/functions/recipes.mjs`; esta actualización amplía la integración a armas/armaduras/equipamiento tradicional.
+- Publica `/catalog/ao-bin-source.json` con fuente elegida, fecha de construcción y cantidades de recetas extraídas. El juego/mercado puede cambiar después de construir: no representa datos en vivo.
+- AODP **West (América)** sigue siendo la fuente de cotizaciones y actividad, con sus límites y fechas. `ao-bin-dumps` no es un API de demanda o órdenes actuales.
 
-## Rollback
+## Qué se comprobó realmente
 
-Si necesitas volver atrás, copia `app.js` y `always-plan.js` desde `gildem-craft-pro-live_backup_antes_demanda_8_7_1` a sus ubicaciones originales (`app.js` y `core/always-plan.js`) y elimina `tests/v8_7_1-demand-first.test.mjs`. Haz commit y push del rollback.
+- Se reprodujo la discrepancia viendo que el test 8.7.1 existía en `main`, mientras `app.js` aún no tenía `GCP_DEMAND_FIRST_871`.
+- **16 pruebas dirigidas** sobre el motor por demanda y extractor de juego pasaron en un banco de pruebas local (incluyendo inventario pendiente). Se ejecutó el instalador completo de principio a fin contra un repositorio sintético que imita la estructura previa; pasó su verificación de sintaxis, test y build.
+- **Limitación importante:** el repositorio completo real no pudo clonarse dentro de esta sesión, y la conexión a GitHub permite leer, pero rechazó crear una rama (403). Por eso **no afirmamos** haber ejecutado ya el paquete completo de 306 pruebas dentro del código real ni haber publicado la web. El instalador lo ejecutará en tu copia local y **cancelará todos los cambios** si falla.
+- Antes de subir, el usuario debe ver `REVISIÓN OK`. No hagas commit/push si muestra error.
 
-**Nota sobre versión:** la versión de distribución permanece en `8.7.0`, porque el repositorio valida esa versión de forma estricta en `scripts/check-deploy.mjs`, `index.html`, `sw.js`, `scripts/build.mjs` y Netlify. El marcador interno `GCP_DEMAND_FIRST_871` distingue esta actualización sin romper la compilación.
+## Archivos que modifica el instalador
+
+- `app.js`
+- `core/always-plan.js`
+- `core/ao-gear-recipes.js` (nuevo)
+- `scripts/build.mjs`
+- `scripts/check-deploy.mjs`
+- `tests/v8_7_1-demand-first.test.mjs` (actualiza o conserva, siempre junto a la implementación)
+- `tests/v8_7_2-ao-bin-dumps.test.mjs` (nuevo)
+
+**No cambia:** archivos de datos personales, localStorage, credenciales, precios manuales ni inventarios. Crea una copia de seguridad fuera del repositorio, incluyendo el log del test y build.
+
+**Versión visible:** sigue `8.7.0` por compatibilidad con pruebas estrictas y la caché actual; los marcadores internos identifican las dos ampliaciones. Si deseas un salto de versión visible, hay que coordinar `package.json`, `index.html`, `sw.js`, `scripts/build.mjs`, `netlify/functions/health.mjs`, tests y preflight en una actualización distinta.

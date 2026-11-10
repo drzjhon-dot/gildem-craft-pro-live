@@ -15,6 +15,7 @@ export function prepareAlwaysPlan(options,{budget=0,horizonDays=14,maxItems=14,m
   const station=numeric(o.stationCost)||0,travel=numeric(o.transportCost)||0;
   const rate=Math.min(.90,pct(o.taxRate)+pct(o.setupRate));
   const quote=numeric(o.referencePrice),weekly=numeric(o.weeklyObserved);
+  const pendingMarketUnits=Math.max(0,Math.floor(numeric(o.pendingMarketUnits)||0));
   const upfront=raw!==null?raw+station+travel:null;
   // Solo informativo: el precio de equilibrio NUNCA elimina una ruta.
   const breakEven=cost!==null&&rate<1?Math.ceil((cost+travel)/(output*(1-rate))):null;
@@ -37,7 +38,7 @@ export function prepareAlwaysPlan(options,{budget=0,horizonDays=14,maxItems=14,m
   // y regula cuanto capital se expone a una perdida prevista.
   const activityScore=weekly>0?1000+Math.log1p(weekly)*100:weekly===0?50:0;
   const score=activityScore+(affordable?30:0)+(quote?10:0)+Math.max(-5,Math.min(5,roi||0));
-  return {...o,score,rawMaterials:raw,costTotal:cost,referencePrice:quote,weeklyObserved:weekly,
+  return {...o,score,rawMaterials:raw,costTotal:cost,referencePrice:quote,weeklyObserved:weekly,pendingMarketUnits,
    minSalePrice:breakEven,breakEvenPrice:breakEven,profitPerCraft:profit===null?null:money(profit),
    estimatedROI:roi,upfrontPerCraft:upfront,blockers:warnings,warnings,qty:0,capital:0,units:0,
    craftAmount:output,outputAmount:output,scenarioProfit:null,budgetVerified:false,
@@ -66,7 +67,12 @@ export function prepareAlwaysPlan(options,{budget=0,horizonDays=14,maxItems=14,m
    Math.max(1,Math.floor(r.weeklyObserved*weeks*.06/r.outputAmount));
   const exposureCap=Math.floor(available*exposure/unit);
   const affordableCap=Math.floor(remaining/unit);
-  let cap=Math.min(2000,velocityCap,exposureCap,affordableCap);
+  // El inventario pendiente en Mi negocio también ocupa parte de la capacidad
+  // prudente del mercado. Nunca volver a programar el mismo volumen.
+  const headroom=r.weeklyObserved===null?
+   Math.max(0,1-r.pendingMarketUnits):
+   Math.max(0,Math.floor((r.weeklyObserved*weeks*.06-r.pendingMarketUnits)/r.outputAmount));
+  let cap=Math.min(2000,velocityCap,exposureCap,affordableCap,headroom);
   if(r.profitPerCraft!==null&&r.profitPerCraft<0){
    // Perdidas calculadas, nunca beneficios ficticios. Primera fabricación
    // de prueba, y exposición reducida antes de pensar en escalar.
