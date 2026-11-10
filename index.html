@@ -1,8 +1,67 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><meta name="theme-color" content="#121a28"/><meta name="description" content="Gildem Craft Pro v9.0 · planificador de crafting para Albion Online West"/><title>Gildem Craft Pro NOVA v9.0</title><link rel="icon" href="./assets/crest.svg"/><link rel="manifest" href="./manifest.webmanifest"/><link rel="stylesheet" href="./styles.css"/></head><body>
-<div class="app" id="app">
-  <aside class="rail"><div class="brand"><img src="./assets/crest.svg" alt="Escudo de Gildem"/><div><strong>GILDEM</strong><small>CRAFT PRO <b>V9.0</b></small></div></div>
-    <div class="rail-label">TALLER DE ALBION</div><nav id="tabs" aria-label="Secciones"><button class="nav-btn active" data-tab="black"><img src="https://render.albiononline.com/v1/item/T6_2H_BOW.png?quality=1&size=96" alt=""/><span><b>Black Craft</b><small>Mercado Negro · rotación y disciplina</small></span></button><button class="nav-btn" data-tab="royal"><img src="https://render.albiononline.com/v1/item/T6_ARMOR_CLOTH_SET1.png?quality=1&size=96" alt=""/><span><b>Royal Craft</b><small>Ciudades Royal · venta distribuida</small></span></button><button class="nav-btn" data-tab="settings"><img src="https://render.albiononline.com/v1/item/T6_BAG.png?quality=1&size=96" alt=""/><span><b>Datos y ajustes</b><small>Fuentes, límites y control</small></span></button></nav>
-    <div class="rail-bottom"><div class="small-status"><span class="status-dot"></span> AMÉRICA · WEST</div><p>Demanda observada, no ventas garantizadas. Priorizamos rutas con rotación real y exposición prudente.</p></div>
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#09111d">
+  <meta name="description" content="Planificador de crafting Royal y Mercado Negro para Albion Online. Ramas, bonos, Focus, presupuesto, diarios y listas de compras.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css?v=8.9.0">
+  <title>Gildem Craft Pro v8.9.0 · Royal + Black Market</title>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-icon">G<span>✦</span></div><div><strong>GILDEM</strong><small>CRAFT PRO v8.9.0 · ROYAL + BM</small></div></div>
+    <div class="nav-title">MI NEGOCIO DE CRAFTING</div>
+    <nav class="nav" aria-label="Navegación principal">
+      <button data-nav="crafting" class="nav-item active"><span class="nav-glyph">⚒</span><span>Black Craft</span></button>
+      <button data-nav="autocraft" class="nav-item"><span class="nav-glyph">✦</span><span>Royal Craft</span></button>
+
+      <button data-nav="resultados" class="nav-item"><span class="nav-glyph">▤</span><span>Resultados</span></button>
+      <button data-nav="ajustes" class="nav-item"><span class="nav-glyph">⚙</span><span>Ajustes y datos</span></button>
+    </nav>
+    <div class="sidebar-bottom"><div class="side-card"><span class="side-dot"></span><div><strong>Albion Data Project</strong><small id="sidebar-status">Esperando conexión</small></div></div><p>Royal y Black Market · datos comunitarios, no promesas de venta.</p></div>
   </aside>
-  <div class="content"><header class="topbar"><div class="crumb">WIKI ALBION <span> / </span> <span id="crumb">BLACK CRAFT</span></div><div class="top-actions"><span class="server">● WEST</span><button class="btn minor" id="refresh-data" type="button">↻ Actualizar catálogo</button></div></header><main id="main" tabindex="-1" aria-live="polite"><div class="loading">Preparando el taller de Gildem…</div></main><footer>Fuente de recetas: ao-data/ao-bin-dumps · Datos de mercado: AODP West · No afiliado a Sandbox Interactive.</footer></div>
-</div><div id="toast" role="status" aria-live="polite"></div><script type="module" src="./src/app.mjs?v=9.0.0"></script></body></html>
+  <div class="workspace">
+    <header class="topbar">
+      <div class="topbar-left"><button class="mobile-menu" id="mobile-menu" title="Abrir menú">☰</button><div><div class="eyebrow">WIKI ALBION <span class="divider-text">/</span> <span id="breadcrumb">Black Craft</span></div><h1 id="page-title">Black Craft</h1></div></div>
+      <div class="topbar-right"><span class="live-indicator"><i></i><span id="api-indicator">Datos AODP</span></span><select id="server-select" aria-label="Servidor"><option value="west">América · West</option></select><button class="icon-btn" data-action="refresh" title="Actualizar precios">↻</button></div>
+    </header>
+    <main id="main-content" aria-live="polite">
+      <section id="gildem-boot" class="panel boot-panel" role="status">
+        <h2>Preparando Gildem Craft Pro…</h2>
+        <p>Cargando las ramas y el catálogo. Si la conexión se interrumpe, puedes reparar la carga sin borrar tus planes.</p>
+        <button type="button" class="btn gold" data-boot-repair>Reparar carga</button>
+      </section>
+    </main>
+    <footer class="footer">Precios aportados por la comunidad · El refresco horario no garantiza que cada observación sea reciente. <a href="https://www.albion-online-data.com/" target="_blank" rel="noopener">Fuente AODP ↗</a></footer>
+  </div>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script>
+(function(){
+ const main=document.getElementById('main-content');
+ function failed(message){
+  if(!document.getElementById('gildem-boot'))return;
+  const boot=document.getElementById('gildem-boot');
+  const text=boot.querySelector('p');
+  if(text)text.textContent=message||'No se pudo iniciar el panel. Puedes reparar la carga sin borrar tus inversiones.';
+  const title=boot.querySelector('h2');if(title)title.textContent='No se pudo iniciar Gildem Craft Pro';
+ }
+ window.addEventListener('error',function(e){if(document.getElementById('gildem-boot'))failed('Error al cargar un archivo del sitio. Pulsa Reparar carga para actualizar la caché.');});
+ window.addEventListener('unhandledrejection',function(){if(document.getElementById('gildem-boot'))failed('Falló la inicialización de un módulo. Pulsa Reparar carga.');});
+ window.setTimeout(function(){if(document.getElementById('gildem-boot'))failed('La aplicación no terminó de iniciar. Comprueba tu conexión y utiliza Reparar carga.');},6500);
+ document.addEventListener('click',async function(e){
+  const button=e.target.closest('[data-boot-repair]');if(!button)return;
+  button.disabled=true;button.textContent='Limpiando caché…';
+  try{if('serviceWorker' in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(x=>x.unregister()));}}catch{}
+  try{if('caches' in window){const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('gildem-craft-pro-')).map(k=>caches.delete(k)));}}catch{}
+  const url=new URL(window.location.href);url.searchParams.set('carga','8.9.0');window.location.replace(url.toString());
+ });
+})();
+</script>
+<script type="module" src="./app.js?v=8.9.0"></script>
+</body>
+</html>
