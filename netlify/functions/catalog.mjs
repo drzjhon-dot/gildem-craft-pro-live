@@ -1,41 +1,22 @@
-// Proxy de respaldo para el catálogo verificado de recetas de Albion.
-// Reduce fallos de CORS/CDN y nunca inventa recetas cuando la fuente falla.
-const SOURCES={
- 'names_es.json':[
-  'https://raw.githubusercontent.com/vkorne-web/albion-market/main/names_es.json',
-  'https://cdn.jsdelivr.net/gh/vkorne-web/albion-market@main/names_es.json'
- ],
- 'recipes.json':[
-  'https://raw.githubusercontent.com/vkorne-web/albion-market/main/recipes.json',
-  'https://cdn.jsdelivr.net/gh/vkorne-web/albion-market@main/recipes.json'
- ]
-};
-const memory=new Map();
-const TTL_MS=4*3600*1000;
-function json(body,status=200){return new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':status===200?'public, max-age=300, s-maxage=3600':'no-store','access-control-allow-origin':'*'}});}
-export async function fetchCatalogFile(file,fetcher=fetch,now=Date.now()){
- if(!Object.hasOwn(SOURCES,file))throw Error('Archivo no permitido');
- const cached=memory.get(file);
- if(cached&&now-cached.at<TTL_MS)return cached.data;
- let last;
- for(const url of SOURCES[file]){
-  try{
-   const response=await fetcher(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(12500)});
-   if(!response.ok)throw Error('HTTP '+response.status);
-   const data=await response.json();
-   if(!data||typeof data!=='object'||Array.isArray(data)||Object.keys(data).length<100)throw Error('Fuente insuficiente');
-   memory.set(file,{at:now,data});
-   return data;
-  }catch(e){last=e;}
+import {extractCatalog,normalizeLegacyRecipes,normalizeNames} from '../../src/catalog.mjs';
+const RAW=['https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/items.json','https://cdn.jsdelivr.net/gh/ao-data/ao-bin-dumps@master/items.json'];
+const LEGACY='https://raw.githubusercontent.com/vkorne-web/albion-market/main/';
+let cache=new Map();
+const reply=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':status===200?'public,max-age=600,s-maxage=21600':'no-store'}});
+async function getJSON(url,fetcher,timeout){const res=await fetcher(url,{headers:{Accept:'application/json','Accept-Encoding':'gzip,deflate,br'},signal:AbortSignal.timeout(timeout)});if(!res.ok)throw Error('HTTP '+res.status);return res.json();}
+export async function getCatalog(type,{fetcher=fetch,now=Date.now(),store=cache}={}){
+ if(!['recipes','names'].includes(type))throw Error('Categoría de catálogo no permitida');
+ const hit=store.get(type);if(hit&&now-hit.at<21600000)return hit.value;
+ let result,error;
+ if(type==='names'){
+  try{const raw=await getJSON(LEGACY+'names_es.json',fetcher,20000);result={names:normalizeNames(raw),meta:{source:'vkorne-web/albion-market',fetchedAt:new Date(now).toISOString()}};if(Object.keys(result.names).length<50)throw Error('Sin nombres válidos');}
+  catch(e){error=e;}
+ }else{
+  for(const url of RAW){try{const raw=await getJSON(url,fetcher,30000);result=extractCatalog(raw);if(result.recipes.length<100)throw Error('Menos de 100 recetas válidas');break;}catch(e){error=e;result=null;}}
+  if(!result){try{const raw=await getJSON(LEGACY+'recipes.json',fetcher,18000);result=normalizeLegacyRecipes(raw);if(result.recipes.length<100)throw Error('Catálogo derivado insuficiente');}catch(e){error=e;result=null;}}
  }
- if(cached?.data)return cached.data; // La fecha corresponde al caché, nunca a una cotización de mercado.
- throw Error('Fuente de recetas no disponible: '+(last?.message||'sin respuesta'));
+ if(!result){if(hit)return {...hit.value,meta:{...hit.value.meta,stale:true,warning:String(error?.message||'Fallo en origen')}};throw Error('Catálogo no disponible: '+String(error?.message||'sin conexión'));}
+ store.set(type,{value:result,at:now});return result;
 }
-export default async function handler(request){
- if(request.method!=='GET')return json({error:'Método no permitido'},405);
- const file=new URL(request.url).searchParams.get('file');
- if(!Object.hasOwn(SOURCES,file||''))return json({error:'Archivo no permitido'},400);
- try{return json(await fetchCatalogFile(file));}
- catch(error){return json({error:String(error.message||error)},503);}
-}
+export default async function handler(request){if(request.method!=='GET')return reply({error:'Método no permitido'},405);try{return reply(await getCatalog(new URL(request.url).searchParams.get('type')));}catch(e){return reply({error:String(e.message)},503);}}
 export const config={path:'/.netlify/functions/catalog'};

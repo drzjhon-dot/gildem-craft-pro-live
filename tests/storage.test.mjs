@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {readPlans,savePlan,removePlan,markStarted,pendingUnits,downloadCSV} from '../src/store.mjs';
+function store(){const m=new Map();return {getItem:k=>m.get(k),setItem:(k,v)=>m.set(k,String(v))};}
+test('guardar borrador no implica compra',()=>{const storage=store(),p=savePlan({market:'black',budget:10000,totalCapital:4000,totalProfit:null,rows:[{id:'T4_BOW',city:'Black Market',qty:4,units:4,capital:4000,profit:null,weekly:100}],shopping:[{id:'T4_PLANKS',qty:20,city:'Lymhurst',price:100}]},{storage});assert.equal(p.started,false);assert.equal(readPlans(storage).length,1);assert.equal(pendingUnits(readPlans(storage)).size,0);});
+test('mark started and remove plan persists',()=>{const storage=store(),p=savePlan({market:'royal',budget:10000,totalCapital:1200,totalProfit:100,rows:[{id:'T4_BOW',city:'Lymhurst',qty:2,units:2,capital:1200,profit:100,weekly:200}],shopping:[]},{storage});markStarted(p.id,storage);assert.equal(pendingUnits(readPlans(storage)).get('T4_BOW|Lymhurst'),2);removePlan(p.id,storage);assert.equal(readPlans(storage).length,0);});
+test('CSV maneja comillas y campos libres sin romper',()=>{assert(downloadCSV([['nombre','texto'],['Uno','"Uno",Dos']]).includes('""Uno"",Dos'));});

@@ -1,47 +1,24 @@
-# Solo se publica dist/. Las funciones y el código fuente quedan fuera del sitio público.
 [build]
-  command = "npm run build"
-  publish = "dist"
-  functions = "netlify/functions"
-
-[build.environment]
-  NODE_VERSION = "22"
-  GILDEM_PREFETCH_ICONS = "0"
-
+ command = "npm run build"
+ publish = "dist"
+ functions = "netlify/functions"
 [functions]
-  node_bundler = "esbuild"
-
+ node_bundler = "esbuild"
+[build.environment]
+ NODE_VERSION = "22"
 [[headers]]
-  for = "/index.html"
-  [headers.values]
-    Cache-Control = "no-cache"
-
+ for = "/app.js"
+ [headers.values]
+ Cache-Control = "no-cache"
 [[headers]]
-  for = "/sw.js"
-  [headers.values]
-    Cache-Control = "no-cache"
-
+ for = "/src/*"
+ [headers.values]
+ Cache-Control = "no-cache"
 [[headers]]
-  for = "/core/*"
-  [headers.values]
-    Cache-Control = "public, max-age=300"
-
+ for = "/index.html"
+ [headers.values]
+ Cache-Control = "no-cache"
 [[headers]]
-  for = "/item-icons/*"
-  [headers.values]
-    Cache-Control = "public, max-age=604800, immutable"
-
-[[headers]]
-  for = "/app.js"
-  [headers.values]
-    Cache-Control = "no-cache"
-
-[[headers]]
-  for = "/styles.css"
-  [headers.values]
-    Cache-Control = "no-cache"
-
-[[headers]]
-  for = "/catalog/*"
-  [headers.values]
-    Cache-Control = "public, max-age=3600, must-revalidate"
+ for = "/.netlify/functions/*"
+ [headers.values]
+ Cache-Control = "no-store"
