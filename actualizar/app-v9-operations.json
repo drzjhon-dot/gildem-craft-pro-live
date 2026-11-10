@@ -1,0 +1,117 @@
+{
+  "expectedSourceSha": "aaf3020400715be1ce82572064f869d40cd166a8",
+  "ops": [
+    {
+      "type": "replace",
+      "old": "import {prepareAlwaysPlan} from './core/always-plan.js';",
+      "new": "import {prepareAlwaysPlan,draftPlanForLedger} from './core/always-plan.js';",
+      "count": 1
+    },
+    {
+      "type": "replace",
+      "old": "const conditionalProposal=!plan.rows.length?conditionalProductionFor(",
+      "new": "const conditionalProposal=conditionalProductionFor(",
+      "count": 2
+    },
+    {
+      "type": "replace",
+      "old": "   budget,horizonDays:Number(autoPrefs.horizonDays)||14,refiningSelected:scanRefining}):null;",
+      "new": "   budget,horizonDays:Number(autoPrefs.horizonDays)||14,refiningSelected:scanRefining});",
+      "count": 1
+    },
+    {
+      "type": "replace",
+      "old": "   market:input.market,saleCities:CITIES,input,budget:input.budget,horizonDays:input.horizonDays}):null;",
+      "new": "   market:input.market,saleCities:CITIES,input,budget:input.budget,horizonDays:input.horizonDays});",
+      "count": 1
+    },
+    {
+      "type": "replace",
+      "old": " const options=[];\n for(const id of ids||[]){",
+      "new": " const options=[];\n const pendingMarket=pendingUnitsByMarket(loadPortfolios());\n for(const id of ids||[]){",
+      "count": 1
+    },
+    {
+      "type": "replace",
+      "old": "    costTotal:cost?.total??null,referencePrice:q?.price??null,ageHours:q?.ageHours??null,",
+      "new": "    costTotal:cost?.total??null,stationCost:Number(input.station)||0,referencePrice:q?.price??null,ageHours:q?.ageHours??null,",
+      "count": 1
+    },
+    {
+      "type": "replace",
+      "old": "    taxRate,setupRate,weeklyObserved:weekly,transportCost:",
+      "new": "    taxRate,setupRate,weeklyObserved:weekly,pendingMarketUnits:pendingMarket.get(id+'|'+saleCity)||0,transportCost:",
+      "count": 1
+    },
+    {
+      "type": "replace",
+      "old": " return prepareAlwaysPlan(options,{budget,horizonDays,maxItems:14});",
+      "new": " return prepareAlwaysPlan(options.map(o=>({...o,pendingMarketUnits:o.pendingMarketUnits??pendingMarket.get(o.id+'|'+o.city)??0})),{budget,horizonDays,maxItems:14});",
+      "count": 1
+    },
+    {
+      "type": "replace",
+      "old": " const rows=plan.rows;\n const overview=",
+      "new": " const rows=plan.rows.filter(r=>r.qty>=2);\n const overview=",
+      "count": 1
+    },
+    {
+      "type": "replace",
+      "old": "<div class=\"gcp-conditional-data\"><span><small>Fabricar, solo si se verifica</small><strong>${fmt(r.qty)} fab. · ${fmt(r.qty*r.craftAmount)} uds.</strong></span><span><small>Capital hipotético</small><strong>${r.rawMaterials===null?'Sin cotización':short(r.capital)}</strong></span><span><small>Precio mínimo por unidad</small><strong>${r.minSalePrice===null?'Por calcular':moneyCell(r.minSalePrice)}</strong></span><span><small>Precio observado</small><strong>${r.referencePrice===null?'Sin cotización':moneyCell(r.referencePrice)}</strong></span></div>",
+      "new": "<div class=\"gcp-conditional-data\"><span><small>Fabricar</small><strong>${fmt(r.qty)} fab. · ${fmt(r.units)} uds.</strong></span><span><small>Capital estimado</small><strong>${r.upfrontPerCraft===null?'Sin cotización':short(r.capital)}</strong></span><span><small>Actividad semanal</small><strong>${r.weeklyObserved===null?'Sin datos':fmt(Math.round(r.weeklyObserved))} uds.</strong></span><span><small>Resultado neto esperado</small><strong>${r.scenarioProfit===null?'No verificable':(r.scenarioProfit>=0?'+':'')+fmt(r.scenarioProfit)+' silver'}</strong></span><span><small>Precio de venta observado</small><strong>${r.referencePrice===null?'Sin cotización':moneyCell(r.referencePrice)}</strong></span><span><small>Precio equilibrio</small><strong>${r.minSalePrice===null?'Por calcular':moneyCell(r.minSalePrice)}</strong></span></div>",
+      "count": 1
+    },
+    {
+      "type": "replace",
+      "old": "El motor encontró ${rows.length} objetos para tu configuración, pero <strong>ninguno ha superado todas las comprobaciones para invertir ahora</strong>. Son cantidades OBJETIVO, no órdenes de compra. El precio mínimo no es una puja disponible ni una venta garantizada.",
+      "new": "El motor seleccionó ${rows.length} objetos por actividad observada, con al menos dos fabricaciones por ruta. El profit puede ser positivo o negativo; las cotizaciones y existencias deben verificarse antes de comprar.",
+      "count": 1
+    },
+    {
+      "type": "replace",
+      "old": " <div class=\"gcp-conditional-warning\"><strong>No hay beneficio neto verificable actualmente.</strong> El plan no entra en Mi negocio, no consume silver y no habilita compras. Cuando una ruta supere el precio mínimo y los controles de suministro, vuelve a generar el plan para convertirla en ruta ejecutable.</div>",
+      "new": " <div class=\"gcp-conditional-warning\"><strong>PLAN POR ROTACIÓN · SIN FILTRO DE PROFIT MÍNIMO</strong> Sin lotes de una sola fabricación. Los precios y la actividad son referencias, no ventas confirmadas. Comprueba profundidad y costos antes de ejecutar.</div>",
+      "count": 1
+    },
+    {
+      "type": "replace",
+      "old": " <div class=\"gcp-conditional-actions\"><button class=\"btn gold\" data-action=\"refresh-craft-now\">↻ Actualizar cotizaciones y recalcular</button><button class=\"btn\" data-action=\"results-edit\">Cambiar filtros</button></div></div>`;",
+      "new": " <div class=\"gcp-conditional-actions\"><button class=\"btn gold\" data-action=\"save-investment\" ${!rows.some(r=>r.budgetVerified&&r.referencePrice>0)?'disabled':''}>Guardar borrador en Mi negocio</button><button class=\"btn\" data-action=\"copy-demand-shopping\">Copiar compras</button><button class=\"btn\" data-action=\"refresh-craft-now\">Actualizar cotizaciones</button><button class=\"btn\" data-action=\"results-edit\">Cambiar filtros</button></div></div>`;",
+      "count": 1
+    },
+    {
+      "type": "replace",
+      "old": "if(current?.conditionalProposal?.rows?.length&&!current.plan?.rows?.length){main.innerHTML=conditionalResultsContent(current);return;}",
+      "new": "if(current?.conditionalProposal){main.innerHTML=conditionalResultsContent(current);return;}",
+      "count": 1
+    },
+    {
+      "type": "replace",
+      "old": "function craftResult(p){if(p?.conditionalProposal?.rows?.length&&!p?.plan?.rows?.length)return conditionalResultsContent(p);",
+      "new": "function craftResult(p){if(p?.conditionalProposal)return conditionalResultsContent(p);",
+      "count": 1
+    },
+    {
+      "type": "region",
+      "start": "function savePlanPortfolio(){",
+      "end": "function appendPlanAlert(index)",
+      "new": "function savePlanPortfolio(){\n const active=currentPlan(),byDemand=!!active?.conditionalProposal;\n const p=byDemand?draftPlanForLedger(active.conditionalProposal):active?.plan;\n if(!p?.rows?.length)return showToast('No hay lotes de al menos dos fabricaciones con precios completos para guardar.',true);\n const name=window.prompt('Nombre para esta inversión','Craft '+new Date().toLocaleDateString('es-ES'));\n if(name===null)return;\n const all=loadPortfolios();\n const deduction=procurementPlan(p.materials,loadInventory(),all);\n all.push({...createPortfolioFromPlan(p,String(name||'Plan de crafting').slice(0,70)),started:false,\n  planMode:byDemand?'demand':'profit',priceStatus:byDemand?'provisional':'observado',\n  planningWarning:byDemand?'Actividad observada, no venta garantizada. Puede haber pérdidas.':'',\n  inventoryAllocations:deduction.allocations,inventoryCredit:deduction.cashSaved,\n  recipeSnapshot:recipeSnapshot(p.rows,recipes),recipeRevision:recipeCatalogStatus().sourceRevision||null,patchChanges:[]});\n if(writeLocal(K_LEDGER,all))showToast('Plan guardado como borrador. No se ha descontado silver.');\n}"
+    },
+    {
+      "type": "replace",
+      "old": " const inventory=consumeAllocations(loadInventory(),active?.inventoryAllocations||[]);",
+      "new": " if(active?.planMode==='demand'&&!confirm('Plan por actividad: podría producir pérdidas. ¿Confirmas que YA compraste los materiales?'))return;\n const inventory=consumeAllocations(loadInventory(),active?.inventoryAllocations||[]);",
+      "count": 1
+    },
+    {
+      "type": "replace",
+      "old": " if(action==='results-copy'){void resultsCopyShopping();return;}",
+      "new": " if(action==='copy-demand-shopping'){\n  const rows=(currentPlan()?.conditionalProposal?.rows||[]).filter(r=>r.qty>=2),materials=new Map();\n  for(const row of rows)for(const m of row.materials||[]){\n   if(!(m.id&&Number(m.count)>0))continue;\n   const city=m.city||row.craftCity,k=m.id+'|'+city;\n   const old=materials.get(k)||{id:m.id,city,qty:0,price:null};\n   old.qty+=Number(m.count)*row.qty;\n   if(Number(m.unitPrice)>0)old.price=Number(m.unitPrice);\n   materials.set(k,old);\n  }\n  const lines=['GILDEM CRAFT PRO | COMPRAS POR ROTACIÓN',\n   'Actividad observada: no garantiza ventas ni stock.',\n   ...[...materials.values()].sort((a,b)=>itemTier(a.id)-itemTier(b.id)||itemEnch(a.id)-itemEnch(b.id)||a.id.localeCompare(b.id))\n    .map(m=>itemName(m.id)+' | '+m.city+' | '+Math.ceil(m.qty)+' uds. | '+(m.price===null?'Sin cotización':Math.round(m.price)+' silver/u'))];\n  if(!navigator.clipboard?.writeText){showToast('No se puede copiar automáticamente.',true);return;}\n  void navigator.clipboard.writeText(lines.join('\\n')).then(()=>showToast('Lista de compras copiada.')).catch(()=>showToast('No se pudo copiar.',true));return;\n }\n if(action==='results-copy'){void resultsCopyShopping();return;}",
+      "count": 1
+    },
+    {
+      "type": "prepend",
+      "new": "// GCP_DEMAND_FIRST_871: motor real por actividad; lotes >=2 y compras coherentes.\n"
+    }
+  ]
+}

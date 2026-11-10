@@ -4,6 +4,9 @@
 const numeric = x => x === null || x === undefined || x === '' ? null : Number.isFinite(Number(x)) ? Math.max(0,Number(x)) : null;
 const money = x => Number.isFinite(x) ? Math.round(x) : null;
 const pct = x => Math.max(0,Math.min(.3,Number(x)||0));
+// GCP_MIN_BATCH_901: no crear ni recomendar lotes de una sola fabricacion.
+export const MIN_CRAFT_BATCH = 2;
+export const MIN_WEEKLY_ACTIVITY_FOR_PLAN = 50;
 
 export function prepareAlwaysPlan(options,{budget=0,horizonDays=14,maxItems=14,minimumROI=0}={}) {
  const available=Math.max(0,Number(budget)||0);
@@ -44,7 +47,8 @@ export function prepareAlwaysPlan(options,{budget=0,horizonDays=14,maxItems=14,m
    craftAmount:output,outputAmount:output,scenarioProfit:null,budgetVerified:false,
    requiresVerification:true,executable:false};
  }).sort((a,b)=>b.score-a.score||(b.weeklyObserved||0)-(a.weeklyObserved||0)||a.id.localeCompare(b.id));
- const hasObserved=ranked.some(x=>x.weeklyObserved>0);
+ // Solo articulos con actividad suficiente para produccion repetida.
+ const hasObserved=ranked.some(x=>x.weeklyObserved>=MIN_WEEKLY_ACTIVITY_FOR_PLAN);
  const selected=[];
  const maxSelected=Math.max(1,Math.min(30,maxItems));
  // Un producto muy activo pero demasiado caro no puede expulsar de la lista
@@ -53,29 +57,22 @@ export function prepareAlwaysPlan(options,{budget=0,horizonDays=14,maxItems=14,m
  let remaining=available;
  for(const r of ranked){
   if(selected.length>=maxSelected)break;
-  if(hasObserved&&!(r.weeklyObserved>0))continue;
+  if(!hasObserved||!(r.weeklyObserved>=MIN_WEEKLY_ACTIVITY_FOR_PLAN))continue;
   if(seen.has(r.id))continue;
   const unit=r.upfrontPerCraft;
-  if(!(unit>0)){
-   // Sin precio de materiales: objetivo de una sola fabricación sin capital
-   // asignado y sin opción de registrar una compra.
-   r.qty=1;r.units=r.outputAmount;r.budgetVerified=false;
-   selected.push(r);seen.add(r.id);continue;
-  }
+  // Sin presupuesto de insumos no se inventa un lote de prueba.
+  if(!(unit>0))continue;
   if(unit>remaining||unit>available)continue;
-  const velocityCap=r.weeklyObserved===null||r.weeklyObserved<=50?1:
-   Math.max(1,Math.floor(r.weeklyObserved*weeks*.06/r.outputAmount));
+  const velocityCap=Math.floor(r.weeklyObserved*weeks*.06/r.outputAmount);
   const exposureCap=Math.floor(available*exposure/unit);
   const affordableCap=Math.floor(remaining/unit);
   // El inventario pendiente en Mi negocio también ocupa parte de la capacidad
   // prudente del mercado. Nunca volver a programar el mismo volumen.
-  const headroom=r.weeklyObserved===null?
-   Math.max(0,1-r.pendingMarketUnits):
-   Math.max(0,Math.floor((r.weeklyObserved*weeks*.06-r.pendingMarketUnits)/r.outputAmount));
+  const headroom=Math.max(0,Math.floor((r.weeklyObserved*weeks*.06-r.pendingMarketUnits)/r.outputAmount));
   let cap=Math.min(2000,velocityCap,exposureCap,affordableCap,headroom);
   if(r.profitPerCraft!==null&&r.profitPerCraft<0){
-   // Perdidas calculadas, nunca beneficios ficticios. Primera fabricación
-   // de prueba, y exposición reducida antes de pensar en escalar.
+   // Perdidas calculadas, nunca beneficios ficticios. Exposición muy
+   // reducida para márgenes negativos; sin lotes unitarios de prueba.
    const loss=Math.abs(r.profitPerCraft);
    const lossCap=Math.max(1,Math.floor(available*.01/Math.max(1,loss)));
    const lossCapitalCap=Math.max(1,Math.floor(available*.05/unit));
@@ -84,28 +81,28 @@ export function prepareAlwaysPlan(options,{budget=0,horizonDays=14,maxItems=14,m
    if(loss>available*.01)r.warnings.push('La pérdida prevista de UNA unidad supera el 1% del presupuesto; considera no comprar');
   }
   const qty=Math.max(0,cap);
-  if(!qty)continue;
+  if(qty<MIN_CRAFT_BATCH)continue;
   r.qty=qty;r.units=qty*r.outputAmount;r.capital=money(qty*unit);
   r.budgetVerified=true;
   r.scenarioProfit=r.profitPerCraft===null?null:money(qty*r.profitPerCraft);
   remaining-=r.capital;
   selected.push(r);seen.add(r.id);
  }
- const rows=selected.filter(r=>r.qty>0);
+ const rows=selected.filter(r=>r.qty>=MIN_CRAFT_BATCH);
  const scenarioCapital=rows.reduce((a,r)=>a+r.capital,0);
  const priced=rows.filter(r=>r.scenarioProfit!==null);
  return {status:'conditional',strategy:'demand_first',executable:false,rows,budget:available,scenarioCapital,
   remaining:Math.max(0,available-scenarioCapital),units:rows.reduce((a,r)=>a+r.units,0),
   estimatedProfit:priced.length===rows.length?priced.reduce((a,r)=>a+r.scenarioProfit,0):null,
   pricedRows:priced.length,horizonDays:horizon,scanned:options?.length||0,
-  warning:'PLAN POR ACTIVIDAD OBSERVADA. Se permiten márgenes bajos o negativos, señalados como riesgo. El historial AODP no garantiza ventas. Comprueba cotizaciones, suministro y tasas antes de comprar.'};
+  warning:'PLAN POR ACTIVIDAD OBSERVADA (mínimo dos fabricaciones y 50 observaciones semanales). Se permiten márgenes bajos o negativos, señalados como riesgo. El historial AODP no garantiza ventas. Comprueba cotizaciones, suministro y tasas antes de comprar.'};
 }
 
 // Solo los lotes con coste y precio observados pueden guardarse en Mi negocio.
 // Guardar = borrador; el silver NO se descuenta hasta que el jugador confirme
 // por separado que ya realizó la compra, tal como funciona la caja actual.
 export function draftPlanForLedger(proposal) {
- const rows=(proposal?.rows||[]).filter(r=>r.qty>0&&r.budgetVerified&&r.upfrontPerCraft>0&&
+ const rows=(proposal?.rows||[]).filter(r=>r.qty>=MIN_CRAFT_BATCH&&r.budgetVerified&&r.upfrontPerCraft>0&&
   r.costTotal!==null&&r.referencePrice>0&&r.profitPerCraft!==null).map(r=>({
   ...r,capitalPerUnit:r.upfrontPerCraft,cost:r.costTotal,sell:r.referencePrice,
   profit:r.profitPerCraft,mode:r.city==='Black Market'?'listed':'listed',

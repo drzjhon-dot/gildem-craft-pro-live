@@ -26,7 +26,7 @@ test('Mayor actividad prevalece ante mayor margen por unidad',()=>{
   route('T5_RAPIDO',5000,{referencePrice:9000})
  ],{budget:1_000_000});
  assert.equal(p.rows[0].id,'T5_RAPIDO');
- assert(p.rows.find(r=>r.id==='T5_RAPIDO').units>p.rows.find(r=>r.id==='T5_CARO').units);
+ assert.equal(p.rows.find(r=>r.id==='T5_CARO'),undefined); // 12 observaciones/semana no justifican fabricar
 });
 
 test('Si es rentable, el motor sigue mostrando beneficio real',()=>{
@@ -38,18 +38,17 @@ test('Si es rentable, el motor sigue mostrando beneficio real',()=>{
 
 test('No se inventa beneficio ni compra cuando faltan cotizaciones de materiales',()=>{
  const p=prepareAlwaysPlan([route('T5_2H_BOW',700,{rawMaterials:null,costTotal:null,referencePrice:null})],{budget:1_000_000});
- assert.equal(p.rows.length,1);
- assert.equal(p.rows[0].qty,1);
- assert.equal(p.rows[0].scenarioProfit,null);
+ assert.equal(p.rows.length,0);
+ assert.equal(p.estimatedProfit,0);
  assert.equal(p.scenarioCapital,0);
  assert.equal(draftPlanForLedger(p).rows.length,0);
 });
 
 test('La exposición a pérdidas y el presupuesto siempre quedan limitados',()=>{
- const p=prepareAlwaysPlan(Array.from({length:12},(_,i)=>route('T5_PRODUCTO_'+i,15000,{rawMaterials:11000,costTotal:18000,referencePrice:10000})),{budget:1_000_000});
+ const p=prepareAlwaysPlan(Array.from({length:12},(_,i)=>route('T5_PRODUCTO_'+i,15000,{rawMaterials:11000,costTotal:10100,referencePrice:10000})),{budget:1_000_000});
  assert(p.rows.length>0);
  assert(p.scenarioCapital<=1_000_000);
- assert(p.rows.every(r=>r.qty>=1&&r.capital>=0));
+ assert(p.rows.every(r=>r.qty>=2&&r.capital>=0));
  assert(p.rows.every(r=>r.profitPerCraft<0&&r.qty<=1_000_000*.01/Math.abs(r.profitPerCraft)+1));
  assert.equal(p.remaining,1_000_000-p.scenarioCapital);
 });
