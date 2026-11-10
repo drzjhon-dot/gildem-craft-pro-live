@@ -107,7 +107,11 @@ def main():
     package=DEST/'package.json'
     version=str(json.loads(package.read_text(encoding='utf-8')).get('version'))
     if version=='8.5.5':
-        print('Gildem Craft Pro 8.5.5 ya parece instalado. No se sobrescribió nada.');return
+        app_source=(DEST/'app.js').read_text(encoding='utf-8')
+        if ("qcControls('craft')" in app_source and 'function resultsPage(){' in app_source
+           and 'data-nav="resultados"' in (DEST/'index.html').read_text(encoding='utf-8')):
+            print('Código de v8.5.5 ya instalado; revisa que todo esté confirmado en GitHub.');return
+        raise RuntimeError('El package.json dice v8.5.5 pero la interfaz no está completa. Restaura una versión limpia o comparte el estado del repositorio.')
     if version not in ('8.5.2','8.5.3','8.5.4'):
         raise RuntimeError(f'Versión no soportada ({version}). Se admiten las bases 8.5.2, 8.5.3 o 8.5.4.')
     migrate_if_needed(version)
@@ -136,7 +140,9 @@ def main():
         src=BASE/rel
         if not src.is_file():raise RuntimeError(f'Falta {rel} en el ZIP')
         target=DEST/rel
-        if target.exists():raise RuntimeError(f'Archivo nuevo {rel} ya existe, no se sobrescribió')
+        # The user's GitHub may already contain the test or helper module,
+        # while app.js and index.html remain v8.5.2. Replace only these
+        # known generated files and preserve any previous version in backup.
         changes[target]=src.read_bytes()
 
     # Respaldo previo de archivos editados. Se mantienen todos los datos locales del navegador.
