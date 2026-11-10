@@ -6,15 +6,22 @@ const finite=x=>Number.isFinite(Number(x))?Math.max(0,Number(x)):0;
 const key=(id,city)=>`${id}|${city}`;
 export const DEFAULT_HORIZON_DAYS=14;
 export function demandHistoryIndex(rows=[]){
- const series=new Map();
+ const series=new Map(),seen=new Map();
  for(const r of rows||[]){
   if(Number(r.quality??1)!==1||!r.item_id)continue;
   const city=r.location||r.city;
   if(!city)continue;
   const k=key(r.item_id,city);
   const arr=series.get(k)||[];
-  arr.push(...(Array.isArray(r.data)?r.data:[]));
-  series.set(k,arr);
+  const keys=seen.get(k)||new Set();
+  for(const row of (Array.isArray(r.data)?r.data:[])){
+   // Duplicate API rows are not independent trading activity. Preserve distinct
+   // observations and markets, but do not count an identical day twice.
+   const signature=[row.timestamp,row.item_count,row.avg_price].join('|');
+   if(keys.has(signature))continue;
+   keys.add(signature);arr.push(row);
+  }
+  seen.set(k,keys);series.set(k,arr);
  }
  return series;
 }

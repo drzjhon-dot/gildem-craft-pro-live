@@ -27,6 +27,7 @@ import {limitRowsByMaterialVolume,limitRowsByMaterialBook} from './core/procurem
 import {coverageByMarket,diagnoseScan,marketResearchIds,marketAuditIds} from './core/market-discovery.js';
 import {volumeTrend} from './core/market-volume.js';
 import {chosenDemandIds,demandHistoryIndex,discoverDemand,demandExplanation} from './core/demand-first.js';
+import {evidenceForPlan} from './core/market-proof.js';
 import {MARKET_SNAPSHOT_KEY,parseMarketRanking,validMarketSnapshot,externalDaily,conflictingServerLabel} from './core/external-demand.js';
 import {MARKET_REFERENCES,marketReferenceSnapshot} from './core/market-references.js';
 import {REGION,requireWest,sourceLabel} from './core/server-policy.js';
@@ -676,13 +677,15 @@ async function runAutoScan(force=false){
   let warning=p.warning||'';const histLookup=new Map();let historyVerified=false;
   if(marketHistoryIds.length){status('Consultando actividad histórica por ciudad, incluso para objetos sin profit…');try{
    const hist=await history(marketHistoryIds,prefs.region,force);warning=[warning,hist.warning].filter(Boolean).join(' · ');
-   historyVerified=!hist.warning;
+   historyVerified=!!hist.rows?.length&&!hist.warning;
    for(const [key,series] of demandHistoryIndex(hist.rows))histLookup.set(key,series);
   }catch(e){warning=[warning,'Historial incompleto: '+e.message].filter(Boolean).join(' · ');}}
   const demandImport=demandEvidence(candidates,histLookup,marketHistoryIds,CITIES);
-  if(!historyVerified)demandEvidence(candidates,histLookup,marketHistoryIds,CITIES);
-  const marketCoverage=coverageByMarket(ids,priceMap,{cities:CITIES,market:'royal',maxAge:prefs.maxAge,history:historyVerified?histLookup:null});
-  marketCoverage.historySample=historyVerified?marketHistoryIds.length:0;marketCoverage.historyUniverse=ids.length;
+  const marketCoverage=coverageByMarket(ids,priceMap,{cities:CITIES,market:'royal',maxAge:prefs.maxAge,history:histLookup.size?histLookup:null});
+  marketCoverage.historySample=marketHistoryIds.length;marketCoverage.historyUniverse=ids.length;
+  marketCoverage.historyObserved=new Set([...histLookup].filter(([,data])=>data.length).map(([key])=>key.split('|')[0])).size;
+  marketCoverage.historyPairs=[...histLookup].filter(([,data])=>data.length).length;
+  marketCoverage.historyPartial=!historyVerified;
   const instant=candidates.filter(x=>x.mode==='instant'),instantIds=[...new Set(instant.map(x=>x.id))];
   if(instantIds.length){status('Comprobando órdenes de compra y límites de absorción…');try{
     const places=[...new Set(instant.map(x=>x.city))],bookResult=await orderbook(instantIds,prefs.region,force,places);
@@ -910,13 +913,28 @@ async function checkMarketReferences(){
 }
 function marketReferencesPanel(data){
  const rows=marketReferenceSnapshot(data);
- const checked=data?.checkedAt&&Number.isFinite(Date.parse(data.checkedAt))?new Date(data.checkedAt).toLocaleString('es-ES'):'No se pudo confirmar esta consulta';
- return `<section class="gcp-market-references panel"><details open><summary>Fuentes consultadas · referencias de mercado</summary>
- <p class="explain"><strong>Precios, historial y órdenes: AODP · América (West), fuente numérica automática.</strong> Se comprobó accesibilidad de ${rows.length} páginas de referencia (${h(checked)}). Una página accesible NO demuestra su servidor ni permite importar automáticamente sus números. Los rankings sin prueba West quedan excluidos del cálculo.</p>
- <div class="gcp-reference-grid">${rows.map(r=>`<a href="${h(r.url)}" target="_blank" rel="noopener noreferrer" class="gcp-reference-card"><b>${h(r.name)}</b><small>${h(r.status==='accessible'?'Accesible · verificar selector West · NO integrada':r.status==='unavailable'?'No respondió · sin importación':'Acceso/servidor no comprobados · sin importación')}</small><span>${h(r.description)}</span></a>`).join('')}</div>
- <p class="explain">Solo las observaciones de AODP West y tablas que hayas confirmado expresamente como West pueden afectar el dimensionamiento. Los anuncios privados no son ventas. Ninguna fuente externa sustituye cotizaciones de materiales ni asegura que las órdenes se ejecuten.</p><button type="button" class="btn sm ghost" data-action="research-west-ai">Copiar consulta para investigación con IA · West</button><small class="muted">Prepara un prompt con los objetos del plan y fuentes verificables. Para investigación automática en la web haría falta un servicio IA externo conectado: no está habilitado y no se cobra nada.</small></details></section>`;
+ const checkedAt=data?.checkedAt&&Number.isFinite(Date.parse(data.checkedAt))?new Date(data.checkedAt).toLocaleString('es-ES'):null;
+ const verified=data?.region==='west'&&Array.isArray(data?.checks)&&data.checks.length>0;
+ const accessible=rows.filter(r=>r.status==='accessible').length;
+ const checked=verified?`Accesibilidad comprobada: ${accessible} de ${rows.length} páginas respondieron · ${h(checkedAt||'fecha desconocida')}.`:'No se pudo comprobar la accesibilidad de las páginas externas en esta consulta.';
+ const cards=rows.map(r=>{
+  const status=r.status==='accessible'?'Página accesible, servidor de los datos NO verificado':r.status==='unavailable'?'La página no respondió':'Acceso no confirmado';
+  const region=r.westSelectable==='yes'?'Permite seleccionar América (West), pero este chequeo no leyó su selección':'Servidor West sin verificación automática';
+  return `<a href="${h(r.url)}" target="_blank" rel="noopener noreferrer" class="gcp-reference-card" aria-label="Abrir ${h(r.name)}">
+    <strong class="gcp-source-name">${h(r.name)}</strong>
+    <span class="gcp-source-server">${h(region)}</span>
+    <small class="gcp-source-status">${h(status)} · Sin estadísticas importadas</small>
+    <span class="gcp-source-uses">${h(r.description)}</span>
+   </a>`;
+ }).join('');
+ return `<section class="gcp-market-references panel"><details open><summary>Fuentes y evidencia de mercado · América (West)</summary>
+ <div class="gcp-reference-primary"><strong>AODP América (West)</strong><span>Única fuente numérica automática: cotizaciones, historial y órdenes observadas. Los datos pueden ser antiguos o incompletos.</span></div>
+ <p class="explain">${checked} Estas comprobaciones solo prueban disponibilidad de páginas, NO importan ventas ni verifican automáticamente su servidor. <strong>0 de ${rows.length} referencias externas aportaron estadísticas al cálculo.</strong></p>
+ <div class="gcp-reference-grid">${cards}</div>
+ <p class="explain">El plan solo utiliza AODP West y tablas externas importadas manualmente con servidor West confirmado. Los anuncios de particulares no prueban ventas ejecutadas. Nunca se mezcla Europa ni Asia con América.</p>
+ <div class="gcp-reference-actions"><button type="button" class="btn sm ghost" data-nav="ajustes">Importar estadísticas West</button><button type="button" class="btn sm ghost" data-action="research-west-ai">Copiar consulta para investigación con IA · West</button></div>
+ <small class="muted">La investigación con IA genera una consulta para copiar. No es una búsqueda automática, ni una importación de cifras, ni una comprobación de profit.</small></details></section>`;
 }
-
 function marketCoverageHtml(p){
  const coverage=p?.marketCoverage,diagnosis=p?.scanDiagnosis;
  if(!coverage&&!diagnosis)return '';
@@ -926,7 +944,7 @@ function marketCoverageHtml(p){
  const top=(diagnosis?.reasons||[]).slice(0,5).map(x=>`<li>${h(x.reason)} · ${fmt(x.count)} rutas</li>`).join('');
  const count=diagnosis?`<div class="gcp-market-stats"><span>${fmt(diagnosis.recipes)} recetas evaluadas</span><span>${fmt(diagnosis.candidates)} rutas con margen inicial</span><span>${fmt(diagnosis.viable)} rutas que superaron seguridad</span><span>${fmt(diagnosis.recommendations)} rutas del plan</span></div>`:'';
  const missing=diagnosis&&diagnosis.missingMaterials+diagnosis.missingSales+diagnosis.missingFocus>0?`<p class="explain">Sin precio completo de materiales: ${fmt(diagnosis.missingMaterials)} · Sin precio de venta reciente: ${fmt(diagnosis.missingSales)} · Sin Focus verificable: ${fmt(diagnosis.missingFocus)}</p>`:'';
- return `<section class="gcp-market-audit panel"><details ${!p.plan?.rows?.length?'open':''}><summary>Mercados examinados · cobertura y motivos de descarte</summary>${count}<div class="table-scroll"><table class="data-table"><thead><tr><th>Mercado</th><th>Objetos con compra (bid)</th><th>Objetos con venta (ask)</th><th>Objetos con historial</th><th>Unidades observadas 14d</th><th>Cotización más antigua</th></tr></thead><tbody>${rows}</tbody></table></div>${mostObserved?`<h4 class="gcp-market-heading">Objetos con más actividad observada por ciudad</h4><div class="gcp-market-leaders-grid">${mostObserved}</div>`:''}${missing}${top?`<strong>Principales motivos por los que algunas rutas no entraron:</strong><ul class="gcp-market-reasons">${top}</ul>`:''}<p class="explain">Datos comunitarios AODP. Historial consultado para ${fmt(coverage.historySample||0)} de ${fmt(coverage.items||0)} variantes elegidas${coverage.historyLoaded?'':' (NO se verificó la consulta histórica)'}. Las cantidades históricas NO son profundidad de compra ni una promesa de ventas; las cotizaciones cuentan solo cuando están dentro del límite de antigüedad. La cobertura es de la rama y variantes elegidas, no de todo Albion.</p>${!p.plan?.rows?.length?'<div class="notice neutral">No se recomienda gastar silver sin márgenes y liquidez suficientes. Las tablas indican qué falta verificar o qué mercados tienen datos.</div>':''}</details></section>`;
+ return `<section class="gcp-market-audit panel"><details ${!p.plan?.rows?.length?'open':''}><summary>Mercados examinados · cobertura y motivos de descarte</summary>${count}<div class="table-scroll"><table class="data-table"><thead><tr><th>Mercado</th><th>Objetos con compra (bid)</th><th>Objetos con venta (ask)</th><th>Objetos con historial</th><th>Unidades observadas 14d</th><th>Cotización más antigua</th></tr></thead><tbody>${rows}</tbody></table></div>${mostObserved?`<h4 class="gcp-market-heading">Objetos con más actividad observada por ciudad</h4><div class="gcp-market-leaders-grid">${mostObserved}</div>`:''}${missing}${top?`<strong>Principales motivos por los que algunas rutas no entraron:</strong><ul class="gcp-market-reasons">${top}</ul>`:''}<p class="explain">Datos comunitarios AODP West. Historial solicitado para ${fmt(coverage.historySample||0)} de ${fmt(coverage.items||0)} variantes elegidas; ${fmt(coverage.historyObserved||0)} variantes devolvieron observaciones en ${fmt(coverage.historyPairs||0)} pares objeto/ciudad${coverage.historyPartial?' (consulta parcial o no confirmada)':''}. Las cantidades históricas NO son profundidad de compra ni una promesa de ventas; las cotizaciones cuentan solo cuando están dentro del límite de antigüedad. La cobertura es de la rama y variantes elegidas, no de todo Albion.</p>${!p.plan?.rows?.length?'<div class="notice neutral">No se recomienda gastar silver sin márgenes y liquidez suficientes. Las tablas indican qué falta verificar o qué mercados tienen datos.</div>':''}</details></section>`;
 }
 function resultCategory(r){
  if(r.recipeKind==='refining')return 'Refinamiento';
@@ -943,6 +961,8 @@ function resultsPage(){
   return;
  }
  const b=current.plan,rows=b.rows||[],sum=resultsSummary(current),supply=shoppingWithCeilings(current),audit=preflightOverview(state.preflight,sum);
+ const proof=evidenceForPlan(b,{horizonDays:current.horizonDays||14,supplyPending:current.supplyPending});
+ const evidenceRows=proof.rows.map(r=>`<tr><td>${itemCell(r.id)}</td><td>${h(r.city)}</td><td>${r.observedDaily===null?'No verificable':fmt(Math.round(r.observedDaily))+' observadas/día'}<small class="gcp-evidence-muted">${h(r.historySource)}</small></td><td>${r.ageHours===null?'Sin fecha':r.ageHours.toFixed(1)+' h'}<small class="gcp-evidence-muted">${h(r.quote)}</small></td><td>${fmt(r.qty)} objetivo<small class="gcp-evidence-muted">${r.firstBatch===null?'Primer lote sin verificar':fmt(r.firstBatch)+' lote inicial estimado, no reservado'}</small></td><td>${h(r.procurement)}${r.alerts.length?`<small class="gcp-evidence-muted">${h(r.alerts.slice(0,2).join(' · '))}</small>`:''}</td></tr>`).join('');
  const availableBlack=!!state.plan?.plan?.rows?.length,availableRoyal=!!state.autoPlan?.plan?.rows?.length;
  const branch=state.resultSource==='autocraft'?'Royal Craft':'Black Craft';
  const confidenceText=sum.confidence===null?'Sin calificación':sum.confidence>=75?'Alta':sum.confidence>=45?'Media':'Baja';
@@ -976,6 +996,9 @@ function resultsPage(){
    <div class="gcp-kpi-grid">${cards}</div>
    ${marketCoverageHtml(current)}
    ${marketReferencesPanel(current.marketReferences)}
+   <section class="gcp-market-proof"><div class="gcp-proof-head"><div><strong>Calidad de los datos del plan</strong><p>Precio, actividad y abastecimiento se verifican por separado. No son ventas realizadas.</p></div><span class="gcp-tag ${proof.staged?'caution':'neutral'}">${proof.staged} rutas con compras por etapas</span></div>
+   <div class="gcp-proof-stats"><span>${proof.quoted}/${proof.total} cotizaciones recientes</span><span>${proof.rows.filter(x=>x.observedDaily!==null).length}/${proof.total} con historial observable</span><span>${proof.ready}/${proof.total} sin compra pendiente señalada</span></div>
+   <details><summary>Revisar evidencia de cada objeto antes de comprar</summary><div class="table-scroll"><table class="data-table"><thead><tr><th>Objeto</th><th>Mercado</th><th>Actividad</th><th>Precio observado</th><th>Fabricaciones</th><th>Compras</th></tr></thead><tbody>${evidenceRows}</tbody></table></div><p class="explain">${h(proof.disclaimer)} Un primer lote de 0 o no verificable no significa que el objeto no tenga mercado; significa que el stock de insumos no está respaldado al precio presupuestado. El techo completo es un objetivo condicionado.</p></details></section>
    <div class="gcp-result-grid"><section class="gcp-result-panel gcp-panel-craft"><div class="gcp-panel-title"><h3>⚒ Lista de fabricación</h3><span class="gcp-title-count">${rows.length} rutas · ${fmt(sum.units)} unidades</span></div><div class="gcp-result-scroll"><table class="gcp-result-table"><thead><tr><th>Objeto</th><th>Tier</th><th>Fabricar</th><th>Ciudad de craft</th><th>Vender en</th><th>Profit/craft</th><th>Profit total</th></tr></thead><tbody>${items}</tbody></table></div><div class="gcp-panel-foot"><span>Las cantidades editables están en fabricaciones, no siempre en unidades.</span><span>${h(sellDepth)}</span></div></section>
    <section class="gcp-result-panel gcp-panel-shopping"><div class="gcp-panel-title"><h3>▣ Lista de compras</h3><span class="gcp-title-count">${supply.length} materiales · ${(b.journalSummary?.items||[]).length} diarios</span></div><div class="gcp-result-scroll"><table class="gcp-result-table"><thead><tr><th>Material / diario</th><th>Comprar</th><th>Ciudad</th><th>Precio/u</th><th>Techo/u</th><th>Costo</th></tr></thead><tbody>${shoppingRows}${journalRows}</tbody></table></div><div class="gcp-shopping-total"><span>Materiales a comprar (bruto)</span><strong>${short(materialTotal)}</strong></div><p class="gcp-panel-caption">El techo/u es un límite financiero calculado, no una oferta disponible. Los diarios son adicionales si no están incluidos en el capital del plan.</p></section>
    <section class="gcp-result-panel gcp-panel-preflight"><div class="gcp-panel-title"><h3>☑ Comprobación previa</h3><span class="gcp-state ${audit.status}">${h(audit.title)}${verificationDate}</span></div><div class="gcp-check-grid">${checks}</div>${current.warning?`<details class="gcp-warnings"><summary>Advertencias del plan</summary><p>${h(current.warning)}</p></details>`:''}<p class="gcp-panel-caption">AODP aporta observaciones comunitarias. El resultado no garantiza la ejecución ni la disponibilidad de todas las órdenes.</p></section>
@@ -1290,14 +1313,17 @@ async function runCraft(force=false){
    try{
      const hist=await history(marketHistoryIds,prefs.region,force);
      if(hist.warning)warning=hist.warning;
-     else historyVerified=true;
+     historyVerified=!!hist.rows?.length&&!hist.warning;
      lookup=demandHistoryIndex(hist.rows);
      demandEvidence(candidates,lookup,marketHistoryIds,input.market==='black'?['Black Market']:CITIES);
    }catch(e){warning='No se pudo verificar la actividad histórica: '+e.message;}
   }
-  if(!historyVerified)demandEvidence(candidates,lookup,marketHistoryIds,input.market==='black'?['Black Market']:CITIES);
-  const marketCoverage=coverageByMarket(ids,map,{cities:input.market==='black'?['Black Market']:CITIES,market:input.market,maxAge:prefs.maxAge,history:historyVerified?lookup:null});
-  marketCoverage.historySample=historyVerified?marketHistoryIds.length:0;marketCoverage.historyUniverse=ids.length;
+  if(!historyVerified&&lookup.size===0)demandEvidence(candidates,lookup,marketHistoryIds,input.market==='black'?['Black Market']:CITIES);
+  const marketCoverage=coverageByMarket(ids,map,{cities:input.market==='black'?['Black Market']:CITIES,market:input.market,maxAge:prefs.maxAge,history:lookup.size?lookup:null});
+  marketCoverage.historySample=marketHistoryIds.length;marketCoverage.historyUniverse=ids.length;
+  marketCoverage.historyObserved=new Set([...lookup].filter(([,data])=>data.length).map(([key])=>key.split('|')[0])).size;
+  marketCoverage.historyPairs=[...lookup].filter(([,data])=>data.length).length;
+  marketCoverage.historyPartial=!historyVerified;
   // Del v6: comprobar niveles del libro de compra observados, no inferir
   // que el mejor precio podrá absorber todas las unidades sugeridas.
   let bookVerified=0,bookWarning=null;

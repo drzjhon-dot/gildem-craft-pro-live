@@ -1,11 +1,19 @@
-# Gildem Craft Pro v8.6.1 | América West y procedencia de fuentes
+# Gildem Craft Pro v8.6.3
 
-**Novedad v8.6.1:** planes Black/Royal exclusivos de América (West); AODP West como única API numérica automática; rechazo de datos Europa/Asia incluso en proxy Netlify; eliminación de Albion Journal como fuente; controles explícitos de West en importaciones manuales de Albion Hub; contraste con Royal Forge, Albion Online Tools, Albion Free Market y AO MCT sin prometer APIs públicas inexistentes. Botón de consulta para investigación con IA (copiar prompt; no búsqueda autónoma sin servicio conectado). Consulta `FUENTES_AMERICA_Y_VERIFICACION.md` para detalles.
+Consulta `RELEASE_NOTES_8_6_3.md` para la versión entregada: ranking equilibrado sensible al volumen, deduplicación AODP y auditoría de precios, actividad y compras por etapas.
+
+# v8.6.2: fuentes visibles y transparencia
+
+Esta versión corrige las cinco tarjetas de fuentes que aparecían sin nombre. El motor **NO importa automáticamente estadísticas numéricas** de esas páginas; sólo se comprueba su disponibilidad. AODP West sigue siendo la fuente numérica automática y las importaciones manuales se validan para América. El botón de IA prepara una consulta para copiar; no ejecuta una búsqueda web.
+
+# Gildem Craft Pro v8.6.2 | América West y procedencia de fuentes
+
+**Novedad v8.6.2:** planes Black/Royal exclusivos de América (West); AODP West como única API numérica automática; rechazo de datos Europa/Asia incluso en proxy Netlify; eliminación de Albion Journal como fuente; controles explícitos de West en importaciones manuales de Albion Hub; contraste con Royal Forge, Albion Online Tools, Albion Free Market y AO MCT sin prometer APIs públicas inexistentes. Botón de consulta para investigación con IA (copiar prompt; no búsqueda autónoma sin servicio conectado). Consulta `FUENTES_AMERICA_Y_VERIFICACION.md` para detalles.
 
 
 Herramienta web de crafting en español para **Albion Online**, configurada por defecto para **América (West)**. Proyecto completo para GitHub + Netlify, sin reparadores locales. Las tabs principales son **Black Craft**, **Royal Craft** y **Resultados**; Level Craft no aparece en la navegación.
 
-## Qué se corrigió en v8.6.1
+## Qué se corrigió en v8.6.2
 
 El motor anterior podía proponer una unidad de botas T5.4 aunque se observaran miles de unidades diarias de botas T4.0, T5.0 y T6.0. El problema no se limita a botas. Cambiamos la lógica de ambas tabs para que:
 
@@ -49,6 +57,6 @@ npm run preflight
 npm run build
 ```
 
-**Validación local v8.6.1:** 230 pruebas automáticas aprobadas; compilación y preflight correctos con Node 22. Navegador Chromium probado **con datos de mercado simulados**, no con ejecuciones o compras reales. Los resultados de prueba con cientos de unidades **no son un consejo de compra**. La publicación Netlify, cuotas y calidad de las APIs reales solo se verifican tras desplegar.
+**Validación local v8.6.2:** 237 pruebas automáticas aprobadas; compilación y preflight correctos con Node 22. Navegador Chromium probado **con datos de mercado simulados**, no con ejecuciones o compras reales. Los resultados de prueba con cientos de unidades **no son un consejo de compra**. La publicación Netlify, cuotas y calidad de las APIs reales solo se verifican tras desplegar.
 
 La comprobación previa no equivale a una reserva real de recursos ni a garantías de llenado en Royal o BM. Compra por tramos, valida tarifas y precio máximo, y no fabrique si el margen resulta negativo.

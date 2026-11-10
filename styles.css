@@ -525,3 +525,25 @@ body.gcp-results-active #main-content{max-width:1750px;padding-top:17px}
 .gcp-research-plan{grid-column:1 / -1;margin:10px 0 16px;border-color:#816744;min-width:0}
 .gcp-research-plan .notice{margin-top:14px}
 .gcp-research-plan .data-table{min-width:990px}
+
+/* v8.6.2: etiquetas visibles de cada fuente y separación de evidencia numérica. */
+.gcp-reference-primary{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;background:#0c2530;border:1px solid #2e7e71;border-radius:12px;padding:12px 14px;margin:8px 0 14px}
+.gcp-reference-primary strong{color:#b7f5d7;font-size:14px}
+.gcp-reference-primary span{flex:1 1 250px;color:#b9d0d5;font-size:12px;line-height:1.55}
+.gcp-market-references .gcp-source-name{display:block;color:#f4d49b;font-size:13px;font-weight:750;line-height:1.4}
+.gcp-market-references .gcp-source-server{display:block;color:#d2dbe3;font-size:11px;line-height:1.5}
+.gcp-market-references .gcp-source-status{display:block;color:#f0b876;font-size:11px;line-height:1.5}
+.gcp-market-references .gcp-source-uses{display:block;color:#a4bccd;font-size:11px;line-height:1.5}
+.gcp-reference-actions{display:flex;flex-wrap:wrap;gap:9px;margin:14px 0}
+/* v8.6.3 · Transparencia de AODP y abastecimiento antes de comprar */
+.gcp-market-proof{margin:14px 0;padding:15px 18px;border:1px solid rgba(203,163,93,.44);border-radius:14px;background:linear-gradient(115deg,rgba(23,38,52,.96),rgba(9,20,33,.96));color:#e9dac0}
+.gcp-proof-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.gcp-proof-head strong{font-weight:750;font-size:1.05rem}
+.gcp-proof-head p{margin:6px 0 0;color:#b2bdc9;font-size:.85rem}
+.gcp-proof-stats{display:flex;gap:9px;flex-wrap:wrap;margin:13px 0}
+.gcp-proof-stats span{background:rgba(58,81,110,.29);border:1px solid rgba(120,150,183,.27);border-radius:10px;padding:8px 11px;font-size:.79rem;color:#e1e8f0}
+.gcp-market-proof details summary{cursor:pointer;color:#e3c88f;font-weight:700;padding:8px 0}
+.gcp-market-proof .table-scroll{margin-top:10px}
+.gcp-market-proof td{vertical-align:top}
+.gcp-evidence-muted{display:block;margin-top:3px;color:#a8b6c8;font-size:.76rem;line-height:1.4}
+@media(max-width:680px){.gcp-market-proof{padding:12px}.gcp-proof-stats{display:grid;grid-template-columns:1fr}.gcp-market-proof .data-table{min-width:790px}}

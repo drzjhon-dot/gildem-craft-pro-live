@@ -1,9 +1,25 @@
-# Gildem Craft Pro v8.6.1 | Región West obligatoria
+## v8.6.3 (2026-11-10) · AODP West y pruebas por objeto
 
-**v8.6.1:** correcciones en `core/server-policy.js`, referencias externas y selección única de servidor; restringidas las funciones Netlify market/snapshot/watch a West, y guard de datos externos. Las cinco fuentes se comprueban como enlaces, sin mezclar precios/volúmenes ajenos ni asumir servidor por accesibilidad. La fuente europea retirada. Nueva consulta opcional para investigación con IA, explícitamente no automática.
+- Ranking equilibrado con retorno por capital y rotación observada.
+- Deduplicación por item, mercado y observación de historia AODP.
+- Auditoría en Resultados de precios, actividad y abastecimiento por etapa.
+- Contador de cobertura real y parcial de historial.
+- Pruebas nuevas de volúmenes, ranking y transparencia de datos.
+
+## v8.6.2 (2026-11-10) · Fuentes de mercado visibles
+
+- Se reparó un bug de propiedades: las tarjetas usaban `name`/`description` mientras que el catálogo exponía `title`/`uses`.
+- La pantalla identifica cada página, muestra su finalidad y distingue un chequeo HTTP de una fuente numérica verdaderamente integrada.
+- AODP West sigue siendo la fuente automática de precios/historial/órdenes; las páginas externas NO son feeds numéricos verificados.
+- Acceso directo para importar manualmente estadísticas comprobadas West en Ajustes.
+- Nuevas pruebas de regresión y nueva versión de caché.
+
+# Gildem Craft Pro v8.6.2 | Región West obligatoria
+
+**v8.6.2:** correcciones en `core/server-policy.js`, referencias externas y selección única de servidor; restringidas las funciones Netlify market/snapshot/watch a West, y guard de datos externos. Las cinco fuentes se comprueban como enlaces, sin mezclar precios/volúmenes ajenos ni asumir servidor por accesibilidad. La fuente europea retirada. Nueva consulta opcional para investigación con IA, explícitamente no automática.
 
 
-## v8.6.1
+## v8.6.2
 
 - Consulta historial de 7, 14 y 30 días de los objetos de **toda la rama elegida**, hasta 900 IDs, antes de asignar inversión. Incluye .0 en el mismo análisis que .1-.4. Evita el sesgo anterior hacia objetos caros con ROI aparente pero actividad mínima.
 - Nuevo selector compacto **Horizonte de venta por órdenes**: 7, 14 o 30 días (14 por defecto); la capacidad estratégica usa un porcentaje conservador del volumen histórico del horizonte, y no el volumen de un día que se redondeaba a cero. Eliminado el tope genérico de 12 crafts para todas las rutas pacientes.

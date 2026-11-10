@@ -1,20 +1,21 @@
-# Gildem Craft Pro v8.6.1 | América (West)
+# Gildem Craft Pro v8.6.3
 
-Esta versión bloquea Europa y Asia para Black Craft, Royal Craft y Netlify. Las fuentes externas son de referencia, no sustituyen las cotizaciones AODP West. La opción de IA genera un prompt que debes pegar en una IA con búsqueda web activa. Detalles: `FUENTES_AMERICA_Y_VERIFICACION.md`.
+Elige el ZIP **SOLO CAMBIOS** si tienes v8.6.2. Copia los archivos extraídos a la raíz de tu repositorio GitHub Desktop (en main, sin merges pendientes), haz Commit y Push. Si no sabes tu versión, usa **COMPLETO**. No subas el ZIP a la web de GitHub como un archivo.
 
+Antes de comprar: abre Resultados → Calidad de los datos del plan. Cotizaciones, actividad histórica y stock son evidencias diferentes; los pedidos en etapas están condicionados a nuevas comprobaciones.
 
-**Este ZIP es el proyecto completo para GitHub y Netlify, no un actualizador.** No necesitas Python en Windows.
+# Gildem Craft Pro v8.6.2 · Fuentes identificadas
 
-1. Publica los archivos siguiendo `SUBIR_A_GITHUB_DESDE_WINDOWS.md`. Comprueba que `package.json` marque **8.6.1** en GitHub.
-2. En **Black Craft** o **Royal Craft**, selecciona rama, objetos y tiers. No olvides **.0**, que concentra buena parte de la actividad en algunas familias.
-3. Usa **Horizonte de venta por órdenes: 7, 14 o 30 días**. Con 14 días por defecto, la cantidad recomendada puede ser de decenas o cientos de unidades cuando hay suficiente actividad, inversión y margen calculable. El horizonte no es un plazo de venta garantizado.
-4. Pulsa generar plan y revisa **Resultados**. Debajo de cada artículo figura la **actividad histórica, su fuente y el límite de fabricación**. Si hay aviso **compras por etapas**, no supongas que están disponibles todos los materiales al precio mostrado.
-5. **Para aprovechar tus tablas:** en **Ajustes y datos**, abre **Estadísticas externas de volumen**, elige **Albion Hub** o **Albion Journal**, el mercado, el servidor y la fecha, pega la tabla y guárdala. La próxima planificación podrá aprovechar la señal de demanda, con prudencia. Solo se mantiene una importación a la vez y se puede reemplazar.
-6. La herramienta busca cotizaciones en AODP para calcular **beneficio realista**, no copia el ROI ni el precio medio de los rankings. El volumen de Europa no debe mezclarse con planes América (West).
-7. Pulsa **Verificar antes de comprar**, consulta precios reales, órdenes y profundidad de materiales y distribuye las compras por tramos. Los datos históricos pueden no corresponder a ventas completadas.
+Esta es una **actualización de interfaz y trazabilidad** sobre v8.6.1. No añade una API de ventas de terceros ni una búsqueda automática con IA.
 
-**¿Selector vacío?** Usa **Reintentar catálogo**. Si la web no carga bien tras una actualización, pulsa **Ctrl + Shift + R** y, si es necesario, **Reparar carga**, que limpia la caché de Gildem sin eliminar tus inversiones locales.
+- Corrige las tarjetas vacías de «Fuentes y evidencia de mercado»: ahora se ven nombres y usos de Albion Online Hub, Royal Forge, Albion Online Tools, Albion Free Market y AO MCT.
+- Muestra AODP América (West) como única fuente numérica integrada automáticamente.
+- Diferencia accesibilidad de una web, identidad del servidor, importación estadística y confianza de un plan.
+- Permite abrir Ajustes para importar estadísticas de West que el usuario haya verificado.
+- Corrige la versión y caché offline para que Netlify distribuya los archivos nuevos.
 
-**¿Plan vacío?** Abre **Mercados examinados** para conocer los límites de datos y márgenes. No se inventa un precio rentable por el hecho de que una línea tenga muchas unidades históricas.
+**No se deben usar rankings europeos ni anuncios entre jugadores como prueba de ventas West.**
 
-La versión fue validada localmente con **230/230 pruebas y `npm run build`**; las comprobaciones en navegador utilizan datos simulados. Las cotizaciones reales y el despliegue Netlify deben verificarse después de publicar.
+Instalación en Windows: descomprime el ZIP de archivos modificados sobre una copia local **v8.6.1** del repositorio, reemplaza los archivos existentes y utiliza GitHub Desktop para Commit/Push. Nunca subas el ZIP como si fuera el código.
+
+Si tu repositorio no está en v8.6.1, usa el archivo ZIP completo.

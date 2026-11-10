@@ -1,4 +1,4 @@
-# Gildem Craft Pro v8.6.1 · Fuentes verificadas para América (West)
+# Gildem Craft Pro v8.6.2 · Fuentes verificadas para América (West)
 
 ## Política innegociable
 

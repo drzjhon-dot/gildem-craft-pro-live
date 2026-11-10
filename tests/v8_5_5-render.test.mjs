@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {resultsSummary,budgetGroups,shoppingWithCeilings,preflightOverview,shoppingListText} from '../core/results-view.js';
 import {marketReferenceSnapshot} from '../core/market-references.js';
+import {evidenceForPlan} from '../core/market-proof.js';
 const fragment=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 // La prueba ejecuta un fragmento aislado de la pantalla sobre datos reales de estructura
 // del motor, sin que sea necesario un navegador, API de precios o login.
@@ -20,7 +21,7 @@ function run(current=fake,report=null){
  const main={innerHTML:''};
  const state={resultSource:'crafting',plan:current,autoPlan:null,preflight:report};
  const context={main,state,prefs:{region:'west'},document:{body:{classList:{add(){}}}},
-   currentPlan:()=>current,resultsSummary,budgetGroups,shoppingWithCeilings,preflightOverview,shoppingListText,marketReferenceSnapshot,
+   currentPlan:()=>current,resultsSummary,budgetGroups,shoppingWithCeilings,preflightOverview,shoppingListText,marketReferenceSnapshot,evidenceForPlan,
    itemName:id=>id,itemTier:()=>5,itemEnch:()=>0,
    itemCell:id=>`<span class="item-cell"><img src="https://render.albiononline.com/v1/item/${id}.png">${id}</span>`,
    moneyCell:n=>`<span>${n}</span>`,preflightResult:report=>`<aside>${report.ok?'OK':'REVISAR'}</aside>`,

@@ -17,12 +17,22 @@ function value(x,goal){
  const personal=Math.max(.75,Math.min(1.12,f(x.personalLearning?.adjustment,1))); 
  const cash=f(x.capitalPerUnit,1);
  const daily=f(x.demandDaily,x.activity?.observedDaily||0);
- const turnover=1+Math.min(2.2,Math.log1p(daily)/Math.log1p(1000)*2.2);
+ const rotation=Math.min(1,Math.log1p(Math.max(0,daily))/Math.log1p(3000));
+ const turnover=.65+2.0*rotation;
  if(goal==='roi')return p/cash*trust*slippage*risk*personal*turnover;
  if(goal==='focus')return f(x.focusGain)/Math.max(1,f(x.focusPerUnit))*trust*slippage*risk*personal;
- if(goal==='balanced'||goal==='daily')return (p*.53+(p/cash)*Math.sqrt(cash)*.47)*trust*slippage*risk*personal*turnover*(goal==='daily'&&x.personalLearning?.qtySold>=3?Math.max(.6,Math.min(1.3,3/Math.max(1,x.personalLearning.averageDays))):1);
+ if(goal==='balanced'||goal==='daily'){
+  // Avoid ranking a single expensive .4 item above a highly liquid .0 line
+  // exclusively because its absolute per-unit profit is larger. Log reduces
+  // that distortion, ROI captures capital efficiency, rotation favors active
+  // markets, and the allocator still checks budget and volume separately.
+  const roi=Math.max(0,p/cash), balanced=Math.log1p(Math.max(0,p))*Math.sqrt(Math.min(2,roi))*turnover;
+  const own=goal==='daily'&&x.personalLearning?.qtySold>=3?Math.max(.6,Math.min(1.3,3/Math.max(1,x.personalLearning.averageDays))):1;
+  return balanced*trust*slippage*risk*personal*own;
+ }
  return p*trust*slippage*risk*personal*turnover;
 }
+export function routePriority(route,goal='balanced'){return value(route,goal);}
 export function allocatePortfolioV6(candidates,budget,opts={}){
  const budgetValue=f(budget),focusLimit=opts.focusLimit==null?Infinity:f(opts.focusLimit),maxVariants=Math.min(80,Math.max(1,opts.maxVariants??70));
  const capFraction=opts.capFraction??.06,unknownCap=opts.unknownCap??1,goal=opts.goal||'balanced',horizonDays=opts.horizonDays??14;

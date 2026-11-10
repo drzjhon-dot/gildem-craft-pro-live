@@ -77,5 +77,6 @@ test('investiga ventas observadas aunque NO haya candidatos rentables',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert(app.includes('const marketHistoryIds=chosenDemandIds([...new Set([...ids,...scanRefining.map(x=>x.id)])],900)'));
  assert(app.includes('const marketHistoryIds=chosenDemandIds(ids,900)'));
- assert(app.includes('marketCoverage.historySample=historyVerified?marketHistoryIds.length:0'));
+ assert(app.includes('marketCoverage.historySample=marketHistoryIds.length'));
+ assert(app.includes('marketCoverage.historyObserved='));
 });
