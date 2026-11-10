@@ -65,7 +65,7 @@ test('v7 negocio de 5 pociones calcula coste por fabricación y 5 productos',()=
 });
 test('v7 límites de actividad convierten unidades observadas a fabricaciones',()=>{
  const item={id:'T4_POTION_HEAL',city:'Lymhurst',craftAmount:5,activity:{observations:7,observedDaily:50}};
- assert.equal(capacityFor(item,.2,2),2); // 10 unidades = 2 lotes
+ assert.equal(capacityFor(item,.2,2),28); // 14 dias * 20% * 50 unidades/dia = 140 unidades = 28 lotes
  assert.equal(capacityFor({...item,activity:null},.2,2),2);
 });
 test('v7 precio de equilibrio es por unidad, no por fabricación',()=>{

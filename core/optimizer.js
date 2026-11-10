@@ -17,7 +17,7 @@ export function historyMetrics(data,days=14,now=Date.now()){
  const observations=(data||[]).map(x=>({...x,t:toEpoch(x.timestamp)})).filter(x=>Number.isFinite(x.t)&&x.t>=start&&x.t<today&&Number(x.item_count)>=0);
  const byDay=new Map();let count=0,turnover=0;
  for(const p of observations){let k=Math.floor(p.t/day);let old=byDay.get(k)||{count:0,prices:[]};let n=Math.max(0,Number(p.item_count)||0);old.count+=n;
- const avg=Number(p.avg_price);if(avg>0){old.prices.push(avg);turnover+=n*avg;}byDay.set(k,old);count+=n;}
+ const avg=Number(p.avg_price);if(n>0&&avg>0){old.prices.push(avg);turnover+=n*avg;}byDay.set(k,old);count+=n;}
  const dayCounts=[...byDay.values()].map(x=>x.count);
  const prices=[...byDay.values()].flatMap(x=>x.prices);
  const mean=prices.length?prices.reduce((a,b)=>a+b,0)/prices.length:null;
@@ -29,7 +29,7 @@ export function historyMetrics(data,days=14,now=Date.now()){
  const dailyMedians=[...byDay.values()].map(day=>median(day.prices)).filter(x=>x>0);
  const medianPrice=dailyMedians.length>=4?median(dailyMedians):null;
  const absoluteDeviation=medianPrice!==null?median(dailyMedians.map(p=>Math.abs(p-medianPrice))):null;
- const activeDays=byDay.size;
+ const activeDays=[...byDay.values()].filter(row=>row.count>0).length;
  return {days,observations:observations.length,activeDays,coverage:activeDays/days,count,observedDaily:count/days,
   volatility:mean&&stdev!=null?stdev/mean:null,avgPrice:count>0&&turnover>0?turnover/count:mean,
   observedTurnover:turnover,observedSilverDaily:turnover/days,
@@ -44,7 +44,7 @@ export function confidenceOf({ageHours=Infinity,activity=null,market='Royal',spr
  else if(ageHours>24){score-=40;reasons.push('Cotización con más de 24 horas');}
  else if(ageHours>6){score-=22;reasons.push('Cotización con más de 6 horas');}
  else if(ageHours>1){score-=9;}
- if(!activity||activity.observations===0){score-=36;reasons.push('Sin historial observable');}
+ if(!activity||activity.observations===0||activity.activeDays===0){score-=36;reasons.push('Sin historial observable');}
  else{if(activity.coverage<.2){score-=27;reasons.push('Pocos días con observaciones');}
  else if(activity.coverage<.5){score-=17;reasons.push('Cobertura histórica parcial');}
  if(activity.volatility!=null&&activity.volatility>.3){score-=20;reasons.push('Precio histórico volátil');}}

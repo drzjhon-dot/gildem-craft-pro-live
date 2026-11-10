@@ -508,3 +508,20 @@ body.gcp-results-active #main-content{max-width:1750px;padding-top:17px}
 .gcp-reference-card:hover{border-color:#d2b173;background:#1b2936}.gcp-reference-card b{font-size:12px}.gcp-reference-card small{font-size:10px;color:#ddb375}.gcp-reference-card span{font-size:11px;color:#94aabe;line-height:1.5}
 @media(max-width:1050px){.gcp-reference-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:530px){.gcp-reference-grid{grid-template-columns:1fr}}
+
+/* v8.5.8: los selectores nunca deben quedarse vacíos silenciosamente. */
+.boot-panel{max-width:740px;margin:32px auto;padding:28px;border-color:#b98a43;background:linear-gradient(120deg,#15253a,#101a27)}
+.boot-panel h2{font-size:22px;color:#f3d39a;margin:0 0 12px}
+.boot-panel p{color:#bfd0df;line-height:1.65;margin:0 0 20px}
+.catalog-recovery{grid-column:1/-1;border:1px solid #9a653e;background:linear-gradient(130deg,#322725,#172436);padding:18px 20px;border-radius:12px;max-width:100%;line-height:1.5}
+.catalog-recovery strong{color:#ffd5a0;font-size:14px}
+.catalog-recovery p{color:#bfd0dc;font-size:12px;max-width:680px}
+.catalog-recovery .btn{margin-top:8px}
+.catalog-loading{grid-column:1/-1;padding:18px;color:#b7cee2}
+
+/* v8.5.9: planes pacientes, sin prometer la ejecución de órdenes. */
+.gcp-patient-notice,.gcp-patience-banner{grid-column:1 / -1;margin:12px 0;padding:14px 17px;border:1px solid #c59c5f;border-radius:12px;background:linear-gradient(115deg,#302b22,#1b2a36);color:#f4dfb6;font-size:12px;line-height:1.6}
+.gcp-patient-notice strong,.gcp-patience-banner strong{color:#ffe3aa}
+.gcp-research-plan{grid-column:1 / -1;margin:10px 0 16px;border-color:#816744;min-width:0}
+.gcp-research-plan .notice{margin-top:14px}
+.gcp-research-plan .data-table{min-width:990px}

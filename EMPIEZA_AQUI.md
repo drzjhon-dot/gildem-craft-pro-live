@@ -1,10 +1,17 @@
-# Gildem Craft Pro 8.5.7 · Empieza aquí
+# Gildem Craft Pro v8.6.0 | Empieza aquí
 
-1. **Publicar**: lee `SUBIR_A_GITHUB_DESDE_WINDOWS.md`. El ZIP contiene los archivos finales para reemplazar en el repositorio, **sin reparadores ni Python**.
-2. **Elegir**: abre Black Craft o Royal Craft, selecciona una rama, marca tiers y encantamientos. Prueba **.0** además de .1–.4: ahora está incluido y suele tener una actividad importante, especialmente en el Mercado Negro.
-3. **Refinamiento**: en Royal Craft elige la categoría **Refinamiento**, después **Todos los refinados** o **Lingotes, Tablones, Tela, Cuero o Bloques de piedra**. El bono de ciudad y el bono diario se calculan; no se promete consumo de Focus de refinado que no se pueda verificar.
-4. **Generar**: pulsa Generar mi plan. Si hay rutas suficientemente seguras, irás a **Resultados**. Si no, despliega **Mercados examinados** para ver cotizaciones, actividad histórica por ciudad y motivos de descarte.
-5. **Comparar fuentes**: en Resultados abre **Fuentes consultadas** para ver los cuatro enlaces y la hora en que se intentó comprobar su acceso. Los números del plan son de AODP, no de rankings privados importados.
-6. **Comprar con cuidado**: usa **Verificar antes de comprar** para volver a consultar precios y órdenes. Compra los materiales por tramos y no superes el precio que justifica el beneficio.
+**Este ZIP es el proyecto completo para GitHub y Netlify, no un actualizador.** No necesitas Python en Windows.
 
-Los datos provienen de AODP y pueden faltar o estar desactualizados. Los conteos históricos no equivalen a ventas confirmadas. Un plan vacío puede significar datos incompletos o márgenes insuficientes, no ausencia de movimiento.
+1. Publica los archivos siguiendo `SUBIR_A_GITHUB_DESDE_WINDOWS.md`. Comprueba que `package.json` marque **8.6.0** en GitHub.
+2. En **Black Craft** o **Royal Craft**, selecciona rama, objetos y tiers. No olvides **.0**, que concentra buena parte de la actividad en algunas familias.
+3. Usa **Horizonte de venta por órdenes: 7, 14 o 30 días**. Con 14 días por defecto, la cantidad recomendada puede ser de decenas o cientos de unidades cuando hay suficiente actividad, inversión y margen calculable. El horizonte no es un plazo de venta garantizado.
+4. Pulsa generar plan y revisa **Resultados**. Debajo de cada artículo figura la **actividad histórica, su fuente y el límite de fabricación**. Si hay aviso **compras por etapas**, no supongas que están disponibles todos los materiales al precio mostrado.
+5. **Para aprovechar tus tablas:** en **Ajustes y datos**, abre **Estadísticas externas de volumen**, elige **Albion Hub** o **Albion Journal**, el mercado, el servidor y la fecha, pega la tabla y guárdala. La próxima planificación podrá aprovechar la señal de demanda, con prudencia. Solo se mantiene una importación a la vez y se puede reemplazar.
+6. La herramienta busca cotizaciones en AODP para calcular **beneficio realista**, no copia el ROI ni el precio medio de los rankings. El volumen de Europa no debe mezclarse con planes América (West).
+7. Pulsa **Verificar antes de comprar**, consulta precios reales, órdenes y profundidad de materiales y distribuye las compras por tramos. Los datos históricos pueden no corresponder a ventas completadas.
+
+**¿Selector vacío?** Usa **Reintentar catálogo**. Si la web no carga bien tras una actualización, pulsa **Ctrl + Shift + R** y, si es necesario, **Reparar carga**, que limpia la caché de Gildem sin eliminar tus inversiones locales.
+
+**¿Plan vacío?** Abre **Mercados examinados** para conocer los límites de datos y márgenes. No se inventa un precio rentable por el hecho de que una línea tenga muchas unidades históricas.
+
+La versión fue validada localmente con **230/230 pruebas y `npm run build`**; las comprobaciones en navegador utilizan datos simulados. Las cotizaciones reales y el despliegue Netlify deben verificarse después de publicar.

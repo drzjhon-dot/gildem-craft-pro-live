@@ -37,6 +37,33 @@ if(prefetch){
  }
  await Promise.all(Array.from({length:Math.min(8,ids.length)},()=>worker()));
 }
-await writeFile(join(OUTPUT,'version.json'),JSON.stringify({app:'Gildem Craft Pro',version:'8.5.7',build:'github-netlify',api:'west / AODP',publishedAt:new Date().toISOString()},null,2)+'\n');
+// Catálogo estático opcional publicado junto con la web.
+// La primera apertura no dependerá del almacenamiento del navegador ni de
+// una solicitud CORS a un CDN. Si falla en Netlify, la función server-side
+// y las otras fuentes siguen disponibles. Jamás usar recetas fabricadas.
+const prefetchCatalog=!!process.env.NETLIFY&&process.env.GILDEM_PREFETCH_CATALOG!=='0';
+const catalogStored=[];
+if(prefetchCatalog){
+ const sources=[
+  'https://raw.githubusercontent.com/vkorne-web/albion-market/main/',
+  'https://cdn.jsdelivr.net/gh/vkorne-web/albion-market@main/'
+ ];
+ async function cacheOne(file){
+  for(const origin of sources){
+   try{
+    const res=await fetch(origin+file,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(6500)});
+    if(!res.ok)continue;
+    const raw=await res.text();
+    if(raw.length<1000||raw.length>10_000_000)continue;
+    const payload=JSON.parse(raw);
+    if(!payload||typeof payload!=='object'||Array.isArray(payload)||Object.keys(payload).length<100)continue;
+    await mkdir(join(OUTPUT,'catalog'),{recursive:true});
+    await writeFile(join(OUTPUT,'catalog',file),raw);catalogStored.push(file);return;
+   }catch{}
+  }
+ }
+ await Promise.all(['names_es.json','recipes.json'].map(cacheOne));
+}
+await writeFile(join(OUTPUT,'version.json'),JSON.stringify({app:'Gildem Craft Pro',version:'8.6.0',build:'github-netlify',api:'west / AODP',publishedAt:new Date().toISOString()},null,2)+'\n');
 await writeFile(join(OUTPUT,'core/icon-manifest.js'),`export const LOCALLY_CACHED_ICONS = new Set(${JSON.stringify(stored)});\n`);
-console.log(`Gildem Craft Pro: dist/ preparado. Iconos locales del selector: ${stored.length}. Fuentes en vivo con respaldo automático.`);
+console.log(`Gildem Craft Pro: dist/ preparado. Iconos locales: ${stored.length}. Catálogos estáticos: ${catalogStored.length}. Proxy Netlify y fuentes externas de respaldo.`);

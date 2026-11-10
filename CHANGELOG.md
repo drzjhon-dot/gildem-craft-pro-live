@@ -1,6 +1,47 @@
+# Gildem Craft Pro v8.6.0 | Demanda primero en BM y Royal
+
+## v8.6.0
+
+- Consulta historial de 7, 14 y 30 días de los objetos de **toda la rama elegida**, hasta 900 IDs, antes de asignar inversión. Incluye .0 en el mismo análisis que .1-.4. Evita el sesgo anterior hacia objetos caros con ROI aparente pero actividad mínima.
+- Nuevo selector compacto **Horizonte de venta por órdenes**: 7, 14 o 30 días (14 por defecto); la capacidad estratégica usa un porcentaje conservador del volumen histórico del horizonte, y no el volumen de un día que se redondeaba a cero. Eliminado el tope genérico de 12 crafts para todas las rutas pacientes.
+- Las rutas más activas pueden recibir lotes mayores siempre que tengan coste, margen y presupuesto suficiente. Se mantiene el modo provisional de 1 fabricación cuando falta evidencia de actividad.
+- El plan paciente **distingue la cantidad objetivo de fabricación de la primera compra de materiales verificable**. Cuando el libro de materiales está incompleto, conserva el lote como **PLAN CONDICIONADO / compras por etapas**, con comprobación previa obligatoria. No garantiza el precio de toda la compra.
+- Resultados muestra **actividad diaria observada, fuente, capacidad de craft, compras por etapas** por ruta.
+- En Ajustes, importador opcional de estadísticas **pegadas** de Albion Hub y Albion Journal: obliga a identificar servidor, destino y fecha. No incorpora precios externos ni mezcla Europa con América. Solo un snapshot manual vigente por vez, con reducción de exposición.
+- No hay conexión directa de estadísticas numéricas con las cuatro webs externas sin API documentada; los precios calculables proceden de AODP y las páginas conservan su comprobación de accesibilidad.
+- Nuevas pruebas de volumen alto/bajo, horizonte temporal, parser de rankings y separación de servidores. **230 pruebas aprobadas** en Node 22; `npm run build` y escenario completo en Chromium con mercado **simulado**, sin validación de compra real ni promesa de ventas.
+
+---
+
+# Gildem Craft Pro v8.5.9 | Motor paciente y planes accionables
+
+## v8.5.9
+
+- Eliminada la tab visible **Level Craft** (permanecen pruebas del motor anterior para regresión).
+- Nuevo `core/adaptive-planner.js`: rescate de oportunidades rentables con actividad histórica de menos de una unidad por día, cantidades iniciales prudentes y advertencias explícitas.
+- Las rutas rentables no se descartan por haber quedado fuera de la **muestra de historial** del escaneo Royal.
+- Conserva la fase estricta. Si devuelve cero, utiliza automáticamente la fase de venta paciente. Se conserva la comprobación de **margen neto positivo, presupuesto y referencias fechadas**.
+- Los precios de hasta 72 horas solo son base de **escenarios provisionales**, con comprobación previa imprescindible; los precios recientes tienen prioridad.
+- La falta de profundidad de materiales puede convertir el plan en **condicionado**, con compras por etapas y advertencia. No significa que el libro permita comprar instantáneamente toda la lista.
+- Cuando ninguna cotización permite un plan rentable, nuevo **Plan de investigación**, con objeto, ciudad de crafting/venta, capital conocido y precio objetivo. Exportable a CSV. No inventa profit.
+- Restaurado el recuento de actividad: días con `item_count=0` no se presentan como días de actividad.
+- Pruebas de extremo a extremo con escenarios simulados de rotación lenta, compra de materiales insuficiente y precios con margen negativo.
+- **223 pruebas automatizadas aprobadas; `npm run build` validado en Node.js 22**. El mercado real y el despliegue Netlify todavía requieren validación tras la publicación.
+
+# Gildem Craft Pro v8.5.8 | Estabilidad del catálogo
+
+- IndexedDB deja de ser requisito para que funcionen los selectores.
+- Nuevo proxy de catálogo Netlify, con alternativa a dos fuentes públicas.
+- Carga independiente de recetas y nombres en español.
+- Panel de recuperación cuando no hay recetas, con botón de reintento.
+- Pantalla de arranque visible y reparación de caché si fallan módulos.
+- Precache de los módulos de mercado faltantes, versiones y cabeceras contra la caché antigua.
+- Preferencias guardadas de versiones anteriores saneadas.
+- Planes e inversiones locales NO se borran al reparar la caché.
+
 # Gildem Craft Pro: historial de cambios
 
-## v8.5.7 | Refinamiento Royal, ramas sin duplicados y órdenes de venta
+## v8.5.8 | Refinamiento Royal, ramas sin duplicados y órdenes de venta
 
 - Regresa Refinamiento a Royal Craft: todos los refinados o lingotes, tablones, tela, cuero y bloques, con tiers, encantamientos y bono diario elegidos. Compara precios de compra de recursos entre ciudades y rutas de venta Royal.
 - Cada profesión de Recolección aparece una sola vez y reúne equipo, mochila y su herramienta correspondiente. Monturas usa una sola rama para los objetos ensillables con receta válida.

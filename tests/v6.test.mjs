@@ -14,7 +14,7 @@ const base={id:'T4_MAIN_AXE',city:'Black Market',craftCity:'Martlock',mode:'inst
 function candidate(p={}){return {...base,...p};}
 
 test('v6 conserva presupuesto, focus y topes de demanda incluso repartiendo mercados',()=>{
- const rows=[candidate({id:'T4_MAIN_AXE',city:'Black Market',profit:220,capitalPerUnit:1200}),
+ const rows=[candidate({id:'T4_MAIN_AXE',city:'Black Market',profit:220,capitalPerUnit:1200,marketCapacity:2,depthVerified:true}),
    candidate({id:'T4_2H_AXE',city:'Martlock',profit:200,capitalPerUnit:1100}),
    candidate({id:'T4_2H_AXE',city:'Lymhurst',profit:170,capitalPerUnit:1100})];
  const a=allocatePortfolioV6(rows,5500,{useAll:true,focusLimit:300,capFraction:1,ensureBothMarkets:true});
@@ -26,9 +26,9 @@ test('v6 no duplica libros de orden al comparar ciudades de fabricación',()=>{
  const a=allocatePortfolioV6([x,{...x,craftCity:'Caerleon',profit:500}],1e7,{useAll:true,unknownCap:4,capFraction:1});
  assert.equal(a.rows.length,1);assert.equal(a.rows[0].qty,3);
 });
-test('v6 bloquea actividad sin capacidad observada',()=>{
- assert.equal(capacityFor(candidate({activity:{observations:8,observedDaily:0.1},city:'Lymhurst',mode:'listed'}),.1,2),0);
- assert.equal(capacityFor(candidate({activity:null,city:'Black Market',mode:'instant'}),.1,2),1);
+test('v8.6.0 admite un craft prudente de venta lenta, y BM instant requiere libro comprobado',()=>{
+ assert.equal(capacityFor(candidate({activity:{observations:8,observedDaily:0.1},city:'Lymhurst',mode:'listed'}),.1,2),1);
+ assert.equal(capacityFor(candidate({activity:null,city:'Black Market',mode:'instant'}),.1,2),0);
 });
 test('v6 competencia Royal cuenta solo órdenes al mismo precio o inferior',()=>{
  const raw=[{item_id:'T4_MAIN_AXE',city:'Martlock',quality:1,sell_orders:[{price:1000,amount:12,updated_at:stamp},{price:1100,amount:9,updated_at:stamp},{price:2000,amount:80,updated_at:stamp}]}];

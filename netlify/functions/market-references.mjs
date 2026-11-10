@@ -10,8 +10,8 @@ export async function verifyMarketReferences(fetcher=fetch){
  const at=new Date().toISOString();
  const checks=await Promise.all(SOURCES.map(async ([key,url])=>{
   try{
-   let r=await fetcher(url,{method:'HEAD',redirect:'follow',signal:AbortSignal.timeout(5500),headers:{'user-agent':'GildemCraftPro/8.5.7'}});
-   if(r.status===405||r.status===501)r=await fetcher(url,{method:'GET',redirect:'follow',signal:AbortSignal.timeout(5500),headers:{'Range':'bytes=0-0','user-agent':'GildemCraftPro/8.5.7'}});
+   let r=await fetcher(url,{method:'HEAD',redirect:'follow',signal:AbortSignal.timeout(5500),headers:{'user-agent':'GildemCraftPro/8.5.9'}});
+   if(r.status===405||r.status===501)r=await fetcher(url,{method:'GET',redirect:'follow',signal:AbortSignal.timeout(5500),headers:{'Range':'bytes=0-0','user-agent':'GildemCraftPro/8.5.9'}});
    return {key,status:r.ok?'accessible':'unavailable',checkedAt:at};
   }catch{return {key,status:'unverified',checkedAt:at};}
  }));

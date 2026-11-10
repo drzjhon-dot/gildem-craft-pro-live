@@ -100,10 +100,10 @@ test('Level Craft loss routes allowed only when explicitly enabled, preserving R
  assert(b.candidates[0].profit<0);
 });
 
-test('navigational tabs renamed, Royal keeps Black Market optional and Level has full selector',()=>{
+test('navigational tabs renamed, Royal solo Royal, Level no se muestra al usuario',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
- assert(html.includes('data-nav="levelcraft"'));
+ assert(!html.includes('data-nav="levelcraft"'));
  assert(html.includes('>Black Craft<'));
  assert(html.includes('>Royal Craft<'));
  assert(!html.includes('>Plan de crafting<'));

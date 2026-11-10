@@ -5,19 +5,100 @@ const BACK='https://raw.githubusercontent.com/vkorne-web/albion-market/main/';
 const FULL='https://cdn.jsdelivr.net/gh/ao-data/ao-bin-dumps@master/items.json';
 const DB='gildem-catalog-2026';
 const CATALOG_TTL=24*3600000;
+// IndexedDB es una optimización, no un requisito para poder ver el catálogo.
+// Algunos navegadores, modos privados y configuraciones de privacidad lanzan
+// SecurityError SIN devolver una solicitud. Nunca dejar vacíos los selectores.
 let dbHandle;
-function database(){if(!('indexedDB'in window))return Promise.resolve(null);if(!dbHandle)dbHandle=new Promise(resolve=>{const q=indexedDB.open(DB,1);q.onupgradeneeded=()=>q.result.createObjectStore('files');q.onsuccess=()=>resolve(q.result);q.onerror=()=>resolve(null)});return dbHandle;}
-async function get(key){const db=await database();if(!db)return null;return new Promise(r=>{const tx=db.transaction('files','readonly');const req=tx.objectStore('files').get(key);req.onsuccess=()=>r(req.result||null);req.onerror=()=>r(null);});}
-async function put(key,value){const db=await database();if(!db)return;return new Promise(r=>{const tx=db.transaction('files','readwrite');tx.objectStore('files').put({ts:Date.now(),value},key);tx.oncomplete=()=>r();tx.onerror=()=>r();});}
-async function downloadJson(name){let failure;for(const u of [ROOT+name,BACK+name]){try{const res=await fetch(u);if(!res.ok)throw Error('HTTP '+res.status);return await res.json();}catch(e){failure=e;}}throw failure||Error('No se pudo obtener catálogo');}
+function database(){
+ if(dbHandle)return dbHandle;
+ try{
+  if(typeof indexedDB==='undefined')return Promise.resolve(null);
+  dbHandle=new Promise(resolve=>{
+   let settled=false;
+   const finish=value=>{if(settled)return;settled=true;resolve(value);};
+   let q;
+   try{q=indexedDB.open(DB,1);}catch{finish(null);return;}
+   q.onupgradeneeded=()=>{try{if(!q.result.objectStoreNames.contains('files'))q.result.createObjectStore('files');}catch{}};
+   q.onsuccess=()=>finish(q.result);
+   q.onerror=()=>finish(null);
+   q.onblocked=()=>finish(null);
+   // No bloquear la interfaz indefinidamente por almacenamiento privado.
+   setTimeout(()=>finish(null),2200);
+  });
+  return dbHandle;
+ }catch{return Promise.resolve(null);}
+}
+async function get(key){
+ try{
+  const db=await database();if(!db)return null;
+  return await new Promise(resolve=>{
+   let done=false;const finish=x=>{if(!done){done=true;resolve(x);}};
+   try{const tx=db.transaction('files','readonly'),req=tx.objectStore('files').get(key);
+    req.onsuccess=()=>finish(req.result||null);req.onerror=()=>finish(null);
+    tx.onabort=()=>finish(null);setTimeout(()=>finish(null),2200);
+   }catch{finish(null);}
+  });
+ }catch{return null;}
+}
+async function put(key,value){
+ try{
+  const db=await database();if(!db)return;
+  await new Promise(resolve=>{
+   let done=false;const finish=()=>{if(!done){done=true;resolve();}};
+   try{const tx=db.transaction('files','readwrite');tx.objectStore('files').put({ts:Date.now(),value},key);
+    tx.oncomplete=finish;tx.onerror=finish;tx.onabort=finish;setTimeout(finish,2200);
+   }catch{finish();}
+  });
+ }catch{}
+}
+export function validCatalogPayload(name,data){
+ if(!data||typeof data!=='object'||Array.isArray(data))return false;
+ const ids=Object.keys(data);
+ if(!ids.length)return false;
+ if(name==='recipes.json')return ids.some(id=>/^T[1-8]_/.test(id)&&Array.isArray(data[id]?.materials)&&typeof data[id]?.city==='string');
+ if(name==='names_es.json')return ids.some(id=>/^T[1-8]_/.test(id)&&typeof data[id]==='string');
+ return false;
+}
+// Proxy Netlify del mismo origen primero, después dos fuentes públicas.
+// Ninguna fuente tiene prioridad para inventar recetas; todas deben incluir
+// datos reales y válidos, y el resultado nunca depende de IndexedDB.
+async function downloadJson(name,force=false){
+ if(!['names_es.json','recipes.json'].includes(name))throw Error('Archivo de catálogo no permitido');
+ let local=null;try{if(typeof location!=='undefined'&&/^https?:/.test(location.href))local=new URL('./.netlify/functions/catalog?file='+encodeURIComponent(name),location.href).toString();}catch{}
+ let last;
+ const staticCatalog=(typeof location!=='undefined'&&/^https?:/.test(location.href)&&!force)?new URL('./catalog/'+name,location.href).toString():null;
+ for(const url of [staticCatalog,local,ROOT+name,BACK+name].filter(Boolean)){
+  try{
+   const signal=typeof AbortSignal!=='undefined'&&typeof AbortSignal.timeout==='function'?AbortSignal.timeout(14500):undefined;
+   const res=await fetch(url,{headers:{Accept:'application/json'},signal});
+   if(!res.ok)throw Error('HTTP '+res.status);
+   const data=await res.json();
+   if(!validCatalogPayload(name,data))throw Error('Catálogo vacío, erróneo o incompatible');
+   return data;
+  }catch(e){last=e;}
+ }
+ throw Error('No se pudo descargar '+name+' desde Netlify ni desde las fuentes públicas: '+(last?.message||'sin conexión'));
+}
 export let names={};export let recipes={};export let advanced={};
 let specialLoaded=false,specialLoadedAt=0;
 export async function loadCatalog(force=false){
-  const [n,r]=await Promise.all([loadCacheFile('names_es.json',force),loadCacheFile('recipes.json',force)]);
-  names=n;recipes={...r,...(specialLoaded?Object.fromEntries(Object.entries(recipes).filter(([k,v])=>v.recipeSource==='ao-bin-dumps')):{})};return {names:Object.keys(n).length,recipes:Object.keys(recipes).length};
+ // Si falla la traducción pero se cargaron las recetas, el planificador debe
+ // seguir disponible con los IDs de Albion. Nunca descartar todo por un idioma.
+ const [nameResult,recipeResult]=await Promise.allSettled([
+  loadCacheFile('names_es.json',force),loadCacheFile('recipes.json',force)
+ ]);
+ if(nameResult.status==='fulfilled')names=nameResult.value;
+ if(recipeResult.status==='fulfilled'){
+  const previousSpecial=specialLoaded?Object.fromEntries(Object.entries(recipes).filter(([k,v])=>v.recipeSource==='ao-bin-dumps')):{};
+  recipes={...recipeResult.value,...previousSpecial};
+  return {names:Object.keys(names).length,recipes:Object.keys(recipes).length,warning:nameResult.status==='rejected'?'Los nombres en español están temporalmente sin actualizar; se muestran IDs.':null};
+ }
+ throw Error('Las recetas no se pudieron cargar. '+String(recipeResult.reason?.message||recipeResult.reason));
 }
-async function loadCacheFile(name,force=false){const prev=await get(name);if(!force&&prev&&Date.now()-prev.ts<CATALOG_TTL)return prev.value;
- try{const value=await downloadJson(name);await put(name,value);return value;}catch(e){if(prev)return prev.value;throw e;}}
+async function loadCacheFile(name,force=false){const prev=await get(name),usable=validCatalogPayload(name,prev?.value);
+ if(!force&&usable&&Date.now()-prev.ts<CATALOG_TTL)return prev.value;
+ try{const value=await downloadJson(name,force);await put(name,value);return value;}
+ catch(e){if(usable)return prev.value;throw e;}}
 // Se carga únicamente al elegir monturas / pociones / recolección. La primera vez
 // descarga el dump oficial, extrae recetas reales y guarda SOLO el resultado
 // pequeño en IndexedDB (14 días). Los datos de equipo tradicionales permanecen.

@@ -20,8 +20,8 @@ test('selecciones reales de tiers, encantamientos, y uso de todo el presupuesto'
  assert(app.includes("QC_TIERS=[4,5,6,7,8]"));
  assert(app.includes("QC_ENCH=[1,2,3,4]"));
  assert(app.includes("QC_BUDGETS=[5000000,10000000,15000000,20000000]"));
- assert(app.includes("useAll:input.invest==='all'"));
- assert(app.includes("useAll:autoPrefs.invest==='all'"));
+ assert(app.includes("invest:input.invest")&&app.includes("useAll:invest==='all'"));
+ assert(app.includes("invest:autoPrefs.invest")&&app.includes("useAll:invest==='all'"));
  assert(css.includes('.qc-settings-grid'));
  assert(css.includes('@media(max-width:510px)'));
 });

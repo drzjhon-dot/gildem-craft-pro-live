@@ -30,3 +30,18 @@
   for = "/item-icons/*"
   [headers.values]
     Cache-Control = "public, max-age=604800, immutable"
+
+[[headers]]
+  for = "/app.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/styles.css"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/catalog/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600, must-revalidate"

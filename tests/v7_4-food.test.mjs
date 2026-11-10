@@ -76,7 +76,7 @@ test('v7.4 presupuesto y beneficio de diez raciones, no 10 fabricaciones',()=>{
  assert.ok(p.profit>0);
  assert.ok(Math.abs(p.profit-(3500*.935-c.total-40))<1e-7);
  const cap=capacityFor({id:'T4_MEAL_SALAD',city:'Lymhurst',craftAmount:10,activity:{observations:5,observedDaily:200}},.1,2);
- assert.equal(cap,2); // 20 raciones observadas -> dos lotes
+ assert.equal(cap,28); // 14 dias * 10% * 200 raciones/dia = 280 raciones = 28 lotes
  const route={id:'T4_MEAL_SALAD',qty:2,craftAmount:10,city:'Lymhurst',cost:c.total,capitalPerUnit:c.rawMaterials+100+40,sell:350,profit:p.profit};
  const portfolio=createPortfolioFromPlan({rows:[route]});
  assert.equal(portfolio.lots[0].qty,20);

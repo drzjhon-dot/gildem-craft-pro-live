@@ -3,17 +3,12 @@
 // garantiza el óptimo matemático para todos los universos de recetas.
 import {routeProfitAtQuantity} from './depth.js';
 import {prudentListingCapacity,liquidityWeight} from './market-volume.js';
+import {listingCapacity} from './demand-first.js';
 import {allocateSmartPortfolio} from './optimizer.js';
 const f=(x,d=0)=>Number.isFinite(Number(x))?Number(x):d;
-export function capacityFor(x,capFraction,unknownCap){
+export function capacityFor(x,capFraction,unknownCap,horizonDays=14){
  if(Number.isFinite(x.marketCapacity))return Math.max(0,Math.floor(x.marketCapacity));
- if(x.city==='Black Market'&&x.mode==='instant')return 1;
- if(x.activity?.observations){
-  const demand=prudentListingCapacity(x,capFraction); 
-  // Si hay historial pero actividad demasiado baja, no fabricar lotes enormes.
-  return Math.max(0,demand);
- }
- return Math.max(0,Math.floor(unknownCap));
+ return listingCapacity(x,{horizonDays,share:capFraction,maxPerRoute:650,unknownCap});
 }
 function value(x,goal){
  const p=f(x.profit);const trust=Math.max(.15,Math.min(1,f(x.confidence?.score,40)/100));
@@ -21,14 +16,16 @@ function value(x,goal){
  const risk=Math.max(.2,Math.min(1,f(x.stressProfit,p)/Math.max(1,p)));
  const personal=Math.max(.75,Math.min(1.12,f(x.personalLearning?.adjustment,1))); 
  const cash=f(x.capitalPerUnit,1);
- if(goal==='roi')return p/cash*trust*slippage*risk*personal;
+ const daily=f(x.demandDaily,x.activity?.observedDaily||0);
+ const turnover=1+Math.min(2.2,Math.log1p(daily)/Math.log1p(1000)*2.2);
+ if(goal==='roi')return p/cash*trust*slippage*risk*personal*turnover;
  if(goal==='focus')return f(x.focusGain)/Math.max(1,f(x.focusPerUnit))*trust*slippage*risk*personal;
- if(goal==='balanced'||goal==='daily')return (p*.65+(p/cash)*Math.sqrt(cash)*.35)*trust*slippage*risk*personal*(goal==='daily'&&x.personalLearning?.qtySold>=3?Math.max(.6,Math.min(1.3,3/Math.max(1,x.personalLearning.averageDays))):1);
- return p*trust*slippage*risk*personal;
+ if(goal==='balanced'||goal==='daily')return (p*.53+(p/cash)*Math.sqrt(cash)*.47)*trust*slippage*risk*personal*turnover*(goal==='daily'&&x.personalLearning?.qtySold>=3?Math.max(.6,Math.min(1.3,3/Math.max(1,x.personalLearning.averageDays))):1);
+ return p*trust*slippage*risk*personal*turnover;
 }
 export function allocatePortfolioV6(candidates,budget,opts={}){
  const budgetValue=f(budget),focusLimit=opts.focusLimit==null?Infinity:f(opts.focusLimit),maxVariants=Math.min(80,Math.max(1,opts.maxVariants??70));
- const capFraction=opts.capFraction??.1,unknownCap=opts.unknownCap??2,goal=opts.goal||'balanced';
+ const capFraction=opts.capFraction??.06,unknownCap=opts.unknownCap??1,goal=opts.goal||'balanced',horizonDays=opts.horizonDays??14;
  const minConfidence=opts.minimumConfidence||0,exposureLimit=opts.useAll?Infinity:budgetValue*(opts.maxPerItemFraction??.30);
  if(!(budgetValue>0)||focusLimit<0)return {rows:[],capital:budgetValue,totalCost:0,totalNetCost:0,totalProfit:0,focusUsed:0,remaining:budgetValue};
  const valid=(candidates||[]).filter(x=>x?.id&&x?.city&&f(x.profit)>0&&f(x.capitalPerUnit)>0&&f(x.cost)>0&&f(x.confidence?.score)>=minConfidence);
@@ -37,7 +34,7 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  const byRoute=new Map();for(const x of valid){const key=x.id+'|'+x.city+'|'+x.mode;
   const old=byRoute.get(key);if(!old||value(x,goal)>value(old,goal))byRoute.set(key,x);
  }
- const all=[...byRoute.values()].filter(x=>capacityFor(x,capFraction,unknownCap)>0);
+ const all=[...byRoute.values()].filter(x=>capacityFor(x,capFraction,unknownCap,horizonDays)>0);
  all.sort((a,b)=>value(b,goal)-value(a,goal));
  // Evaluamos varias carteras con distintos órdenes de exploración y cambios 1x1.
  const variants=[
@@ -54,7 +51,7 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
    const capitalRoom=Math.floor((budgetValue-spent+1e-8)/x.capitalPerUnit);
    const focRoom=Number.isFinite(focusLimit)&&f(x.focusPerUnit)>0?Math.floor((focusLimit-focus+1e-8)/x.focusPerUnit):Infinity;
    const itemRoom=Number.isFinite(exposureLimit)?Math.floor((exposureLimit-(byItem.get(x.id)||0)+1e-8)/x.capitalPerUnit):Infinity;
-   const routeRoom=capacityFor(x,capFraction,unknownCap)-previous;
+   const routeRoom=capacityFor(x,capFraction,unknownCap,horizonDays)-previous;
    return Math.max(0,Math.min(routeRoom,capitalRoom,focRoom,itemRoom));
   };
   const take=(x,n)=>{if(!quantities.has(x)&&quantities.size>=maxVariants)return 0;const q=Math.min(n,maxFor(x));if(q<1)return 0;quantities.set(x,(quantities.get(x)||0)+q);spent+=q*x.capitalPerUnit;focus+=q*f(x.focusPerUnit);byItem.set(x.id,(byItem.get(x.id)||0)+q*x.capitalPerUnit);return q;};
@@ -74,7 +71,7 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
      if(to===from)continue;
      const current=quantities.get(to)||0;
      if(!current&&selected.length>=maxVariants&&qty>1)continue;
-     if(current>=capacityFor(to,capFraction,unknownCap))continue;
+     if(current>=capacityFor(to,capFraction,unknownCap,horizonDays))continue;
      const room=budgetValue-spent+costFreed;
      if(to.capitalPerUnit>room+1e-8)continue;
      if(Number.isFinite(focusLimit)&&focus-focusFreed+f(to.focusPerUnit)>focusLimit+1e-8)continue;
@@ -96,7 +93,7 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
    byItem.set(from.id,(byItem.get(from.id)||0)-from.capitalPerUnit);
    byItem.set(to.id,(byItem.get(to.id)||0)+to.capitalPerUnit);
   }
-  const normalized=[...quantities].filter(([,q])=>q>0).map(([x,qty])=>({...x,qty,maxCrafts:capacityFor(x,capFraction,unknownCap),allocation:qty*x.capitalPerUnit,totalProfit:routeProfitAtQuantity(x,qty)})).filter(x=>x.totalProfit>0);
+  const normalized=[...quantities].filter(([,q])=>q>0).map(([x,qty])=>({...x,qty,maxCrafts:capacityFor(x,capFraction,unknownCap,horizonDays),allocation:qty*x.capitalPerUnit,totalProfit:routeProfitAtQuantity(x,qty)})).filter(x=>x.totalProfit>0);
   const objective=normalized.reduce((s,x)=>s+x.totalProfit,0);
   // Dar prioridad al objetivo elegido sin dejar de comprobar beneficio neto.
   const metric=normalized.reduce((s,x)=>s+x.qty*value(x,goal),0);

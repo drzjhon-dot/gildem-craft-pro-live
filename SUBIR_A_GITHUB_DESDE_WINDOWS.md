@@ -1,28 +1,28 @@
-# SUBIR GILDEM CRAFT PRO A GITHUB DESDE WINDOWS
+# Publicar Gildem Craft Pro v8.6.0 desde Windows con GitHub Desktop
 
-## Pasos fáciles con GitHub Desktop
+## Pasos sin Python ni PowerShell
 
-1. Descarga `Gildem_Craft_Pro_v8_5_7_REFINAMIENTO_ORDENES_FUENTES_GITHUB_NETLIFY.zip` y usa **Extraer todo** en Windows.
-2. Abre **GitHub Desktop** y elige el repositorio `drzjhon-dot/gildem-craft-pro-live`.
-3. Pulsa **Repository → Show in Explorer** (Repositorio → Mostrar en el Explorador). Aparecerá la carpeta actual del repositorio.
-4. Abre **otra ventana** con la carpeta extraída del ZIP. **Entra dentro de esa carpeta**, hasta ver `app.js`, `index.html`, `package.json`, `core`, `netlify`, `assets` y `.github`.
-5. Pulsa **Ctrl + A → Ctrl + C** para seleccionar y copiar TODOS los archivos y carpetas extraídos.
-6. Vuelve a la ventana de la carpeta de GitHub Desktop. Pulsa **Ctrl + V** y acepta **Reemplazar los archivos en el destino** si Windows lo solicita. **No copies el ZIP como archivo ni lo metas dentro de una subcarpeta.**
-7. Vuelve a GitHub Desktop, pestaña **Changes**. Deben aparecer muchos archivos modificados, especialmente **`app.js`, `index.html`, `styles.css`, `package.json`, `core/market-discovery.js`, `core/market-references.js`, `core/refining-opportunities.js`, `netlify/functions/market-references.mjs`, `core/procurement-liquidity.js` y `.github/workflows/reconstruir-gildem.yml`**.
-8. En **Summary** escribe `Gildem Craft Pro v8.5.7 · refinamiento y órdenes`. Pulsa **Commit to main** y después **Push origin**.
-9. Entra a `https://github.com/drzjhon-dot/gildem-craft-pro-live/actions`. Busca la ejecución **Gildem Craft Pro | Validar proyecto completo**. Cuando se vea verde, GitHub confirmó que las pruebas y la compilación pasaron sobre el código publicado.
-10. Abre tu sitio de **Netlify**. El mismo commit debe activar el despliegue automático. Comprueba que Netlify diga **Published** y abre la tab **Resultados**.
+1. Descarga **Gildem_Craft_Pro_v8_6_0_DEMANDA_PRIMERO_BM_ROYAL_GITHUB_NETLIFY.zip** y elige **Extraer todo** en Windows.
+2. Abre **GitHub Desktop**, selecciona **drzjhon-dot/gildem-craft-pro-live** y pulsa **Fetch origin / Pull origin** si aparecen actualizaciones.
+3. En el menú superior abre **Repository → Show in Explorer**. Esa es la carpeta REAL del repositorio.
+4. Abre en otra ventana la carpeta extraída del ZIP. **Entra hasta ver `app.js`, `index.html`, `package.json`, `core`, `assets`, `netlify`, `.github` y `tests` juntos.**
+5. Dentro de esa carpeta, pulsa **Ctrl + A** para seleccionar todos los archivos; después **Ctrl + C**. Vuelve a la carpeta del repositorio y pulsa **Ctrl + V**, eligiendo **Reemplazar archivos**.
+6. Regresa a GitHub Desktop → **Changes**. Comprueba los archivos modificados `app.js`, `index.html`, `core/demand-first.js`, `core/external-demand.js`, `core/adaptive-planner.js`, `core/allocator-v6.js`, `styles.css`, `sw.js`, `package.json`, `tests/`.
+7. En **Summary** escribe `Gildem Craft Pro v8.6.0 · demanda 14 días BM y Royal`. Pulsa **Commit to main → Push origin**.
+8. Abre https://github.com/drzjhon-dot/gildem-craft-pro-live/actions y espera una ejecución verde de **Gildem Craft Pro | Validar proyecto completo**.
+9. Abre Netlify y comprueba **Published** para ese nuevo commit. En tu web pulsa **Ctrl + Shift + R** una sola vez.
 
-## Cómo saber si subiste la carpeta correcta
+## Validación rápida
 
-En la página principal de tu repositorio de GitHub, `app.js`, `package.json` e `index.html` deben aparecer directamente en el primer nivel. No deben estar dentro de `Gildem_Craft_Pro_v8_5_5_GITHUB_LISTO/`.
+- En GitHub, `package.json` debe indicar `"version": "8.6.0"`.
+- Las tabs visibles son **Black Craft**, **Royal Craft** y **Resultados**. Level Craft se mantiene fuera del menú.
+- En Black Craft → Botas de placas, activa **.0** y **T4/T5/T6**; busca el control plegable **Horizonte de venta por órdenes: 7/14/30 días**.
+- En Resultados, debajo de cada objeto, deben aparecer **uds./día · fuente · límite de crafts**.
+- En Ajustes → **Estadísticas externas de volumen**, podrás pegar un ranking de Albion Hub o Albion Journal, elegir región/mercado/fecha e importarlo.
+- `netlify.toml` utiliza `npm run build`, Node 22 y publica `dist/`.
 
-En `package.json` debe aparecer la versión **8.5.7** y en `index.html` debe existir `data-nav="resultados"`.
+## Si no se actualiza
 
-## ¿Todavía aparecen carpetas antiguas de reparaciones?
+No vuelvas a subir instaladores ni a ejecutar Python. Comprueba primero que hiciste **Push origin**, no solo **Commit**, y que Netlify compiló ese mismo commit. Si falla, copia los logs de esa nueva ejecución.
 
-Las carpetas `parts/`, `compat/`, `liquidez_v8_5_3/` y los instaladores antiguos no son parte de esta versión final. No afectan la compilación si quedaron en el repositorio, pero puedes eliminarlos después de confirmar que la versión nueva funciona. No borres `core/`, `assets/`, `netlify/`, `scripts/` ni `tests/`.
-
-## Si Netlify sigue fallando
-
-Revisa primero que GitHub Desktop haya hecho **Push origin** y que en GitHub exista `data-nav="resultados"` en `index.html`. Si GitHub Actions está verde pero Netlify falla, guarda el registro nuevo de Netlify; ya no será el problema anterior de los cuatro tests ausentes.
+La automatización de GitHub **solo valida**, nunca reescribe tus archivos. No necesitas borrar datos del navegador, ya que las inversiones locales pueden perderse. Usa primero **Reparar carga** si solo falla la caché.
