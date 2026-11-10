@@ -575,7 +575,7 @@ body.gcp-results-active #main-content{max-width:1750px;padding-top:17px}
 .gcp-depth-details p,.gcp-first-stage p{margin:9px 0;color:#b5c0bd;font-size:12px}
 .gcp-depth-details .table-scroll,.gcp-first-stage .table-scroll{max-height:265px;overflow:auto}
 
-/* v8.6.7 · Vista de fabricación compacta, sin tablas anchas */
+/* v8.6.8 · Vista de fabricación compacta, sin tablas anchas */
 .gcp-results,.gcp-results .gcp-result-grid,.gcp-results .gcp-result-panel{min-width:0;max-width:100%}
 .gcp-results .gcp-result-grid{grid-template-columns:minmax(0,1fr);gap:12px}
 .gcp-results .gcp-compact-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:10px}

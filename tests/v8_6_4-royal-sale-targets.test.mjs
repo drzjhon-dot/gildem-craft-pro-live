@@ -45,7 +45,7 @@ test('refinamiento solo propone venta en ciudades elegidas y compra materias pri
  assert(out.every(x=>x.materials.every(m=>m.city==='Bridgewatch')),'Las compras no deben restringirse a las ciudades de venta');
 });
 
-test('interfaz Royal guarda selección; el motor usa los destinos en planes e investigación',()=>{
+test('interfaz Royal guarda selección y solo usa destinos elegidos',()=>{
  assert.match(app,/\$\{royalSaleCitiesHtml\(\)\}/);
  assert.match(app,/data-royal-sale-city/);
  assert.match(app,/selectedRoyalSaleCities\(\)/);
@@ -53,8 +53,8 @@ test('interfaz Royal guarda selección; el motor usa los destinos en planes e in
  assert.match(app,/saleCities,mode:refineSale/);
  assert.match(app,/filterRoyalSaleRoutes\(\[\.\.\.result\.candidates,\.\.\.refinery\.candidates\],saleCities\)/);
  assert.match(app,/marketCoverage=coverageByMarket\(ids,priceMap,\{cities:saleCities/);
- assert.match(app,/researchForMissingPlan\(ids,priceMap,recipes,\{\.\.\.input,budget,market:'royal',cities:saleCities/);
- assert.match(app,/researchForRefining\(scanRefining,priceMap,\{budget,saleCities,/);
+ assert(!app.includes('researchPlanHtml('));
+ assert(!app.includes('researchPlan:')); 
  assert.match(app,/saleCities,branch:craftCats/);
 });
 

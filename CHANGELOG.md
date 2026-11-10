@@ -1,3 +1,11 @@
+## 8.6.8 · Arcos y plan real vs investigación
+- Retirados los paneles y exportación de «Plan de investigación» (sin fabricar, beneficio cero).
+- El motor Black Craft consulta el historial antes de descartar una receta por su puja BM actual, y evalúa un precio objetivo de orden BM, no una orden ejecutable.
+- Filtro para el escenario alternativo: cuatro días activos como mínimo, más de 50 observaciones/semana, volatilidad acotada, último dato <=72 h, descuento del 15% sobre mediana 14d y máximo 40% por encima del bid si existe. El margen debe seguir siendo positivo incluso con el estrés configurado.
+- Los escenarios históricos muestran aviso en Resultados y CSV, sin ocultar incertidumbre del beneficio.
+- Si faltan datos o beneficios, se muestra una explicación sin inventar oportunidades y un botón de expansión automática a T4-T8, todos los encantamientos y modelos de la rama.
+- Sin cambios de servidor: AODP West obligatorio. Sin datos privados, ni conexión automática a Albion Hub/AFM.
+
 ## v8.6.7 (2026-11-10) · Totales por objeto, logística visible y presupuesto sin techos arbitrarios
 
 - Rediseño de Resultados en tarjetas compactas sin scroll horizontal en teléfono y PC. Repeticiones del mismo ID exacto por ciudad de venta se consolidan; logística por destino aparece abajo.

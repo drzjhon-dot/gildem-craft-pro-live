@@ -23,6 +23,7 @@ export function evidenceForRoute(route,{horizonDays=14,supplyPending=false}={}){
  if(observed===null)alerts.push('sin actividad observada: no inferir ventas');
  else if(observed===0)alerts.push('actividad observada cero: no inferir capacidad de venta');
  if(route?.externalDemand)alerts.push('cantidad de una tabla importada, no verificable automáticamente');
+ if(route?.salePriceProvisional)alerts.push('precio objetivo BM basado en historial, NO puja actual: verificar antes de fabricar');
  if(quote!=='reciente')alerts.push(`cotización ${quote}; revalidar antes de invertir`);
  if(needsStaging)alerts.push('compra completa no comprobada al precio presupuestado');
  if(route?.city==='Black Market')alerts.push('orden propia BM: puja NPC no asegura compra futura');

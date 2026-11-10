@@ -53,7 +53,8 @@ test('Nivel se elimina del menú y los dos mercados conservan su motor adaptativ
  assert(app.includes("if(page==='levelcraft')page='crafting'"));
  assert(app.includes('allocateCraftWithPatientFallback({candidates,viable,market,budget'));
  assert(app.includes('allocateCraftWithPatientFallback({candidates,viable,market:input.market'));
- assert(app.includes('researchForMissingPlan('));
+ assert(app.includes('gcp-no-craft-plan'));
+ assert(!app.includes('researchPlanHtml('));
 });
 
 test('días con item_count cero no se convierten en días con actividad',async()=>{
