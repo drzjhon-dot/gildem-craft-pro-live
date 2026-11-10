@@ -1,3 +1,7 @@
+## v9.1.0 (2026-11-10)
+
+- Motor: la cantidad sale de la demanda (los materiales ya no recortan a 1), lote mínimo útil en Mercado Negro, saturación BM más suave. Nuevo «Objetivo del plan» con fama de crafteo. Ver `RELEASE_NOTES_9_1_0.md`.
+
 ## v9.0.0 (2026-11-10)
 
 - Resultados: listas de fabricación, compras y logística en filas ordenadas por tier; se retira «Qué pide el mercado ahora». Tema nuevo «Mercado de noche» con tipografías propias y color por ciudad. Ver `RELEASE_NOTES_9_0_0.md`.

@@ -812,3 +812,5 @@ button,input,select,textarea{font-family:inherit}
 .gx-item>.gcp-tier{flex:none}
 #page-title{font-family:var(--font-body);font-size:21px;font-weight:750;letter-spacing:-.01em}
 .brand strong{letter-spacing:.02em;font-size:30px;line-height:1}
+
+.gx-fame{color:#dcc6ff!important;font-weight:650!important}

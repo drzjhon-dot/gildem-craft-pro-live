@@ -36,6 +36,30 @@ function value(x,goal){
  return p*trust*slippage*risk*personal*turnover;
 }
 export function routePriority(route,goal='balanced'){return value(route,goal);}
+// v9.1.0 · Lote mínimo útil. En el Mercado Negro un lote de 1 no compensa el viaje
+// a Caerleon: o la ruta recibe una parte real de lo que su mercado absorbe, o no
+// entra en el plan. En Royal se permite 1 unidad (se publica y se espera).
+export function minUsefulLot(route,capacity){
+ const cap=Math.max(0,Math.floor(Number(capacity)||0));
+ // Con libro de órdenes verificado la venta es inmediata y real: vale cualquier cantidad.
+ if(route?.city!=='Black Market'||route?.depthVerified||cap<=1)return Math.min(1,cap)||1;
+ // Entre 3 y 5 unidades según lo que absorbe el mercado; para objetos caros basta
+ // con el lote que ya mueve unas 400.000 de silver (uno solo si vale eso o más).
+ const byUnits=Math.min(5,Math.max(3,Math.ceil(cap*.15)));
+ const bySilver=f(route.capitalPerUnit)>0?Math.ceil(400000/f(route.capitalPerUnit)):byUnits;
+ return Math.max(1,Math.min(cap,byUnits,bySilver));
+}
+// v9.1.0 · Fama de crafteo como segundo objetivo. Devuelve cuánto destaca una ruta
+// en fama por silver invertido frente a la mediana del plan (entre 0,25 y 4).
+export function fameFactorFor(routes,weight){
+ const w=Math.max(0,Math.min(1,Number(weight)||0));
+ if(!w)return ()=>1;
+ const eff=x=>f(x.craftFame)>0&&f(x.capitalPerUnit)>0?f(x.craftFame)/f(x.capitalPerUnit):0;
+ const known=(routes||[]).map(eff).filter(v=>v>0).sort((a,b)=>a-b);
+ if(!known.length)return ()=>1;
+ const median=known[Math.floor(known.length/2)]||1;
+ return x=>{const e=eff(x);return Math.pow(e>0?Math.min(4,Math.max(.25,e/median)):.5,w);};
+}
 export function allocatePortfolioV6(candidates,budget,opts={}){
  const budgetValue=f(budget),focusLimit=opts.focusLimit==null?Infinity:f(opts.focusLimit);
  const maxVariants=Math.min(80,Math.max(1,opts.maxVariants??70));
@@ -51,10 +75,13 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
   focusUsed:0,remaining:budgetValue,method:'Sin rutas rentables verificables'};
  if(!(budgetValue>0)||focusLimit<0)return empty;
  const sat=opts.saturation!=null&&opts.saturation!==false?resolveStyle(opts.saturation):null;
+ const fameWeight=Math.max(0,Math.min(1,f(opts.fameWeight)));
+ const fameOf=fameFactorFor(candidates,fameWeight);
+ const val=x=>value(x,goal)*fameOf(x);
  const valid=(candidates||[]).filter(x=>x?.id&&x?.city&&f(x.profit)>0&&f(x.capitalPerUnit)>0&&f(x.cost)>0&&f(x.confidence?.score)>=minConfidence);
  // Never buy the same listing book twice through different production cities.
  const byRoute=new Map();for(const x of valid){const key=x.id+'|'+x.city+'|'+x.mode;
-  const old=byRoute.get(key);if(!old||value(x,goal)>value(old,goal))byRoute.set(key,x);
+  const old=byRoute.get(key);if(!old||val(x)>val(old))byRoute.set(key,x);
  }
  const all=[...byRoute.values()].map(x=>{
   let base=capacityFor(x,capFraction,unknownCap,horizonDays),saturation=null;
@@ -64,22 +91,45 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
   if(sat&&!(x.depthVerified&&x.orderLevels?.length)){
    const volumeUnits=horizonVolumeUnits(x,horizonDays);
    if(volumeUnits>0){
-    saturation={k:sat.k,volumeUnits,style:sat.id};
-    base=Math.min(base,impactCapacity(x,{horizonDays,style:sat}));
+    // En el Mercado Negro el lote ya se valora a la mediana pagada y lo vendido sale
+    // del juego, así que tus ventas pesan menos sobre el precio (estimación: la mitad).
+    const style=x.city==='Black Market'?{...sat,k:sat.k*.5}:sat;
+    saturation={k:style.k,volumeUnits,style:sat.id};
+    base=Math.min(base,impactCapacity(x,{horizonDays,style}));
    }
   }
   const capacity=pendingAdjustedCapacity(x,base,pending);
-  return {...x,saturation:saturation||x.saturation||null,intelligentCapacity:capacity,pendingUnits:pending.get(x.id+'|'+x.city)||0};
+  return {...x,saturation:saturation||x.saturation||null,intelligentCapacity:capacity,minLot:minUsefulLot(x,capacity),pendingUnits:pending.get(x.id+'|'+x.city)||0};
  }).filter(x=>x.intelligentCapacity>0);
  if(!all.length)return empty;
- all.sort((a,b)=>value(b,goal)-value(a,goal));
+ all.sort((a,b)=>val(b)-val(a));
  // v8.7.0 · Reparto proporcional a la demanda. En producción de volumen el tope por
  // objeto ya no es un porcentaje plano del presupuesto: cada ruta recibe una cuota
  // del capital según cuánto capital puede absorber su mercado (capacidad x coste).
  const demandWeighted=opts.bulkMode===true&&opts.demandWeighted!==false;
- const capitalAbsorbed=x=>x.intelligentCapacity*x.capitalPerUnit;
+ const capitalAbsorbed=x=>x.intelligentCapacity*x.capitalPerUnit*fameOf(x);
  const totalAbsorbed=all.reduce((a,x)=>a+capitalAbsorbed(x),0)||1;
  const routeShare=new Map(all.map(x=>[x,capitalAbsorbed(x)/totalAbsorbed]));
+ // Con presupuesto escaso no caben todos: una ruta cuya parte proporcional no llega a
+ // su lote mínimo útil sale del reparto y su capital pasa a las demás. Se repite
+ // hasta que todas las que quedan reciben un lote real. Siempre queda al menos una.
+ if(demandWeighted){
+  let pool=[...all];
+  for(let round=0;round<all.length;round++){
+   const sum=pool.reduce((a,x)=>a+capitalAbsorbed(x),0)||1;
+   const weak=pool.filter(x=>x.minLot>1&&Math.floor(budgetValue*capitalAbsorbed(x)/sum/x.capitalPerUnit)<x.minLot);
+   if(!weak.length||weak.length===pool.length)break;
+   // retira primero la de menor prioridad para no vaciar el plan de golpe
+   const worst=weak.reduce((a,x)=>val(x)<val(a)?x:a);
+   pool=pool.filter(x=>x!==worst);
+  }
+  if(pool.length<all.length){
+   const keep=new Set(pool);
+   for(let i=all.length-1;i>=0;i--)if(!keep.has(all[i]))all.splice(i,1);
+   const sum=all.reduce((a,x)=>a+capitalAbsorbed(x),0)||1;
+   routeShare.clear();for(const x of all)routeShare.set(x,capitalAbsorbed(x)/sum);
+  }
+ }
  const itemShare=new Map();
  for(const x of all)itemShare.set(x.id,(itemShare.get(x.id)||0)+routeShare.get(x));
  const itemFractionFor=id=>demandWeighted?Math.max(itemFraction,Math.min(.60,(itemShare.get(id)||0)*1.5)):itemFraction;
@@ -99,6 +149,7 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
   [...all].sort((a,b)=>b.profit-a.profit),
   [...all].sort((a,b)=>f(b.demandDaily,b.activity?.observedDaily)-f(a.demandDaily,a.activity?.observedDaily))
  ];
+ if(fameWeight>0)orders.push([...all].sort((a,b)=>f(b.craftFame)/b.capitalPerUnit-f(a.craftFame)/a.capitalPerUnit));
  let best=null;
  for(const ordered of orders){
   const counts=new Map(),byItem=new Map(),byCity=new Map(),byTier=new Map();
@@ -115,7 +166,9 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
   };
   const take=(x,count)=>{
    if(!counts.has(x)&&counts.size>=maxVariants)return 0;
-   const n=Math.floor(Math.min(count,maxFor(x)));
+   const room=maxFor(x);
+   // Una ruta nueva entra con su lote mínimo útil o no entra.
+   const n=Math.floor(counts.has(x)?Math.min(count,room):room>=x.minLot?Math.min(Math.max(count,x.minLot),room):0);
    if(n<1)return 0;
    counts.set(x,(counts.get(x)||0)+n);spent+=n*x.capitalPerUnit;focus+=n*f(x.focusPerUnit);
    byItem.set(x.id,(byItem.get(x.id)||0)+n*x.capitalPerUnit);
@@ -159,10 +212,10 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
   // The limits remain active for every item and city.
   for(const x of ordered)take(x,maxFor(x));
   const rows=[...counts].filter(([,q])=>q>0).map(([x,qty])=>({
-   ...x,qty,maxCrafts:x.intelligentCapacity,allocation:qty*x.capitalPerUnit,itemExposureFraction:itemFractionFor(x.id),demandShare:routeShare.get(x),
+   ...x,qty,maxCrafts:x.intelligentCapacity,fameTotal:qty*f(x.craftFame),allocation:qty*x.capitalPerUnit,itemExposureFraction:itemFractionFor(x.id),demandShare:routeShare.get(x),
    totalProfit:routeProfitAtQuantity(x,qty)
   })).filter(x=>x.totalProfit>0);
-  const score=rows.reduce((a,x)=>a+x.qty*value(x,goal),0);
+  const score=rows.reduce((a,x)=>a+x.qty*val(x),0);
   const profit=rows.reduce((a,x)=>a+x.totalProfit,0);
   const itemCount=new Set(rows.map(x=>x.id)).size;
   // Reward having several profitable, truly distinct items but avoid driving
@@ -176,7 +229,7 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  const stats=portfolioDiversityStats(rows,{budget:budgetValue,pending});
  return {rows,capital:budgetValue,totalCost,totalNetCost:rows.reduce((a,x)=>a+x.qty*x.cost,0),
   totalProfit:best.profit,focusUsed:rows.reduce((a,x)=>a+x.qty*f(x.focusPerUnit),0),
-  remaining:Math.max(0,budgetValue-totalCost),diversity:stats,
+  remaining:Math.max(0,budgetValue-totalCost),diversity:stats,totalFame:rows.reduce((a,x)=>a+f(x.fameTotal),0),fameWeight,
   method:opts.bulkMode?'Producción de volumen: actividad semanal superior a 50; reinversión del presupuesto sin reserva; topes dinámicos, mercado e inventario pendiente':smart?'Cartera inteligente: objetos distintos primero; topes por artículo, tier, destino e inventario pendiente':
    'asignación conjunta multi-inicio; resultado aproximado'};
 }
