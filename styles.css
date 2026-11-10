@@ -574,3 +574,47 @@ body.gcp-results-active #main-content{max-width:1750px;padding-top:17px}
 .gcp-depth-details summary,.gcp-first-stage summary{cursor:pointer;color:#e7d8b8;font-weight:650}
 .gcp-depth-details p,.gcp-first-stage p{margin:9px 0;color:#b5c0bd;font-size:12px}
 .gcp-depth-details .table-scroll,.gcp-first-stage .table-scroll{max-height:265px;overflow:auto}
+
+/* v8.6.7 · Vista de fabricación compacta, sin tablas anchas */
+.gcp-results,.gcp-results .gcp-result-grid,.gcp-results .gcp-result-panel{min-width:0;max-width:100%}
+.gcp-results .gcp-result-grid{grid-template-columns:minmax(0,1fr);gap:12px}
+.gcp-results .gcp-compact-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:10px}
+.gcp-results .gcp-compact-card{min-width:0;background:#0c1727;border:1px solid #35475c;border-radius:10px;padding:10px;overflow-wrap:anywhere}
+.gcp-results .gcp-production-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:start}
+.gcp-results .gcp-compact-item{display:flex;gap:8px;align-items:center;min-width:0}
+.gcp-results .gcp-compact-item .item-cell{display:flex;align-items:center;gap:7px;min-width:0;flex:1}
+.gcp-results .gcp-compact-item .item-cell strong{font-size:12px;white-space:normal;max-width:none;overflow-wrap:anywhere}
+.gcp-results .gcp-compact-item .item-cell img{width:37px;height:37px;object-fit:contain}
+.gcp-results .gcp-compact-item .gcp-tier{flex-shrink:0;font-size:10px}
+.gcp-results .gcp-compact-quantity{text-align:right;display:grid;gap:2px;justify-items:end}
+.gcp-results .gcp-compact-quantity label,.gcp-results .gcp-compact-quantity small{color:#b3c6d5;font-size:10px}
+.gcp-results .gcp-compact-quantity .qty-input{width:75px;min-height:31px;padding:5px 8px}
+.gcp-results .gcp-compact-meta{display:flex;flex-wrap:wrap;gap:5px 12px;align-items:center;grid-column:1/-1;color:#b2c2d3;font-size:10px;line-height:1.5}
+.gcp-results .gcp-compact-meta b{color:#f6d9a6;font-weight:650}
+.gcp-results .gcp-compact-values{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:7px;grid-column:1/-1;border-top:1px solid #2e4052;padding-top:7px}
+.gcp-results .gcp-compact-values span{display:flex;gap:6px;align-items:baseline;font-size:12px}
+.gcp-results .gcp-compact-values small{font-size:10px;color:#9baec1}
+.gcp-results .gcp-compact-values strong{font-size:13px}
+.gcp-results .gcp-logistics-title{display:flex;align-items:center;gap:9px;min-width:0}
+.gcp-results .gcp-logistics-title .item-cell{flex:1;min-width:0;display:flex;align-items:center;gap:8px}
+.gcp-results .gcp-logistics-title .item-cell img{width:28px;height:28px;object-fit:contain}
+.gcp-results .gcp-logistics-title .item-cell strong{font-size:11px;white-space:normal;max-width:none}
+.gcp-results .gcp-logistics-route{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:9px;align-items:center;margin:7px 0;color:#d3e4ed}
+.gcp-results .gcp-logistics-route>span:nth-child(2){color:#e7bf7d}
+.gcp-results .gcp-logistics-route small{display:block;color:#849bb4;font-size:10px;margin-bottom:2px}
+.gcp-results .gcp-logistics-route strong{font-size:12px}
+.gcp-results .gcp-logistics-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid #2a3d50;padding-top:7px;font-size:11px}
+.gcp-results .gcp-pending-text{color:#ebbc83;font-size:10px}
+.gcp-results .gcp-shopping-item{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px}
+.gcp-results .gcp-shopping-item .item-cell{display:flex;align-items:center;min-width:0;gap:7px}
+.gcp-results .gcp-shopping-item .item-cell img{width:28px;height:28px;object-fit:contain}
+.gcp-results .gcp-shopping-item .item-cell strong{font-size:11px;white-space:normal;max-width:none}
+.gcp-results .gcp-shopping-item>strong{flex:0 0 auto;color:#f4d6a6}
+.gcp-results .gcp-shopping-detail{display:flex;flex-wrap:wrap;gap:6px 12px;justify-content:space-between;margin-top:7px;font-size:10px;color:#abbdd0}
+.gcp-results .gcp-shopping-detail b{color:#ddebf5}
+.gcp-results .gcp-shopping-detail>strong{font-size:12px;color:#ecd09b}
+.gcp-results .gcp-panel-title{flex-wrap:wrap;gap:7px}
+.gcp-results .gcp-title-count{white-space:normal;text-align:right}
+.gcp-results .gcp-first-stage .table-scroll,.gcp-results .gcp-depth-details .table-scroll{max-width:100%;overflow-x:hidden}
+@media(max-width:1120px){.gcp-results .gcp-compact-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){.gcp-results .gcp-result-panel{padding:10px}.gcp-results .gcp-compact-card{padding:9px}.gcp-results .gcp-compact-item .item-cell img{width:31px;height:31px}.gcp-results .gcp-compact-item .item-cell strong{font-size:11px}.gcp-results .gcp-panel-title h3{font-size:16px}.gcp-results .gcp-compact-meta{gap:4px 8px}.gcp-results .gcp-shopping-total strong{font-size:14px}}

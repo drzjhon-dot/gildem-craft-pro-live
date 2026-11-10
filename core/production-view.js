@@ -94,3 +94,23 @@ export function distributeProductionQuantity(rows, key, target) {
  if (change!==0) return {ok:false,reason:'La cantidad solicitada supera la capacidad rentable observada para ese objeto.'};
  return {ok:true,rows:copy};
 }
+
+// Vista logística por ruta real: la lista de fabricación muestra cada item una
+// sola vez; aquí permanecen distintos destinos y ciudades de producción.
+export function groupLogistics(rows=[]){
+ const map=new Map();
+ for(const r of rows||[]){
+  if(!r||!Number.isInteger(r.qty)||r.qty<=0)continue;
+  const key=[r.id,r.craftCity||'Sin ciudad',r.city||'Sin mercado',r.mode||'listed'].join('|');
+  let group=map.get(key);
+  if(!group){group={key,id:r.id,craftCity:r.craftCity||'Sin ciudad',city:r.city||'Sin mercado',mode:r.mode||'listed',
+   qty:0,units:0,profit:0,capital:0,firstBatch:0,staged:false};map.set(key,group);}
+  group.qty+=r.qty;
+  group.units+=r.qty*Math.max(1,Number(r.craftAmount)||1);
+  group.profit+=Number(r.totalProfit)||0;
+  group.capital+=Number(r.allocation)||r.qty*(Number(r.capitalPerUnit)||0);
+  group.firstBatch+=r.procurementFirstBatch==null?(r.patientSupplyPending?0:r.qty):Math.max(0,Math.min(r.qty,Number(r.procurementFirstBatch)||0));
+  group.staged||=!!r.patientSupplyPending;
+ }
+ return [...map.values()].sort((a,b)=>a.id.localeCompare(b.id)||a.city.localeCompare(b.city));
+}

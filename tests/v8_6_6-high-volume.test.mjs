@@ -53,7 +53,7 @@ test('sin reserva, más rutas y beneficio positivo permiten asignar casi todo un
 test('con solo 3 objetos activos permite lotes considerables sin saltarse exposición ni saturación',()=>{
  const routes=[route(0),route(1),route(2)];
  const fraction=bulkItemExposureFraction(routes);
- assert.equal(fraction,.34);
+ assert.equal(fraction,.38);
  const r=allocatePortfolioV6(routes,3_000_000,{intelligent:true,bulkMode:true,useAll:true,
   maxPerItemFraction:fraction,maxVariants:65,targetDifferentItems:28,capFraction:.15,horizonDays:14});
  assert(r.totalCost>2_500_000,`inversión: ${r.totalCost}`);

@@ -1,11 +1,12 @@
-# GitHub Desktop → Netlify · v8.6.6
+# GitHub Desktop → Netlify · v8.6.7
 
-1. Asegúrate de que no hay un Merge pendiente. Si lo hay, guarda una copia de tu trabajo y cancela el Merge antes de continuar.
-2. Haz Fetch/Pull desde `main` en GitHub Desktop.
-3. Si tu carpeta tiene v8.6.5, extrae y copia el ZIP «SOLO_CAMBIOS_DESDE_8_6_5». Para versiones desconocidas, clona el repositorio en una carpeta nueva y copia el ZIP completo.
-4. Repository → Show in Explorer. Copia los archivos y **carpetas internas** del ZIP directamente ahí. No crees otra carpeta que envuelva `app.js`.
-5. Commit to main → Push origin. Netlify recibirá el cambio cuando haya créditos para el deploy.
-6. En Netlify Deploys comprueba Published; en la app verifica que muestra `v8.6.6`.
-7. Genera un plan usando «Usar todo lo posible» y comprueba capital utilizado, actividad semanal y profundidad de materiales.
+La rama `main` de GitHub estaba en `v8.6.6` al preparar esta actualización.
 
-**No subas 120 archivos manualmente desde la web de GitHub:** usa Desktop o un ZIP de menos de 100 cambios. Nunca hagas Force Push para resolver conflictos.
+1. Si GitHub Desktop muestra conflictos, guarda una copia de tu trabajo y cancela el Merge antes de continuar; no hagas Force Push.
+2. Haz Fetch origin / Pull en `main` y comprueba que los cambios remotos estén integrados.
+3. Descarga el ZIP **SOLO_CAMBIOS_DESDE_8_6_6**, que contiene menos de 100 archivos.
+4. Descomprime, abre Repository → Show in Explorer y copia los archivos *dentro* de la raíz del repositorio. Debe existir `app.js` junto a `index.html`, no una subcarpeta que los envuelva.
+5. En GitHub Desktop, confirma los cambios, escribe un resumen de commit y haz Commit to main → Push origin.
+6. En Netlify confirma el estado `Published`. Recarga la web con Ctrl + Shift + R y comprueba `v8.6.7`.
+
+El ZIP completo es una alternativa si clonas el repositorio en una carpeta nueva y limpia. No subas todos sus archivos mediante el cargador web de GitHub, que puede limitar las operaciones a 100 archivos.

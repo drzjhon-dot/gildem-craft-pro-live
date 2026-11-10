@@ -4,7 +4,7 @@
 import {listingCapacity} from './demand-first.js';
 const number=(x,d=0)=>Number.isFinite(Number(x))?Number(x):d;
 
-export function patientCapacity(route,{maxPerRoute=650,observedShare=.06,horizonDays=14}={}){
+export function patientCapacity(route,{maxPerRoute=6000,observedShare=.06,horizonDays=14}={}){
  return listingCapacity(route,{maxPerRoute,share:observedShare,horizonDays,unknownCap:1});
 }
 

@@ -9,7 +9,7 @@ import {pendingAdjustedCapacity,portfolioDiversityStats} from './intelligent-por
 const f=(x,d=0)=>Number.isFinite(Number(x))?Number(x):d;
 export function capacityFor(x,capFraction,unknownCap,horizonDays=14){
  if(Number.isFinite(x.marketCapacity))return Math.max(0,Math.floor(x.marketCapacity));
- return listingCapacity(x,{horizonDays,share:capFraction,maxPerRoute:650,unknownCap});
+ return listingCapacity(x,{horizonDays,share:capFraction,maxPerRoute:6000,unknownCap});
 }
 function value(x,goal){
  const p=f(x.profit);const trust=Math.max(.15,Math.min(1,f(x.confidence?.score,40)/100));
@@ -63,8 +63,11 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  const tiers=new Set(all.map(x=>String(x.id).match(/^T([4-8])_/)?.[1]).filter(Boolean));
  // A single selected Royal city or the sole BM market must not be arbitrarily
  // capped as though the player had selected several destinations.
- const cityLimit=smart&&destinations.size>1?budgetValue*(opts.bulkMode?Math.max(.72,1/destinations.size+.20):Math.max(.45,1/destinations.size+.12)):Infinity;
- const tierLimit=smart&&tiers.size>1?budgetValue*(opts.bulkMode?.85:.60):Infinity;
+ const cityLimit=smart&&!opts.bulkMode&&destinations.size>1?budgetValue*Math.max(.45,1/destinations.size+.12):Infinity;
+ // A high-volume route already has an activity cap per sale market. An extra
+ // arbitrary 72% destination ceiling can leave silver idle with no market basis.
+ const tierLimit=smart&&!opts.bulkMode&&tiers.size>1?budgetValue*.60:Infinity;
+ // Likewise, never force 15% cash idle just because most viable items share T4.
  const desiredItems=Math.min(maxVariants,Math.max(8,Math.floor(f(opts.targetDifferentItems,12))));
  const orders=[
   all,

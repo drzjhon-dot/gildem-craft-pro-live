@@ -75,5 +75,5 @@ test('v8.4.2 frontend, backend y service worker renuevan versión de recetas',()
  const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
  assert(catalog.includes('special-recipes-v5-kits-siege-offhands'));
  assert(netlify.includes('special-recipes-v5-kits-siege-offhands'));
- assert(sw.includes('gildem-craft-pro-v8.6.6'));
+ assert(sw.includes('gildem-craft-pro-v8.6.7'));
 });

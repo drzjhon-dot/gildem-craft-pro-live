@@ -54,7 +54,7 @@ export function chosenDemandIds(ids,limit=900){
  order.sort((a,b)=>a.ench-b.ench||a.tier-b.tier||a.index-b.index);
  return order.slice(0,limit).map(x=>x.id);
 }
-export function listingCapacity(route,{horizonDays=DEFAULT_HORIZON_DAYS,share=.06,maxPerRoute=650,unknownCap=1}={}){
+export function listingCapacity(route,{horizonDays=DEFAULT_HORIZON_DAYS,share=.06,maxPerRoute=6000,unknownCap=1}={}){
  if(!route)return 0;
  if(route.city==='Black Market'&&route.mode==='instant')return route.depthVerified?Math.max(0,Math.floor(finite(route.marketCapacity))):0;
  if(Number.isFinite(route?.hardMarketCapacity))return Math.max(0,Math.floor(route.hardMarketCapacity));
@@ -77,7 +77,7 @@ export function listingCapacity(route,{horizonDays=DEFAULT_HORIZON_DAYS,share=.0
 }
 export function demandExplanation(route,{horizonDays=14,share=.06}={}){
  const day=route?.demandDaily??(route?.activity?.observations>0?route.activity.observedDaily:null);
- const max=listingCapacity(route,{horizonDays,share,maxPerRoute:650});
+ const max=listingCapacity(route,{horizonDays,share,maxPerRoute:6000});
  if(day===null)return {daily:null,max,reason:'Sin historial suficiente: exposición provisional, no demanda confirmada',source:'No verificada'};
  return {daily:day,max,reason:`Límite indicativo: ${Math.round(share*100)}% de la actividad observada durante ${horizonDays} días`,source:route.demandSource||'AODP · historial'};
 }

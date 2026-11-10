@@ -1,3 +1,13 @@
+## v8.6.7 (2026-11-10) · Totales por objeto, logística visible y presupuesto sin techos arbitrarios
+
+- Rediseño de Resultados en tarjetas compactas sin scroll horizontal en teléfono y PC. Repeticiones del mismo ID exacto por ciudad de venta se consolidan; logística por destino aparece abajo.
+- Fabricación total editable a nivel de objeto; redistribuye los cambios entre rutas conservando límites por mercado y costos sin contabilizar dos veces.
+- Producción de volumen: techo por ruta antes fijo en 650, ahora máximo técnico de 6.000, sujeto a actividad, horizonte, competencia e inventario pendiente; no convierte observaciones AODP en ventas garantizadas.
+- Corrige los topes artificiales por tier/ciudad y la exposición combinada de dos objetos que impedían usar el presupuesto incluso con oportunidades viables.
+- Primera compra de materiales y profundidad en tarjetas compactas; compras escalonadas siguen señaladas como condicionadas.
+- Referencias estudiadas: AFM Data Client, albionmarket.gg Data Client y ejemplo MIT de millelog. No se integra acceso privado de pago ni se importa una API no documentada. `RESEARCH_CLIENTES_MERCADO_AMERICA.md`.
+- 279 pruebas automáticas y compilación limpia (con datos simulados). Renderizado de Resultados inspeccionado a 390 px y 1.060 px sin desplazamiento horizontal; falta confirmar cotizaciones y despliegue reales.
+
 ## v8.6.6 (2026-11-10) · Plan de volumen y uso integral del presupuesto
 
 - Elimina el control Reservar 15%; generación Black Craft / Royal Craft con 100% del capital autorizado cuando se elige usar todo.

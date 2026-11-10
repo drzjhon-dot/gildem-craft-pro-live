@@ -31,14 +31,19 @@ export function bulkMarketCandidates(routes,{minWeekly=MIN_WEEKLY_ACTIVITY,requi
 // sigue existiendo límite por producto y sobre todo capacidad por rotación.
 export function bulkItemExposureFraction(routes){
  const count=new Set((routes||[]).map(x=>x.id).filter(Boolean)).size;
- if(count>=12)return .12;
- if(count>=9)return .15;
- if(count>=7)return .18;
- if(count>=5)return .22;
- if(count>=4)return .27;
- if(count>=3)return .34;
- if(count>=2)return .40;
- return .50;
+ // Limits are an anti-concentration guard, not a minimum cash reserve. With
+ // 2 items, 40% each made it impossible to spend more than 80% of the budget.
+ // Actual allocation remains bounded by observed demand, competition, existing
+ // inventory and affordable input materials for every exact sale market.
+ if(count>=15)return .11;
+ if(count>=12)return .13;
+ if(count>=9)return .16;
+ if(count>=7)return .19;
+ if(count>=5)return .24;
+ if(count>=4)return .29;
+ if(count>=3)return .38;
+ if(count>=2)return .52;
+ return .75; // one item alone never justifies committing every silver
 }
 export function portfolioFillSummary(plan,budget,{minWeekly=MIN_WEEKLY_ACTIVITY,eligible=0}={}){
  const capital=Math.max(0,Number(budget)||0),used=Math.max(0,Number(plan?.totalCost)||0);
