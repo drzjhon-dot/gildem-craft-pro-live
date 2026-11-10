@@ -1,6 +1,6 @@
 import {specFameGoal,craftingFameFromRecipe,planLevelCraft,eligibleToStudy,createStudyOnlyCandidates} from './core/level-craft.js';
 import {resultsSummary, budgetGroups, shoppingWithCeilings, preflightOverview, shoppingListText} from './core/results-view.js';
-import {groupProduction, groupSales, groupLogistics, distributeProductionQuantity} from './core/production-view.js';
+import {groupProduction, groupSales, groupLogistics, distributeProductionQuantity,materialUsage} from './core/production-view.js';
 import {normalizeOrderbook,enrichWithDepth,routeProfitAtQuantity} from './core/depth.js';
 import {journalInfo,journalSummary,JOURNAL_NPC_REFERENCE} from './core/journals.js';
 import {rebuildPlan,fitPlan} from './core/plan.js';
@@ -31,7 +31,7 @@ import {coverageByMarket,diagnoseScan,marketResearchIds,marketAuditIds} from './
 import {volumeTrend} from './core/market-volume.js';
 import {chosenDemandIds,demandHistoryIndex,discoverDemand,demandExplanation,listingCapacity} from './core/demand-first.js';
 import {PLAN_STYLES,DEFAULT_STYLE,resolveStyle,impactCapacity,saturationSummary} from './core/market-impact.js';
-import {addressableDemand,qualityVolumeIndex,applyBmReversion,marketNeed,marketNeedsRanking} from './core/market-mechanics.js';
+import {addressableDemand,qualityVolumeIndex,applyBmReversion} from './core/market-mechanics.js';
 import {evidenceForPlan} from './core/market-proof.js';
 import {MARKET_SNAPSHOT_KEY,parseMarketRanking,validMarketSnapshot,externalDaily,conflictingServerLabel} from './core/external-demand.js';
 import {MARKET_REFERENCES,marketReferenceSnapshot} from './core/market-references.js';
@@ -131,7 +131,7 @@ function errorText(e){return `<div class="error-box"><strong>No pudimos completa
 function showToast(msg,isError=false){const e=$('#toast');e.textContent=msg;e.className=(isError?'error ':'')+'show';clearTimeout(showToast.t);showToast.t=setTimeout(()=>e.className='',4500);}
 function setBusy(id,text='Consultando datos del mercado…'){const e=control(id);if(e)e.innerHTML=`<div class="loading"><span class="spinner"></span><span>${h(text)}</span></div>`;}
 function updateStatus(info){if(!info)return;state.lastFetch=info.fetchedAt||Date.now();state.lastWarning=info.warning||null;$('#sidebar-status').textContent=info.warning?'Caché de respaldo':info.cached?'Caché de 1 hora':'Consulta completada';$('#api-indicator').textContent=info.warning?'Datos en caché':info.cached?'Caché válida':'AODP consultado';}
-function changePage(page){if(page==='levelcraft')page='crafting';if(page!==state.page)state.preflight=null;state.page=page;document.body.classList.toggle('gcp-results-active',page==='resultados');document.querySelectorAll('[data-nav]').forEach(el=>el.classList.toggle('active',el.dataset.nav===page));$('#page-title').textContent=page==='inicio'?'Tu centro económico':navNames[page];$('#breadcrumb').textContent=navNames[page];document.querySelector('.sidebar').classList.remove('open');render();window.scrollTo({top:0,behavior:'smooth'});}
+function changePage(page){if(page==='levelcraft')page='crafting';if(page!==state.page)state.preflight=null;state.page=page;document.body.dataset.page=page;document.body.classList.toggle('gcp-results-active',page==='resultados');document.querySelectorAll('[data-nav]').forEach(el=>el.classList.toggle('active',el.dataset.nav===page));$('#page-title').textContent=page==='inicio'?'Tu centro económico':navNames[page];$('#breadcrumb').textContent=navNames[page];document.querySelector('.sidebar').classList.remove('open');render();window.scrollTo({top:0,behavior:'smooth'});}
 function render(){if(state.page==='resultados')resultsPage();if(state.page==='inicio')home();if(state.page==='cartera')portfolioPage();if(state.page==='autocraft')autoPage();if(state.page==='focuslab')focusPage();if(state.page==='alertas')alertsPage();if(state.page==='precios')marketPage();if(state.page==='comercio'||state.page==='negro')tradePage();if(state.page==='crafting')craftPage();if(state.page==='refino')refinePage();if(state.page==='encantar')enchantPage();if(state.page==='transmutar')transmutePage();if(state.page==='ajustes')settingsPage();}
 function home(){
  const count=Object.keys(recipes).length, catalog=Object.keys(names).length, real=overallDashboard(loadPortfolios());
@@ -977,14 +977,6 @@ function marketReferencesPanel(data){
  <div class="gcp-reference-actions"><button type="button" class="btn sm ghost" data-nav="ajustes">Importar estadísticas West</button><button type="button" class="btn sm ghost" data-action="research-west-ai">Copiar consulta para investigación con IA · West</button></div>
  <small class="muted">La investigación con IA genera una consulta para copiar. No es una búsqueda automática, ni una importación de cifras, ni una comprobación de profit.</small></details></section>`;
 }
-function marketNeedsHtml(current,rows){
- const list=marketNeedsRanking([...(current?.needCandidates||[]),...(rows||[])],8);
- if(!list.length)return '';
- const inPlan=new Set((rows||[]).map(r=>r.id+'|'+r.city));
- const lines=list.map(x=>{const mine=inPlan.has(x.id+'|'+x.city);
-  return `<div class="gcp-need-row">${itemCell(x.id)}<span class="gcp-need-city">${h(x.city==='Black Market'?'Mercado Negro':x.city)}</span><span class="gcp-need-volume"><b>${fmt(Math.round(x.daily))}</b>/día</span><span class="gcp-need-label">${h(x.need.label)}</span><span class="gcp-tag ${mine?'good':'neutral'}">${mine?'En tu plan':'Fuera del plan'}</span></div>`;}).join('');
- return `<section class="panel gcp-market-needs"><details open><summary>Qué pide el mercado ahora · ${list.length} objetos</summary><p class="explain">Mercado Negro: puja actual frente a lo que pagó de media en 14 días (pedidos acumulados sin atender). Royal: poca oferta por delante de tu orden frente a la venta diaria. Es una señal de momento, no una venta asegurada.</p><div class="gcp-need-list">${lines}</div></details></section>`;
-}
 function marketCoverageHtml(p){
  const coverage=p?.marketCoverage,diagnosis=p?.scanDiagnosis;
  if(!coverage&&!diagnosis)return '';
@@ -1007,7 +999,7 @@ function resultsPage(){
  document.body.classList.add('gcp-results-active');
  const current=currentPlan();
  if(!current?.plan?.rows?.length){
-  main.innerHTML=`<div class="gcp-results gcp-results-empty"><section class="gcp-result-hero"><span class="gcp-hero-overline">GILDEM CRAFT PRO · RESULTADOS</span><h2>Tus planes, en una sola pantalla</h2><p>Genera un plan en Black Craft o Royal Craft y aquí aparecerán las cantidades, compras, capital, profit y comprobaciones.</p></section><div class="gcp-empty-actions"><button class="btn gold" data-nav="crafting">⚒ Crear plan Black Craft</button><button class="btn" data-nav="autocraft">✦ Crear plan Royal Craft</button><button class="btn ghost" data-nav="cartera">Ver inversiones guardadas</button></div></div>`;
+  main.innerHTML=`<div class="gcp-results gcp-results-empty"><section class="gcp-result-hero"><h2>Tus planes, en una sola pantalla</h2><p>Genera un plan en Black Craft o Royal Craft y aquí aparecerán las cantidades, compras, capital, profit y comprobaciones.</p></section><div class="gcp-empty-actions"><button class="btn gold" data-nav="crafting">⚒ Crear plan Black Craft</button><button class="btn" data-nav="autocraft">✦ Crear plan Royal Craft</button><button class="btn ghost" data-nav="cartera">Ver inversiones guardadas</button></div></div>`;
   return;
  }
  const b=current.plan,rows=b.rows||[],sum=resultsSummary(current),supply=shoppingWithCeilings(current),audit=preflightOverview(state.preflight,sum);
@@ -1028,28 +1020,58 @@ function resultsPage(){
    ['Focus usado',fmt(sum.focus),'Costo según perfil configurado','focus']
  ];
  const cards=kpis.map(([name,value,desc,klass])=>`<article class="gcp-kpi gcp-kpi-${klass}"><div class="gcp-kpi-icon" aria-hidden="true">${({coins:'◈',profit:'↗',roi:'◎',focus:'✦'})[klass]}</div><div class="gcp-kpi-content"><span class="gcp-kpi-name">${h(name)}</span><strong class="gcp-kpi-number ${klass==='profit'?profitabilityClass:''}">${h(value)}</strong><small>${h(desc)}</small></div>${klass==='coins'?`<div class="gcp-kpi-meter" style="width:${sum.budgetUsed.toFixed(1)}%"></div>`:''}</article>`).join('');
- const production=groupProduction(rows);
+ // v9.0.0 · Listas en filas (icono con cantidad, nombre y tier), ordenadas de menor a mayor tier.
+ const tierRank=id=>itemTier(id)*10+itemEnch(id);
+ const byTier=(x,y)=>tierRank(x.id)-tierRank(y.id)||String(itemName(x.id)).localeCompare(String(itemName(y.id)),'es')||String(x.city||'').localeCompare(String(y.city||''));
+ const tierChip=id=>`<span class="gcp-tier gcp-tier-${itemEnch(id)}">T${itemTier(id)}.${itemEnch(id)}</span>`;
+ const cityChip=city=>{const name=city==='Black Market'?'Mercado Negro':(city||'Sin ciudad');return `<span class="gx-city gx-city-${String(city||'none').toLowerCase().replace(/[^a-z]/g,'')}">${h(name)}</span>`;};
+ const itemWithCount=(id,count)=>`<div class="gx-item"><span class="gx-count">×${fmt(count)}</span>${itemCell(id)}${tierChip(id)}</div>`;
+ const production=groupProduction(rows).sort(byTier);
  const items=production.map(g=>{
-  const count=g.sourceIndices.length;
   const stages=g.sourceIndices.some(i=>rows[i].patientSupplyPending||rows[i].procurementFirstBatch!=null&&rows[i].procurementFirstBatch<rows[i].qty);
-  const craftPlaces=g.craftCities.map(c=>`${h(c.city)}${g.craftCities.length>1?' · '+fmt(c.qty)+' fab.':''}`).join(' · ');
+  const provisional=g.sourceIndices.some(i=>rows[i].salePriceProvisional);
+  const fieldId='gcp-group-'+h(g.id).replace(/[^a-zA-Z0-9-]/g,'-');
   const weeklyMax=Math.max(0,...g.sourceIndices.map(i=>Number(observedWeeklyActivity(rows[i])?.units)||0));
   const source=g.sourceIndices.map(i=>rows[i].demandSource||'historial')[0];
-  return `<article class="gcp-compact-card gcp-production-card">
-   <div class="gcp-compact-item">${itemCell(g.id)}<span class="gcp-tier gcp-tier-${itemEnch(g.id)}">T${itemTier(g.id)}.${itemEnch(g.id)}</span></div>
-   <div class="gcp-compact-quantity"><label for="gcp-group-${h(g.id).replace(/[^a-zA-Z0-9-]/g,'-')}">Fabricar</label><input id="gcp-group-${h(g.id).replace(/[^a-zA-Z0-9-]/g,'-')}" class="qty-input" data-plan-group="${h(g.key)}" type="number" min="0" step="1" max="${Math.min(999999,Math.max(g.qty,g.capacity))}" value="${g.qty}" aria-label="Fabricaciones totales de ${h(itemName(g.id))}"><small>${fmt(g.units)} unidades</small></div>
-   <div class="gcp-compact-meta"><span><b>Fabricar en</b> ${craftPlaces}</span><span><b>Mercados</b> ${count} ${count===1?'ruta':'rutas'}</span>${g.sourceIndices.some(i=>rows[i].salePriceProvisional)?'<span class="gcp-pending-text"><b>Precio BM objetivo:</b> historial; confirmar antes de comprar o fabricar</span>':''}${weeklyMax?`<span><b>Actividad semanal</b> hasta ${fmt(Math.round(weeklyMax))} observaciones/mercado · ${h(source)}</span>`:''}${stages?'<span class="gcp-pending-text">Compras por etapas, no garantizadas</span>':''}</div>
-   <div class="gcp-compact-values"><span><small>Capital</small><strong>${moneyCell(g.capital)}</strong></span><span><small>Profit estimado</small><strong class="${resultClass(g.profit)}">${moneyCell(g.profit,resultClass(g.profit))}</strong></span></div>
-  </article>`;
+  const notes=[provisional?'Precio del Mercado Negro tomado del historial: confírmalo antes de comprar':'',stages?'Compra por etapas, sin garantía de stock':''].filter(Boolean);
+  return `<div class="gx-row gx-craft-row">
+   ${itemWithCount(g.id,g.qty)}
+   <div class="gx-cell gx-cell-city" data-label="Fabricar en">${g.craftCities.map(c=>cityChip(c.city)).join('')}</div>
+   <div class="gx-cell gx-cell-qty" data-label="Fabricar"><input id="${fieldId}" class="qty-input" data-plan-group="${h(g.key)}" type="number" min="0" step="1" max="${Math.min(999999,Math.max(g.qty,g.capacity))}" value="${g.qty}" aria-label="Fabricaciones totales de ${h(itemName(g.id))}"><small title="${h(source)}">${weeklyMax?`demanda ${fmt(Math.round(weeklyMax))}/sem`:`${fmt(g.units)} uds.`}</small></div>
+   <div class="gx-cell gx-cell-num" data-label="Capital">${moneyCell(g.capital)}</div>
+   <div class="gx-cell gx-cell-num" data-label="Profit">${moneyCell(g.profit,resultClass(g.profit))}</div>
+   ${notes.length?`<p class="gx-note gcp-pending-text">${h(notes.join(' · '))}</p>`:''}
+  </div>`;
  }).join('');
- const logistics=groupLogistics(rows).map(g=>`<article class="gcp-compact-card gcp-logistics-card">
-   <div class="gcp-logistics-title">${itemCell(g.id)}<span class="gcp-tier gcp-tier-${itemEnch(g.id)}">T${itemTier(g.id)}.${itemEnch(g.id)}</span></div>
-   <div class="gcp-logistics-route"><span><small>Fabricar</small><strong>${h(g.craftCity)}</strong></span><span aria-hidden="true">→</span><span><small>Vender</small><strong>${h(g.city==='Black Market'?'Caerleon · BM':g.city)}</strong></span></div>
-   <div class="gcp-logistics-footer"><strong>${fmt(g.qty)} fab. · ${fmt(g.units)} uds.</strong><span class="${resultClass(g.profit)}">${moneyCell(g.profit,resultClass(g.profit))} profit</span></div>
-   ${g.staged||g.firstBatch<g.qty?`<small class="gcp-pending-text">Primera compra respaldada: ${fmt(g.firstBatch)} de ${fmt(g.qty)} fab. (estimado)</small>`:''}
-  </article>`).join('');
- const shoppingRows=supply.map(m=>`<article class="gcp-compact-card gcp-shopping-card"><div class="gcp-shopping-item">${itemCell(m.id)}<strong>${fmt(m.qtyGross)} uds.</strong></div><div class="gcp-shopping-detail"><span>Comprar en <b>${h(m.city||'Sin ciudad')}</b></span><span>Precio/u ${moneyCell(m.unitPrice)}</span><span>Máximo/u ${moneyCell(Math.floor(m.suggestedCeiling))}</span><strong>${moneyCell(m.grossCost)}</strong></div></article>`).join('');
- const journalRows=(b.journalSummary?.items||[]).map(j=>`<article class="gcp-compact-card gcp-shopping-card"><div class="gcp-shopping-item">${itemCell(j.empty,j.name+' T'+j.tier)}<strong>${fmt(j.qty)} uds.</strong></div><div class="gcp-shopping-detail"><span>Comprar en <b>${h(j.buyCity||'Sin ciudad')}</b></span><span>Diario</span><strong>${moneyCell(j.purchaseCost)}</strong></div></article>`).join('');
+ const logistics=groupLogistics(rows).sort(byTier).map(g=>`<div class="gx-row gx-logistics-row">
+   ${itemWithCount(g.id,g.units)}
+   <div class="gx-cell gx-cell-city" data-label="Fabricar en">${cityChip(g.craftCity)}</div>
+   <div class="gx-cell gx-cell-city" data-label="Vender en">${cityChip(g.city)}<small>${g.mode==='instant'?'Venta inmediata':'Orden de venta'}</small></div>
+   <div class="gx-cell gx-cell-num" data-label="Cantidad"><strong>${fmt(g.units)}</strong><small>${fmt(g.qty)} fab.</small></div>
+   <div class="gx-cell gx-cell-num" data-label="Profit">${moneyCell(g.profit,resultClass(g.profit))}</div>
+   ${g.staged||g.firstBatch<g.qty?`<p class="gx-note gcp-pending-text">Primera compra respaldada: ${fmt(g.firstBatch)} de ${fmt(g.qty)} fabricaciones (estimado)</p>`:''}
+  </div>`).join('');
+ const usage=materialUsage(rows);
+ const usedFor=m=>{const ids=usage.get(m.id+'|'+(m.city||''))||[];
+  return ids.slice(0,10).map(id=>`<span class="gx-for" title="${h(itemName(id))}">${itemCell(id)}</span>`).join('')+(ids.length>10?`<span class="gx-for-more">+${ids.length-10}</span>`:'');};
+ const shoppingRows=[...supply].sort(byTier).map(m=>{
+  const spare=m.ret===false?0:Math.max(0,Math.floor(m.qtyGross-(Number(m.qtyNet)||m.qtyGross)));
+  return `<div class="gx-row gx-shopping-row">
+   <div class="gx-item gx-material">${itemCell(m.id)}${m.ret===false?'<span class="gx-noreturn">No se devuelve</span>':''}</div>
+   <div class="gx-cell gx-cell-for" data-label="Para">${usedFor(m)}</div>
+   <div class="gx-cell gx-cell-city" data-label="Comprar en">${cityChip(m.city)}</div>
+   <div class="gx-cell gx-cell-num" data-label="A comprar"><strong>${fmt(m.qtyGross)}</strong>${spare?`<small class="gx-spare">sobran ${fmt(spare)}</small>`:''}</div>
+   <div class="gx-cell gx-cell-num" data-label="Precio unidad">${moneyCell(m.unitPrice)}<small>máx. ${fmt(Math.floor(m.suggestedCeiling))}</small></div>
+   <div class="gx-cell gx-cell-num gx-cell-total" data-label="Total">${moneyCell(m.grossCost)}</div>
+  </div>`;}).join('');
+ const journalRows=(b.journalSummary?.items||[]).map(j=>`<div class="gx-row gx-shopping-row">
+   <div class="gx-item gx-material">${itemCell(j.empty,j.name+' T'+j.tier)}<span class="gx-noreturn">Diario</span></div>
+   <div class="gx-cell gx-cell-for" data-label="Para"></div>
+   <div class="gx-cell gx-cell-city" data-label="Comprar en">${cityChip(j.buyCity)}</div>
+   <div class="gx-cell gx-cell-num" data-label="A comprar"><strong>${fmt(j.qty)}</strong></div>
+   <div class="gx-cell gx-cell-num" data-label="Precio unidad">${moneyCell(j.qty?j.purchaseCost/j.qty:NaN)}</div>
+   <div class="gx-cell gx-cell-num gx-cell-total" data-label="Total">${moneyCell(j.purchaseCost)}</div>
+  </div>`).join('');
  const materialTotal=supply.reduce((s,m)=>s+m.grossCost,0);
  const firstStage=stagedMaterialNeeds(rows),firstStageCost=firstStage.reduce((sum,m)=>sum+m.qty*m.unitPrice,0);
  const firstStageHtml=firstStage.length?`<details class="gcp-first-stage"><summary>Primera compra orientativa · ${short(firstStageCost)} silver</summary><p>Estas cantidades no representan órdenes reservadas. Antes de comprar compara las ofertas actuales con los techos del plan.</p><div class="gcp-compact-grid gcp-first-stage-grid">${firstStage.slice(0,60).map(m=>`<article class="gcp-compact-card gcp-shopping-card"><div class="gcp-shopping-item">${itemCell(m.id)}<strong>${fmt(Math.ceil(m.qty))} uds.</strong></div><div class="gcp-shopping-detail"><span>${h(m.city)}</span><span>${moneyCell(m.qty*m.unitPrice)} estimados</span></div></article>`).join('')}</div></details>`:
@@ -1061,21 +1083,20 @@ function resultsPage(){
  const verificationDate=audit.at?` · ${h(new Date(audit.at).toLocaleString('es-ES'))}`:'';
  const sellDepth=sum.blackTotal?`Mercado Negro: órdenes de venta pendientes; puja NPC solo orientativa`:'Royal: órdenes de venta pendientes, sin fecha garantizada';
  main.innerHTML=`<section class="gcp-results">
-   <header class="gcp-result-hero"><div><span class="gcp-hero-overline">GILDEM CRAFT PRO · ${h(branch)} · ${h(prefs.region.toUpperCase())}</span><h2>Resultados del Plan</h2><p>${h(current.branch||'Plan de crafting')} · ${sum.routeCount} rutas · ${fmt(sum.units)} unidades · Mercado ${h(current.market==='black'?'Negro':'Royal')}</p></div><span class="gcp-result-crest" aria-hidden="true">✦</span></header>
+   <header class="gcp-result-hero"><div><span class="gcp-hero-overline">${h(branch)}, servidor América (West)</span><h2>Resultados del plan</h2><p>${h(current.branch||'Plan de crafting')} · ${sum.routeCount} rutas · ${fmt(sum.units)} unidades · Mercado ${h(current.market==='black'?'Negro':'Royal')}</p></div><span class="gcp-result-crest" aria-hidden="true">✦</span></header>
    ${patienceNotice}
    <div class="gcp-smart-summary"><strong>◈ Crafting de volumen</strong> · ${fmt(current.smartPortfolio?.differentItems||new Set(rows.map(r=>r.id)).size)} objetos · ${current.fill?.percent?.toFixed(1)??(sum.budgetUsed.toFixed(1))}% del presupuesto asignado · ${short(current.fill?.remaining??Math.max(0,current.budget-b.totalCost))} sin invertir · Sin reserva fija · Actividad mayor de ${current.minWeekly??50}/semana · Tope por objeto ${Math.round((current.exposureFraction??.12)*100)}%.${(()=>{const sat=saturationSummary(rows);return sat?` Estilo ${h(PLAN_STYLES[current.style||DEFAULT_STYLE].label)}: cuota media del mercado ${(sat.avgShare*100).toFixed(1)}% (máx. ${(sat.maxShare*100).toFixed(1)}%) · saturación estimada -${short(sat.loss)} de beneficio.`:'';})()}<small>${current.fees?`Comisiones aplicadas: impuesto ${current.fees.tax} % + ${current.fees.setup} % por publicar orden (igual en Royal y Mercado Negro). `:''}${h(current.fill?.explanation||'Los topes protegen contra saturación.')} Actividad observada no significa ventas ejecutadas. ${current.smartPortfolio?.pendingMarkets||0} mercados con inventario pendiente registrado.</small></div>
    <div class="gcp-summaryline"><span class="gcp-tag ${sum.confidence===null?'neutral':sum.confidence>=75?'good':sum.confidence>=45?'caution':'risk'}">Confianza: ${h(confidenceText)}</span><span class="gcp-tag ${sum.activityDays===null?'neutral':sum.activityDays>=10?'good':'caution'}">Actividad observada: ${h(activityText)}</span><span class="gcp-tag ${audit.status==='verified'?'good':audit.status==='partial'?'caution':audit.status==='warning'?'risk':'neutral'}">${h(audit.title)}</span><span class="gcp-age">${h(ageText)}</span></div>
    ${(availableBlack&&availableRoyal)?`<div class="gcp-result-sources"><span>Ver resultados de:</span><button class="btn sm ${state.resultSource==='crafting'?'gold':'ghost'}" data-action="results-source" data-source="crafting">Black Craft</button><button class="btn sm ${state.resultSource==='autocraft'?'gold':'ghost'}" data-action="results-source" data-source="autocraft">Royal Craft</button></div>`:''}
    <div class="gcp-kpi-grid">${cards}</div>
-   ${marketNeedsHtml(current,rows)}
    ${marketCoverageHtml(current)}
    ${marketReferencesPanel(current.marketReferences)}
    <section class="gcp-market-proof"><div class="gcp-proof-head"><div><strong>Calidad de los datos del plan</strong><p>Precio, actividad y abastecimiento se verifican por separado. No son ventas realizadas.</p></div><span class="gcp-tag ${proof.staged?'caution':'neutral'}">${proof.staged} rutas con compras por etapas</span></div>
    <div class="gcp-proof-stats"><span>${proof.quoted}/${proof.total} cotizaciones recientes</span><span>${proof.rows.filter(x=>x.observedDaily!==null).length}/${proof.total} con historial observable</span><span>${proof.ready}/${proof.total} sin compra pendiente señalada</span></div>
    <details><summary>Revisar evidencia de cada objeto antes de comprar</summary><div class="table-scroll"><table class="data-table"><thead><tr><th>Objeto</th><th>Mercado</th><th>Actividad</th><th>Precio observado</th><th>Fabricaciones</th><th>Compras</th></tr></thead><tbody>${evidenceRows}</tbody></table></div><p class="explain">${h(proof.disclaimer)} Un primer lote de 0 o no verificable no significa que el objeto no tenga mercado; significa que el stock de insumos no está respaldado al precio presupuestado. El techo completo es un objetivo condicionado.</p></details></section>
-   <div class="gcp-result-grid"><section class="gcp-result-panel gcp-panel-craft"><div class="gcp-panel-title"><h3>⚒ Lista de fabricación</h3><span class="gcp-title-count">${production.length} objetos · ${fmt(sum.units)} unidades · ${fmt(production.reduce((a,g)=>a+g.qty,0))} fabricaciones</span></div><div class="gcp-compact-grid gcp-production-grid">${items}</div><div class="gcp-panel-foot"><span>Un objeto aparece una sola vez. Edita su total; los destinos se recalculan en Logística.</span><span>${h(sellDepth)}</span></div></section>
-   <section class="gcp-result-panel gcp-panel-logistics"><div class="gcp-panel-title"><h3>↗ Logística · Fabricar y vender</h3><span class="gcp-title-count">${rows.length} rutas de venta · ${fmt(sum.units)} unidades</span></div><p class="gcp-panel-caption">Cada destino tiene su propia cantidad y profit. Fabricaciones del mismo objeto se suman arriba, sin duplicar la producción.</p><div class="gcp-compact-grid gcp-logistics-grid">${logistics}</div></section>
-   <section class="gcp-result-panel gcp-panel-shopping"><div class="gcp-panel-title"><h3>▣ Lista de compras</h3><span class="gcp-title-count">${supply.length} materiales · ${(b.journalSummary?.items||[]).length} diarios</span></div><div class="gcp-compact-grid gcp-shopping-grid">${shoppingRows}${journalRows}</div><div class="gcp-shopping-total"><span>Materiales a comprar (bruto)</span><strong>${short(materialTotal)}</strong></div><p class="gcp-panel-caption">El techo/u es un límite financiero calculado, no una oferta disponible. Los diarios son adicionales si no están incluidos en el capital del plan.</p>${firstStageHtml}${current.procurementAudit?`<details class="gcp-depth-details"><summary>Ver compras por tramos y primer lote</summary><p>Ofertas observadas en AODP West: ${current.procurementAudit.checked}/${current.procurementAudit.rows.length} materiales con libro. ${current.procurementAudit.missing} insumos con cantidad insuficiente al techo previsto. No implica compra ejecutada.</p><div class="gcp-compact-grid gcp-depth-grid">${current.procurementAudit.rows.map(m=>`<article class="gcp-compact-card gcp-shopping-card"><div class="gcp-shopping-item">${itemCell(m.id)}<strong>${fmt(m.filled)} / ${fmt(m.qty)}</strong></div><div class="gcp-shopping-detail"><span>Precio medio ${m.averageUnitPrice===null?'Sin ofertas':moneyCell(m.averageUnitPrice)}</span><span>Techo/u ${moneyCell(m.ceiling)}</span></div></article>`).join('')}</div></details>`:''}</section>
+   <div class="gcp-result-grid"><section class="gcp-result-panel gcp-panel-craft"><div class="gcp-panel-title"><h3>Lista de fabricación</h3><span class="gcp-title-count">${production.length} objetos, ${fmt(production.reduce((a,g)=>a+g.qty,0))} fabricaciones</span></div><div class="gx-list gcp-production-grid"><div class="gx-head gx-craft-row"><span>Objeto</span><span>Fabricar en</span><span>Fabricar</span><span>Capital</span><span>Profit</span></div>${items}</div><div class="gcp-panel-foot"><span>Cambia la cantidad de un objeto y el plan recalcula compras y destinos.</span><span>${h(sellDepth)}</span></div></section>
+   <section class="gcp-result-panel gcp-panel-logistics"><div class="gcp-panel-title"><h3>Logística</h3><span class="gcp-title-count">${rows.length} rutas, ${fmt(sum.units)} unidades</span></div><div class="gx-list gcp-logistics-grid"><div class="gx-head gx-logistics-row"><span>Objeto</span><span>Fabricar en</span><span>Vender en</span><span>Cantidad</span><span>Profit</span></div>${logistics}</div></section>
+   <section class="gcp-result-panel gcp-panel-shopping"><div class="gcp-panel-title"><h3>Lista de compras</h3><span class="gcp-title-count">${supply.length} materiales, ${(b.journalSummary?.items||[]).length} diarios</span></div><div class="gx-list gcp-shopping-grid"><div class="gx-head gx-shopping-row"><span>Material</span><span>Para</span><span>Comprar en</span><span>A comprar</span><span>Precio unidad</span><span>Total</span></div>${shoppingRows}${journalRows}</div><div class="gcp-shopping-total"><span>Materiales a comprar</span><strong>${short(materialTotal)}</strong></div><p class="gcp-panel-caption">«máx.» es el precio más alto que el plan aguanta por unidad, no una oferta disponible.</p>${firstStageHtml}${current.procurementAudit?`<details class="gcp-depth-details"><summary>Ver compras por tramos y primer lote</summary><p>Ofertas observadas en AODP West: ${current.procurementAudit.checked}/${current.procurementAudit.rows.length} materiales con libro. ${current.procurementAudit.missing} insumos con cantidad insuficiente al techo previsto. No implica compra ejecutada.</p><div class="gcp-compact-grid gcp-depth-grid">${current.procurementAudit.rows.map(m=>`<article class="gcp-compact-card gcp-shopping-card"><div class="gcp-shopping-item">${itemCell(m.id)}<strong>${fmt(m.filled)} / ${fmt(m.qty)}</strong></div><div class="gcp-shopping-detail"><span>Precio medio ${m.averageUnitPrice===null?'Sin ofertas':moneyCell(m.averageUnitPrice)}</span><span>Techo/u ${moneyCell(m.ceiling)}</span></div></article>`).join('')}</div></details>`:''}</section>
    <section class="gcp-result-panel gcp-panel-preflight"><div class="gcp-panel-title"><h3>☑ Comprobación previa</h3><span class="gcp-state ${audit.status}">${h(audit.title)}${verificationDate}</span></div><div class="gcp-check-grid">${checks}</div>${current.warning?`<details class="gcp-warnings"><summary>Advertencias del plan</summary><p>${h(current.warning)}</p></details>`:''}<p class="gcp-panel-caption">AODP aporta observaciones comunitarias. El resultado no garantiza la ejecución ni la disponibilidad de todas las órdenes.</p></section>
    <section class="gcp-result-panel gcp-panel-budget"><div class="gcp-panel-title"><h3>◉ Distribución del presupuesto</h3><span class="gcp-title-count">${sum.budgetUsed.toFixed(1)}% del capital asignado</span></div>${bars||'<p>No hay categorías con capital asignado.</p>'}<div class="gcp-budget-remaining"><span>Presupuesto restante</span><strong>${short(Math.max(0,sum.budget-sum.capital))}</strong></div><p class="gcp-panel-caption">Distribución proporcional al capital estimado de cada ruta. No son nuevos gastos.</p></section></div>
    <div id="preflight-results" class="gcp-preflight-detail">${state.preflight?preflightResult(state.preflight):''}</div>

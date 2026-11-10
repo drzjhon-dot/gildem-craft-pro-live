@@ -3,18 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#09111d">
+  <meta name="theme-color" content="#14101f">
   <meta name="description" content="Planificador de crafting Royal y Mercado Negro para Albion Online. Ramas, bonos, Focus, presupuesto, diarios y listas de compras.">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=8.9.0">
-  <title>Gildem Craft Pro v8.9.0 · Royal + Black Market</title>
+  <link rel="stylesheet" href="./styles.css?v=9.0.0">
+  <title>Gildem Craft Pro v9.0.0 · Royal + Black Market</title>
 </head>
 <body>
 <div class="app-shell">
   <aside class="sidebar">
-    <div class="brand"><div class="brand-icon">G<span>✦</span></div><div><strong>GILDEM</strong><small>CRAFT PRO v8.9.0 · ROYAL + BM</small></div></div>
-    <div class="nav-title">MI NEGOCIO DE CRAFTING</div>
+    <div class="brand"><div class="brand-icon">G<span>✦</span></div><div><strong>Gildem</strong><small>Craft Pro v9.0.0 · Royal y Mercado Negro</small></div></div>
+    <div class="nav-title">Mi taller</div>
     <nav class="nav" aria-label="Navegación principal">
       <button data-nav="crafting" class="nav-item active"><span class="nav-glyph">⚒</span><span>Black Craft</span></button>
       <button data-nav="autocraft" class="nav-item"><span class="nav-glyph">✦</span><span>Royal Craft</span></button>
@@ -26,7 +26,7 @@
   </aside>
   <div class="workspace">
     <header class="topbar">
-      <div class="topbar-left"><button class="mobile-menu" id="mobile-menu" title="Abrir menú">☰</button><div><div class="eyebrow">WIKI ALBION <span class="divider-text">/</span> <span id="breadcrumb">Black Craft</span></div><h1 id="page-title">Black Craft</h1></div></div>
+      <div class="topbar-left"><button class="mobile-menu" id="mobile-menu" title="Abrir menú">☰</button><div><div class="eyebrow">Gildem <span class="divider-text">/</span> <span id="breadcrumb">Black Craft</span></div><h1 id="page-title">Black Craft</h1></div></div>
       <div class="topbar-right"><span class="live-indicator"><i></i><span id="api-indicator">Datos AODP</span></span><select id="server-select" aria-label="Servidor"><option value="west">América · West</option></select><button class="icon-btn" data-action="refresh" title="Actualizar precios">↻</button></div>
     </header>
     <main id="main-content" aria-live="polite">
@@ -58,10 +58,10 @@
   button.disabled=true;button.textContent='Limpiando caché…';
   try{if('serviceWorker' in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(x=>x.unregister()));}}catch{}
   try{if('caches' in window){const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('gildem-craft-pro-')).map(k=>caches.delete(k)));}}catch{}
-  const url=new URL(window.location.href);url.searchParams.set('carga','8.9.0');window.location.replace(url.toString());
+  const url=new URL(window.location.href);url.searchParams.set('carga','9.0.0');window.location.replace(url.toString());
  });
 })();
 </script>
-<script type="module" src="./app.js?v=8.9.0"></script>
+<script type="module" src="./app.js?v=9.0.0"></script>
 </body>
 </html>

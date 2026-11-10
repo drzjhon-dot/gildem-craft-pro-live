@@ -2,6 +2,7 @@
 // encantamiento incluidos), mientras los destinos siguen siendo rutas distintas.
 // No modifica los cálculos, las órdenes, el presupuesto ni las compras.
 import {routeProfitAtQuantity} from './depth.js';
+import {purchaseComponents} from './refining-integration.js';
 
 export const productionKey = row => `${row.id}|${row.recipeKind || 'equipo'}`;
 
@@ -113,4 +114,18 @@ export function groupLogistics(rows=[]){
   group.staged||=!!r.patientSupplyPending;
  }
  return [...map.values()].sort((a,b)=>a.id.localeCompare(b.id)||a.city.localeCompare(b.city));
+}
+
+// v9.0.0 · Para qué objetos del plan sirve cada material de la lista de compras.
+// Clave «material|ciudad de compra», igual que en plan.materials.
+export function materialUsage(rows=[]){
+ const map=new Map();
+ for(const r of rows||[]){
+  if(!r||!Number.isInteger(r.qty)||r.qty<=0)continue;
+  for(const m of r.materials||[])for(const p of purchaseComponents(m)){
+   const key=p.id+'|'+(p.city||'');
+   const set=map.get(key)||new Set();set.add(r.id);map.set(key,set);
+  }
+ }
+ return new Map([...map].map(([k,v])=>[k,[...v].sort()]));
 }

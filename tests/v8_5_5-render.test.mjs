@@ -6,7 +6,7 @@ import {resultsSummary,budgetGroups,shoppingWithCeilings,preflightOverview,shopp
 import {marketReferenceSnapshot} from '../core/market-references.js';
 import {evidenceForPlan} from '../core/market-proof.js';
 import {stagedMaterialNeeds,observedRotation} from '../core/intelligent-portfolio.js';
-import {groupProduction,groupLogistics} from '../core/production-view.js';
+import {groupProduction,groupLogistics,materialUsage} from '../core/production-view.js';
 import {observedWeeklyActivity} from '../core/high-volume.js';
 import {saturationSummary,PLAN_STYLES,DEFAULT_STYLE} from '../core/market-impact.js';
 import {marketNeedsRanking} from '../core/market-mechanics.js';
@@ -26,7 +26,7 @@ function run(current=fake,report=null){
  const main={innerHTML:''};
  const state={resultSource:'crafting',plan:current,autoPlan:null,preflight:report};
  const context={main,state,prefs:{region:'west'},document:{body:{classList:{add(){}}}},
-   currentPlan:()=>current,resultsSummary,budgetGroups,shoppingWithCeilings,preflightOverview,shoppingListText,marketReferenceSnapshot,evidenceForPlan,stagedMaterialNeeds,observedRotation,groupProduction,groupLogistics,saturationSummary,PLAN_STYLES,DEFAULT_STYLE,marketNeedsRanking,observedWeeklyActivity,
+   currentPlan:()=>current,resultsSummary,budgetGroups,shoppingWithCeilings,preflightOverview,shoppingListText,marketReferenceSnapshot,evidenceForPlan,stagedMaterialNeeds,observedRotation,groupProduction,groupLogistics,materialUsage,saturationSummary,PLAN_STYLES,DEFAULT_STYLE,marketNeedsRanking,observedWeeklyActivity,
    itemName:id=>id,itemTier:()=>5,itemEnch:()=>0,
    itemCell:id=>`<span class="item-cell"><img src="https://render.albiononline.com/v1/item/${id}.png">${id}</span>`,
    moneyCell:n=>`<span>${n}</span>`,preflightResult:report=>`<aside>${report.ok?'OK':'REVISAR'}</aside>`,
@@ -39,7 +39,7 @@ function run(current=fake,report=null){
 }
 test('el dashboard representa números reales, íconos, el destino y botones',()=>{
  const html=run();
- assert.match(html,/Resultados del Plan/);
+ assert.match(html,/Resultados del plan/);
  assert.match(html,/110000/);
  assert.match(html,/850000/);
  assert.match(html,/render\.albiononline\.com\/v1\/item\/T5_MAIN_AXE\.png/);

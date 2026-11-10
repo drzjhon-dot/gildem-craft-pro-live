@@ -8,7 +8,7 @@ const must=['package.json','netlify.toml','index.html','app.js','styles.css',
 'netlify/functions/hourly-prices.mjs','netlify/functions/snapshot.mjs'];
 for(const path of must)await access(join(process.cwd(),path));
 const pkg=JSON.parse(await readFile('package.json','utf8'));
-assert.match(pkg.version,/^8\.9\.0$/,'La distribución debe declarar la versión 8.9.0');
+assert.match(pkg.version,/^9\.0\.0$/,'La distribución debe declarar la versión 9.0.0');
 // Prevent the regression that sent only test files to GitHub while keeping
 // app.js/index.html on an older version. These checks run in every Netlify build.
 const html=await readFile('index.html','utf8');
@@ -22,7 +22,7 @@ const css=await readFile('styles.css','utf8');
 assert.ok(css.includes('.gcp-results .gcp-market-audit')&&css.includes('.gcp-results .gcp-panel-budget'),'Los paneles secundarios deben permanecer ocultos en Resultados');
 assert.ok(source.includes("qcControls('craft')")&&source.includes("qcControls('auto')"),'Black/Royal no tienen controles compactos');
 assert.ok(!source.includes('researchPlanHtml(')&&source.includes('historicalBmListingTarget('),'No deben mostrarse planes de investigación ni perder el contraste del historial BM');
-assert.ok(source.includes('marketCoverageHtml(p)')&&source.includes('chosenDemandIds('),'Falta la exploración por demanda de v8.9.0');
+assert.ok(source.includes('marketCoverageHtml(p)')&&source.includes('chosenDemandIds('),'Falta la exploración por demanda de v9.0.0');
 assert.ok(source.includes('evidenceForPlan(b,')&&source.includes('marketCoverage.historyObserved='),'Falta auditoría de precio, historial y abastecimiento');
 assert.ok(source.includes('pendingUnitsByMarket(loadPortfolios())')&&source.includes('intelligent:true'),'Falta Cartera inteligente en Black/Royal');
 assert.ok(!source.includes('qc-reserve')&&source.includes('bulkMarketCandidates(')&&source.includes('materialDepthAssessment('),'Faltan los filtros de volumen o sobran controles de reserva');

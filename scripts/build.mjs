@@ -5,7 +5,7 @@ import {imageUpstreams} from '../netlify/functions/item-image.mjs';
 
 const OUTPUT='dist';
 const assets=['index.html','app.js','styles.css','sw.js','manifest.webmanifest'];
-const folders=['core','icons','assets'];
+const folders=['core','icons','assets','fonts'];
 await rm(OUTPUT,{recursive:true,force:true});
 await mkdir(OUTPUT,{recursive:true});
 for(const file of assets){await stat(file);await cp(file,join(OUTPUT,file));}
@@ -64,6 +64,6 @@ if(prefetchCatalog){
  }
  await Promise.all(['names_es.json','recipes.json'].map(cacheOne));
 }
-await writeFile(join(OUTPUT,'version.json'),JSON.stringify({app:'Gildem Craft Pro',version:'8.9.0',build:'github-netlify',api:'west / AODP',publishedAt:new Date().toISOString()},null,2)+'\n');
+await writeFile(join(OUTPUT,'version.json'),JSON.stringify({app:'Gildem Craft Pro',version:'9.0.0',build:'github-netlify',api:'west / AODP',publishedAt:new Date().toISOString()},null,2)+'\n');
 await writeFile(join(OUTPUT,'core/icon-manifest.js'),`export const LOCALLY_CACHED_ICONS = new Set(${JSON.stringify(stored)});\n`);
 console.log(`Gildem Craft Pro: dist/ preparado. Iconos locales: ${stored.length}. Catálogos estáticos: ${catalogStored.length}. Proxy Netlify y fuentes externas de respaldo.`);

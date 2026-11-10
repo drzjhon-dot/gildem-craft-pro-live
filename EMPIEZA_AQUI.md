@@ -1,5 +1,5 @@
-# Gildem Craft Pro v8.9.0 · Mecánicas reales de mercado (West)
+# Gildem Craft Pro v9.0.0 · Nuevas listas y tema «Mercado de noche»
 
-Esta versión corrige las comisiones del Mercado Negro, valora sus lotes al precio medio y añade el panel **Qué pide el mercado ahora**. Detalles en `RELEASE_NOTES_8_9_0.md` y la investigación en `INVESTIGACION_MERCADOS.md`.
+Resultados muestra fabricación, compras y logística en filas ordenadas por tier, y toda la herramienta estrena colores y tipografías. Detalles en `RELEASE_NOTES_9_0_0.md`.
 
-Instalación: copia todos los archivos sobre tu repositorio con GitHub Desktop, Commit to main → Push origin, espera `Published` en Netlify y recarga con Ctrl + Shift + R (debe verse `v8.9.0`). Revisa en Ajustes tu tipo de cuenta (Premium o no).
+Instalación: copia todos los archivos (incluida la carpeta nueva `fonts/`) sobre tu repositorio con GitHub Desktop, Commit to main → Push origin, espera `Published` en Netlify y recarga con Ctrl + Shift + R (debe verse `v9.0.0`).

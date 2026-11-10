@@ -1,3 +1,7 @@
+## v9.0.0 (2026-11-10)
+
+- Resultados: listas de fabricación, compras y logística en filas ordenadas por tier; se retira «Qué pide el mercado ahora». Tema nuevo «Mercado de noche» con tipografías propias y color por ciudad. Ver `RELEASE_NOTES_9_0_0.md`.
+
 ## v8.9.0 (2026-11-10)
 
 - Mecánicas reales de mercado: impuesto correcto en Mercado Negro (4/8 % + 2,5 %), lote BM valorado a la mediana de 14 días, demanda por calidades 1-3, panel «Qué pide el mercado ahora». Ver `RELEASE_NOTES_8_9_0.md` e `INVESTIGACION_MERCADOS.md`.
