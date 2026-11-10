@@ -1,44 +1,40 @@
-# Gildem Craft Pro v8.5.5: nueva tab RESULTADOS
+# Gildem Craft Pro: motor por actividad observada
 
-Esta entrega es una **actualización para tu proyecto existente**, no una web autónoma.
-Conserva Black Craft, Royal Craft, Level Craft, el motor económico, tus ajustes y la conexión a AODP.
+**Actualización de comportamiento para la base v8.7.0.** No modifica los datos guardados del navegador, ni publica automáticamente en Netlify.
 
-## Qué se implementa
+## Qué cambia
 
-- Menú lateral **Resultados** con el estilo visual oscuro/dorado que elegimos.
-- Apertura automática de Resultados después de generar un plan viable de Black Craft o Royal Craft.
-- Si ambos planes están en memoria, cambio rápido entre Black y Royal sin mezclarlos.
-- Tarjetas de capital, profit neto estimado, ROI y Focus, usando los valores **del motor**, no del diseño gráfico.
-- Lista de fabricación con **iconos reales de Albion** mediante el sistema de render del proyecto, tier, ciudad, venta, profit y cantidades editables.
-- Lista de compras de materiales y diarios con cantidades brutas, ciudad, precio presupuestado, techo prudente calculado y costo. **El techo no es un precio disponible o garantizado**.
-- Comprobación previa integrada con AODP y estados honestos: pendiente, favorable o necesita revisión.
-- Distribución proporcional de capital por familia; barras representativas y presupuesto restante.
-- Botones: verificar, copiar compras, exportar CSV, guardar inversión, editar plan.
-- Arte decorativo original en el fondo fantasy; **las ilustraciones de fondo no sustituyen los iconos de objetos del juego**.
-- El refresco de la barra superior y el botón regenerar vuelven al formulario de origen y consultan precios nuevos.
-- Diseño adaptable a móvil y computadora.
+El viejo mensaje **«No hay beneficio neto verificable actualmente»** desaparece de los resultados. Ahora **Black Craft y Royal Craft muestran el plan de demanda** aun cuando ninguna ruta supera el antiguo margen mínimo. El motor clasifica artículos por actividad histórica observada en el mercado correspondiente y selecciona cantidades pequeñas, compatibles con presupuesto, exposición y movimiento del mercado.
 
-## Instalar en Windows
+- **Primero, actividad:** más volumen de órdenes observadas y más continuidad. Un artículo con mucho movimiento ya no desaparece por tener ROI bajo o negativo.
+- **Profit visible pero no obligatorio:** los cálculos de beneficio y pérdida se muestran con signo; el **precio de equilibrio es informativo**, no una condición para crear el plan.
+- **Protección del silver:** las rutas con pérdida prevista reciben límites de cantidad y exposición mucho más estrictos; artículos demasiado caros no bloquean a otros asequibles.
+- **Plan detallado:** ítem, tier, fabricaciones, unidades para vender, ciudad de fabricación y venta, precio observado, actividad semanal, coste, estimación neta, advertencias y lista bruta de materias primas.
+- **Mi negocio:** puedes guardar como **pendiente** las rutas con precio y coste conocidos, incluidas las de beneficio negativo. **Guardar nunca consume silver**. La caja se modifica solo al confirmar que la compra se realizó. Antes de marcar una compra en planes por demanda, el sistema muestra una confirmación especial.
+- **Sin cifras ficticias:** si faltan cotizaciones, el plan solo muestra una unidad orientativa, no simula beneficio ni permite guardar esa ruta como compra real.
 
-1. Descomprime este archivo ZIP **fuera** de la carpeta de tu proyecto.
-2. Descarga o abre en tu PC la carpeta **completa** del repo `drzjhon-dot/gildem-craft-pro-live`.
-3. Arrastra esa carpeta sobre `ACTUALIZAR_WINDOWS.bat`.
-4. El instalador acepta v8.5.2, v8.5.3 o v8.5.4. Para las dos primeras incorpora primero las actualizaciones previas.
-5. El `.bat` ejecuta `npm test` y `npm run build` (requiere Python 3 y Node.js 22).
-6. Si ambas operaciones terminan bien, usa GitHub Desktop para Commit y Push. Netlify publicará el cambio cuando termine el deploy.
-7. Recarga la web. Si ves diseño antiguo, haz recarga forzada o espera a que el service worker se actualice.
+> **Importante:** la fuente AODP ofrece observaciones comunitarias del mercado. Sus registros históricos **no prueban ventas completadas**, ni reservan órdenes o materiales. Revisar precio y profundidad del mercado antes de fabricar sigue siendo imprescindible.
 
-Alternativa manual: `python INSTALAR_ACTUALIZACION.py "RUTA_A_TU_REPO"` y luego `npm test` y `npm run build` desde el repo.
+## Instalación con GitHub Desktop, paso a paso (Windows)
 
-### Advertencias
+1. Descarga y **extrae este ZIP en una carpeta aparte** (por ejemplo `Descargas\Gildem_Demanda`). **No descomprimas los archivos directamente sobre tu repositorio**.
+2. En GitHub Desktop abre el repositorio `drzjhon-dot/gildem-craft-pro-live`. En `Repository > Show in Explorer`, copia la ruta de la carpeta que contiene `app.js`, `core/` y `package.json`.
+3. Haz doble clic en **`ACTUALIZAR_GILDEM_WINDOWS.bat`** dentro de la actualización extraída. Pega la ruta del repositorio cuando se solicite. El asistente necesita **Python 3** instalado.
+4. La actualización modifica solo `app.js` y `core/always-plan.js`, y añade `tests/v8_7_1-demand-first.test.mjs`. Guarda los archivos anteriores en una carpeta de respaldo **junto a tu repositorio**, llamada `gildem-craft-pro-live_backup_antes_demanda_8_7_1`.
+5. En la terminal de tu repositorio, si tienes Node 22: ejecuta `node --check app.js`, `npm test` y `npm run build`.
+6. Revisa los cambios en GitHub Desktop. Haz **Commit to main** y **Push origin**. Netlify volverá a construir la web si está enlazada a ese repositorio.
+7. Actualiza el navegador con `Ctrl + Shift + R`. Genera un plan de arcos u otra rama con historial conocido y verifica que aparezca **«PLAN POR ROTACIÓN · SIN FILTRO DE PROFIT MÍNIMO»**.
 
-- Este actualizador **no se ha publicado en tu GitHub ni Netlify**: la integración de GitHub disponible no permite escritura al repositorio.
-- Se probaron los cálculos puros, la sintaxis del archivo de pantalla y el instalador en un proyecto de prueba. No se pudo ejecutar aquí `npm test` del repo real completo porque ese código no está disponible en el contenedor.
-- Copia de seguridad del código cambiado: `.gildem-respaldo-antes-v8.5.5/` dentro del repo local.
-- Guardar plan utiliza el sistema **Mi negocio** ya existente. El plan editable actual permanece en memoria durante la sesión; no se simula recuperación de un plan guardado si no conserva sus datos económicos originales.
-- El sistema diferencia datos observados y profundidad verificada; los resultados no garantizan que las órdenes se ejecuten ni que exista liquidez para cada lote.
-- Para cambiar qué iconos aparecen, debes corregir los IDs reales de recetas; la nueva pantalla usa `itemCell`/`itemimg` y sus fallbacks ya existentes.
+**Alternativa sin .bat:** abre una terminal en la carpeta extraída y ejecuta `py -3 INSTALAR_DEMANDA.py "C:\RUTA\AL\gildem-craft-pro-live"`.
 
-## Pruebas nuevas
+## Compatibilidad y pruebas
 
-- `tests/v8_5_5-results.test.mjs` mide KPI, ROI, presupuesto, límites globales de compra, preflight y las conexiones con el menú y el estado del motor.
+El instalador valida cada sección a sustituir. Si el proyecto difiere de la versión observada, detiene la instalación en lugar de cambiar secciones equivocadas. Si tienes Node.js instalado, valida la sintaxis antes de finalizar y restaura las fuentes originales ante un error de sintaxis.
+
+**Probado en esta entrega:** 10 pruebas del motor y de integración sobre una instalación de prueba (incluido un caso de precio inferior al equilibrio, límite de pérdidas, artículos caros y guardado pendiente). La compilación completa y las pruebas de todos los módulos de tu repositorio deben ejecutarse localmente o en Netlify después de aplicar el cambio. La conexión actual a GitHub permite lectura, pero rechazó la escritura automática, por lo que esta actualización **todavía no está publicada en tu web**.
+
+## Rollback
+
+Si necesitas volver atrás, copia `app.js` y `always-plan.js` desde `gildem-craft-pro-live_backup_antes_demanda_8_7_1` a sus ubicaciones originales (`app.js` y `core/always-plan.js`) y elimina `tests/v8_7_1-demand-first.test.mjs`. Haz commit y push del rollback.
+
+**Nota sobre versión:** la versión de distribución permanece en `8.7.0`, porque el repositorio valida esa versión de forma estricta en `scripts/check-deploy.mjs`, `index.html`, `sw.js`, `scripts/build.mjs` y Netlify. El marcador interno `GCP_DEMAND_FIRST_871` distingue esta actualización sin romper la compilación.

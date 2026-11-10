@@ -1,0 +1,41 @@
+function conditionalResultsContent(p){
+ const plan=p.conditionalProposal;
+ if(!plan?.rows?.length)return `<section class="gcp-conditional-wrap"><h3>No se pudo asignar un lote con estos datos</h3><p>No hay recetas con actividad suficiente y coste presupuestable. Amplía los tiers o la rama; no se inventarán precios ni compras.</p><button class="btn gold" data-action="refresh-craft-now">Actualizar mercados</button></section>`;
+ const rows=plan.rows,ready=rows.filter(r=>r.budgetVerified&&r.costTotal!==null&&r.referencePrice>0);
+ const priced=rows.filter(r=>r.scenarioProfit!==null);
+ const projected=priced.length===rows.length?priced.reduce((s,r)=>s+r.scenarioProfit,0):null;
+ const weekly=rows.reduce((s,r)=>s+(r.weeklyObserved||0),0);
+ const overview=rows.map(r=>{
+  const net=r.scenarioProfit;
+  const economic=net===null?'No verificable':(net>=0?'+':'')+fmt(net)+' silver';
+  const freshness=r.ageHours===null||r.ageHours===undefined?'Sin fecha':Number(r.ageHours).toFixed(1)+' h';
+  return `<article class="gcp-conditional-card">
+   <div class="gcp-conditional-product">${itemCell(r.id)}<span class="gcp-tier gcp-tier-${itemEnch(r.id)}">T${itemTier(r.id)}.${itemEnch(r.id)}</span></div>
+   <div class="gcp-conditional-data"><span><small>Fabricar</small><strong>${fmt(r.qty)} veces · ${fmt(r.units)} uds.</strong></span><span><small>Actividad semanal observada</small><strong>${r.weeklyObserved===null?'Sin datos':fmt(Math.round(r.weeklyObserved))+' uds.'}</strong></span>
+    <span><small>Capital estimado</small><strong>${r.upfrontPerCraft===null?'Sin precio':moneyCell(r.capital)}</strong></span><span><small>Resultado neto esperado</small><strong class="${net===null?'':net>=0?'positive':'negative'}">${h(economic)}</strong></span>
+    <span><small>Precio de venta observado</small><strong>${r.referencePrice===null?'Sin cotización':moneyCell(r.referencePrice)}</strong></span><span><small>Precio equilibrio (informativo)</small><strong>${r.breakEvenPrice===null?'No calculable':moneyCell(r.breakEvenPrice)}</strong></span></div>
+   <div class="gcp-conditional-route"><b>Fabricar:</b> ${h(r.craftCity)} · <b>Vender:</b> ${h(r.city==='Black Market'?'Caerleon · BM':r.city)} · Precio consultado: ${h(freshness)}</div>
+   <p class="gcp-conditional-blocker">${h(r.warnings.slice(0,3).join(' · '))}</p>
+  </article>`;
+ }).join('');
+ const materials=new Map();
+ for(const row of rows)for(const m of row.materials||[]){
+  if(!(m.id&&Number(m.count)>0))continue;
+  const key=m.id+'|'+(m.city||row.craftCity);
+  const prev=materials.get(key)||{id:m.id,city:m.city||row.craftCity,qty:0,price:null};
+  prev.qty+=Number(m.count)*row.qty;
+  if(Number(m.unitPrice)>0)prev.price=Number(m.unitPrice);
+  materials.set(key,prev);
+ }
+ const supply=[...materials.values()].sort((a,b)=>a.city.localeCompare(b.city)||a.id.localeCompare(b.id))
+  .map(x=>`<div class="gcp-conditional-material">${itemCell(x.id)}<span>${fmt(Math.ceil(x.qty))} uds.</span><small>${h(x.city)}${x.price?' · Ref. '+fmt(Math.round(x.price))+'/ud.':' · Precio no verificado'}</small></div>`).join('');
+ return `<div class="gcp-conditional-wrap">
+  <div class="gcp-conditional-head"><span class="pill green">PLAN POR ROTACIÓN · SIN FILTRO DE PROFIT MÍNIMO</span><h2>Plan de crafting basado en movimiento del mercado</h2>
+   <p>Estos son los objetos con mayor actividad observada que caben en el presupuesto. El precio de equilibrio se informa, <strong>pero no bloquea la fabricación</strong>. Los lotes con pérdidas previstas se limitan automáticamente. Los registros de AODP no garantizan ventas.</p>${p.warning?`<p class="gcp-conditional-blocker">${h(p.warning)}</p>`:''}</div>
+  <div class="gcp-conditional-stats"><div><small>Objetos seleccionados</small><strong>${fmt(rows.length)}</strong></div><div><small>Unidades a vender</small><strong>${fmt(plan.units)}</strong></div><div><small>Capital estimado</small><strong>${short(plan.scenarioCapital)}</strong></div><div><small>Profit / pérdida estimada</small><strong class="${projected===null?'':projected>=0?'positive':'negative'}">${projected===null?'Incompleto':(projected>=0?'+':'')+short(projected)}</strong></div></div>
+  <p class="gcp-conditional-disclaimer">Actividad conjunta de las rutas: ${fmt(Math.round(weekly))} unidades observadas por semana. No son ventas confirmadas, profundidad de compra, stock reservado ni plazo de venta. Presupuesto sin asignar: ${short(plan.remaining)} silver.</p>
+  <h3>Qué fabricar, tier y cantidad</h3><div class="gcp-conditional-grid">${overview}</div>
+  <h3>Lista de compra de materiales</h3><p class="gcp-conditional-disclaimer">Cantidades brutas antes del retorno. Revisa el libro por tramos para evitar subirte el precio al comprar; el stock de esta lista no está reservado. Los diarios no se incluyen si no se han validado sus requisitos.</p><div class="gcp-conditional-materials">${supply||'<p>Precios o recetas incompletos.</p>'}</div>
+  <div class="gcp-conditional-warning"><strong>Beneficio no es requisito para generar el plan.</strong> Si el neto es negativo, es una pérdida estimada real y no se esconde. Puedes guardar las rutas con precio y coste conocidos en Mi negocio como <strong>plan pendiente</strong>; guardar no consume silver. El saldo cambia únicamente si confirmas una compra realizada. Verifica precios, impuestos, suministro y riesgo de transporte dentro del juego antes de fabricar.</div>
+  <div class="gcp-conditional-actions"><button class="btn gold" data-action="save-investment" ${!ready.length?'disabled':''}>▣ Guardar en Mi negocio (${ready.length})</button><button class="btn" data-action="copy-demand-shopping">▤ Copiar compras</button><button class="btn" data-action="refresh-craft-now">↻ Actualizar precios</button><button class="btn ghost" data-action="results-edit">Cambiar filtros</button></div></div>`;
+}

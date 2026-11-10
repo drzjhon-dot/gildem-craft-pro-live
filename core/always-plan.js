@@ -1,64 +1,119 @@
-// Third-stage fallback: a conditional production PROPOSAL, never an executable
-// order or an assertion of present profit. AODP activity is NOT verified sales.
-// No fabricated quotes, material costs or confirmed demand are allowed here.
-const numeric = x => (x===null||x===undefined||x==='')?null:Number.isFinite(Number(x))?Math.max(0,Number(x)):null;
-const money = x => Number.isFinite(x)?Math.round(x):null;
+// Plan de crafting por movimiento observado, incluso sin margen positivo.
+// AODP es evidencia de actividad, NO ventas ejecutadas ni ordenes reservadas.
+// No se inventan cotizaciones, recetas, compras ni beneficios.
+const numeric = x => x === null || x === undefined || x === '' ? null : Number.isFinite(Number(x)) ? Math.max(0,Number(x)) : null;
+const money = x => Number.isFinite(x) ? Math.round(x) : null;
+const pct = x => Math.max(0,Math.min(.3,Number(x)||0));
 
-export function prepareAlwaysPlan(options,{budget=0,horizonDays=14,maxItems=14,minimumROI=.08}={}){
+export function prepareAlwaysPlan(options,{budget=0,horizonDays=14,maxItems=14,minimumROI=0}={}) {
  const available=Math.max(0,Number(budget)||0);
- const weeks=Math.max(1,Math.min(30,Number(horizonDays)||14))/7;
+ const horizon=Math.max(1,Math.min(30,Number(horizonDays)||14));
+ const weeks=horizon/7;
  const seen=new Set();
  const ranked=(options||[]).filter(o=>o?.id&&o?.city&&o?.craftCity).map(o=>{
-  const gross=numeric(o.rawMaterials),cost=numeric(o.costTotal),output=Math.max(1,numeric(o.craftAmount)||1);
-  const rate=Math.max(0,Math.min(.30,Number(o.taxRate)||0)) + Math.max(0,Math.min(.30,Number(o.setupRate)||0));
-  const travel=numeric(o.transportCost)||0;
-  const minimumUnit=cost!==null&&rate<1?Math.ceil((cost+travel)*(1+minimumROI)/(output*(1-rate))):null;
-  const quoted=numeric(o.referencePrice);
-  const weekly=numeric(o.weeklyObserved);
-  const feasibleCost=gross!==null&&gross>0&&gross<=available;
-  const gap=minimumUnit&&quoted?quoted/minimumUnit:0;
-  const score=(weekly!==null?Math.log1p(weekly)*20:0)+(feasibleCost?28:0)+
-   (minimumUnit&&quoted?Math.min(30,gap*23):0)-(gross===null?28:0);
-  const blockers=[];
-  if(gross===null||cost===null)blockers.push('Faltan precios verificables de los materiales');
-  else if(gross>available)blockers.push('Una fabricación supera el presupuesto');
-  if(!quoted)blockers.push('Falta una cotización de venta reciente');
-  else if(minimumUnit!==null&&quoted<minimumUnit)blockers.push('Precio observado por debajo del mínimo rentable');
-  else blockers.push('No superó las comprobaciones estrictas de beneficio, riesgo o liquidez');
-  if(weekly===null)blockers.push('Sin actividad semanal contrastable');
-  else if(weekly<=50)blockers.push('Actividad limitada: no ampliar el lote sin confirmar demanda');
-  if(o.focusUnverified)blockers.push('Consumo de Focus sin verificar');
-  return {...o,score,referencePrice:quoted,rawMaterials:gross,costTotal:cost,weeklyObserved:weekly,
-   minSalePrice:minimumUnit,blockers,qty:0,capital:0,units:0,craftAmount:output,outputAmount:output,
-   scenarioProfit:null,requiresVerification:true,executable:false};
- }).sort((a,b)=>b.score-a.score||a.id.localeCompare(b.id));
+  const raw=numeric(o.rawMaterials),cost=numeric(o.costTotal),output=Math.max(1,numeric(o.craftAmount)||1);
+  const station=numeric(o.stationCost)||0,travel=numeric(o.transportCost)||0;
+  const rate=Math.min(.90,pct(o.taxRate)+pct(o.setupRate));
+  const quote=numeric(o.referencePrice),weekly=numeric(o.weeklyObserved);
+  const upfront=raw!==null?raw+station+travel:null;
+  // Solo informativo: el precio de equilibrio NUNCA elimina una ruta.
+  const breakEven=cost!==null&&rate<1?Math.ceil((cost+travel)/(output*(1-rate))):null;
+  const profit=cost!==null&&quote>0?quote*output*(1-rate)-cost-travel:null;
+  const roi=profit!==null&&upfront>0?100*profit/upfront:null;
+  const affordable=upfront!==null&&upfront>0&&upfront<=available;
+  const warnings=[];
+  if(raw===null||cost===null)warnings.push('Faltan precios de materias primas: confirmar compras');
+  else if(!affordable)warnings.push('Una fabricación supera el presupuesto');
+  if(!quote)warnings.push('Falta una cotización reciente de venta: profit no calculable');
+  else if(profit<0)warnings.push('Precio observado debajo del equilibrio: pérdida prevista');
+  else if(profit===0)warnings.push('Precio de equilibrio: margen neto nulo');
+  else if(roi<8)warnings.push('Margen positivo pequeño: no se descarta por profit');
+  if(weekly===null)warnings.push('Sin observaciones de actividad: máximo una fabricación de prueba');
+  else if(weekly===0)warnings.push('Sin actividad positiva en el período consultado');
+  else if(weekly<=50)warnings.push('Actividad baja: exposición inicial mínima');
+  if(o.focusUnverified)warnings.push('Costo de Focus no verificado: revalidar devolución y consumo');
+  if(o.ageHours==null||Number(o.ageHours)>24)warnings.push('Cotización sin fecha reciente: actualizar antes de comprar');
+  // La actividad pesa mucho mas que el ROI. La rentabilidad solo desempata
+  // y regula cuanto capital se expone a una perdida prevista.
+  const activityScore=weekly>0?1000+Math.log1p(weekly)*100:weekly===0?50:0;
+  const score=activityScore+(affordable?30:0)+(quote?10:0)+Math.max(-5,Math.min(5,roi||0));
+  return {...o,score,rawMaterials:raw,costTotal:cost,referencePrice:quote,weeklyObserved:weekly,
+   minSalePrice:breakEven,breakEvenPrice:breakEven,profitPerCraft:profit===null?null:money(profit),
+   estimatedROI:roi,upfrontPerCraft:upfront,blockers:warnings,warnings,qty:0,capital:0,units:0,
+   craftAmount:output,outputAmount:output,scenarioProfit:null,budgetVerified:false,
+   requiresVerification:true,executable:false};
+ }).sort((a,b)=>b.score-a.score||(b.weeklyObserved||0)-(a.weeklyObserved||0)||a.id.localeCompare(b.id));
+ const hasObserved=ranked.some(x=>x.weeklyObserved>0);
  const selected=[];
- for(const x of ranked){if(seen.has(x.id))continue;seen.add(x.id);selected.push(x);if(selected.length>=Math.max(1,Math.min(30,maxItems)))break;}
- // A plausible *target* lot, based on a small share of observed activity. It is
- // NOT an instruction to buy: observed listings != realized sales or stock.
- const exposure=selected.length>=10?.17:selected.length>=5?.28:selected.length>=3?.40:.65;
+ const maxSelected=Math.max(1,Math.min(30,maxItems));
+ // Un producto muy activo pero demasiado caro no puede expulsar de la lista
+ // a otros productos asequibles. Se elige y asigna en la misma pasada.
+ const exposure=ranked.length>=10?.17:ranked.length>=5?.28:ranked.length>=3?.40:.65;
  let remaining=available;
- for(const row of selected){
-  const gross=row.rawMaterials;
-  if(gross===null||gross<=0||gross>available){row.qty=1;row.budgetVerified=false;continue;}
-  const velocityCap=row.weeklyObserved===null?1:row.weeklyObserved<=50?1:
-   Math.max(1,Math.floor(row.weeklyObserved*weeks*.06/row.outputAmount));
-  const capitalCap=Math.floor(available*exposure/gross);
-  const affordable=Math.floor(remaining/gross);
-  const qty=Math.max(0,Math.min(2000,velocityCap,capitalCap,affordable));
-  row.qty=qty;row.budgetVerified=true;
-  row.capital=money(qty*gross);
-  row.units=qty*row.outputAmount;
-  remaining-=row.capital;
-  if(row.minSalePrice!==null&&row.costTotal!==null){
-   const net=(1-Math.min(.95,(Number(row.taxRate)||0)+(Number(row.setupRate)||0)))*row.minSalePrice*row.outputAmount;
-   row.scenarioProfit=money(qty*(net-row.costTotal-(Number(row.transportCost)||0)));
+ for(const r of ranked){
+  if(selected.length>=maxSelected)break;
+  if(hasObserved&&!(r.weeklyObserved>0))continue;
+  if(seen.has(r.id))continue;
+  const unit=r.upfrontPerCraft;
+  if(!(unit>0)){
+   // Sin precio de materiales: objetivo de una sola fabricación sin capital
+   // asignado y sin opción de registrar una compra.
+   r.qty=1;r.units=r.outputAmount;r.budgetVerified=false;
+   selected.push(r);seen.add(r.id);continue;
   }
+  if(unit>remaining||unit>available)continue;
+  const velocityCap=r.weeklyObserved===null||r.weeklyObserved<=50?1:
+   Math.max(1,Math.floor(r.weeklyObserved*weeks*.06/r.outputAmount));
+  const exposureCap=Math.floor(available*exposure/unit);
+  const affordableCap=Math.floor(remaining/unit);
+  let cap=Math.min(2000,velocityCap,exposureCap,affordableCap);
+  if(r.profitPerCraft!==null&&r.profitPerCraft<0){
+   // Perdidas calculadas, nunca beneficios ficticios. Primera fabricación
+   // de prueba, y exposición reducida antes de pensar en escalar.
+   const loss=Math.abs(r.profitPerCraft);
+   const lossCap=Math.max(1,Math.floor(available*.01/Math.max(1,loss)));
+   const lossCapitalCap=Math.max(1,Math.floor(available*.05/unit));
+   cap=Math.min(cap,lossCap,lossCapitalCap);
+   if(r.estimatedROI < -10)cap=Math.min(cap,1);
+   if(loss>available*.01)r.warnings.push('La pérdida prevista de UNA unidad supera el 1% del presupuesto; considera no comprar');
+  }
+  const qty=Math.max(0,cap);
+  if(!qty)continue;
+  r.qty=qty;r.units=qty*r.outputAmount;r.capital=money(qty*unit);
+  r.budgetVerified=true;
+  r.scenarioProfit=r.profitPerCraft===null?null:money(qty*r.profitPerCraft);
+  remaining-=r.capital;
+  selected.push(r);seen.add(r.id);
  }
- const rows=selected.filter(x=>x.qty>0);
+ const rows=selected.filter(r=>r.qty>0);
  const scenarioCapital=rows.reduce((a,r)=>a+r.capital,0);
- return {status:'conditional',executable:false,rows,budget:available,scenarioCapital,
+ const priced=rows.filter(r=>r.scenarioProfit!==null);
+ return {status:'conditional',strategy:'demand_first',executable:false,rows,budget:available,scenarioCapital,
   remaining:Math.max(0,available-scenarioCapital),units:rows.reduce((a,r)=>a+r.units,0),
-  horizonDays,scanned:options?.length||0,
-  warning:'PROPUESTA CONDICIONADA. Ninguna orden de compra o venta está garantizada. NO compres materiales ni fabriques hasta verificar precios, costes y margen neto en el juego.'};
+  estimatedProfit:priced.length===rows.length?priced.reduce((a,r)=>a+r.scenarioProfit,0):null,
+  pricedRows:priced.length,horizonDays:horizon,scanned:options?.length||0,
+  warning:'PLAN POR ACTIVIDAD OBSERVADA. Se permiten márgenes bajos o negativos, señalados como riesgo. El historial AODP no garantiza ventas. Comprueba cotizaciones, suministro y tasas antes de comprar.'};
+}
+
+// Solo los lotes con coste y precio observados pueden guardarse en Mi negocio.
+// Guardar = borrador; el silver NO se descuenta hasta que el jugador confirme
+// por separado que ya realizó la compra, tal como funciona la caja actual.
+export function draftPlanForLedger(proposal) {
+ const rows=(proposal?.rows||[]).filter(r=>r.qty>0&&r.budgetVerified&&r.upfrontPerCraft>0&&
+  r.costTotal!==null&&r.referencePrice>0&&r.profitPerCraft!==null).map(r=>({
+  ...r,capitalPerUnit:r.upfrontPerCraft,cost:r.costTotal,sell:r.referencePrice,
+  profit:r.profitPerCraft,mode:r.city==='Black Market'?'listed':'listed',
+  taxRate:pct(r.taxRate),setupRate:pct(r.setupRate)
+ }));
+ const materialMap=new Map();
+ for(const row of rows)for(const m of row.materials||[]){
+  if(!(m.id&&Number(m.count)>0))continue;
+  const city=m.city||row.craftCity,key=m.id+'|'+city;
+  const prev=materialMap.get(key)||{...m,id:m.id,city,qtyGross:0,qtyNet:0,unitPrice:Number(m.unitPrice)||0};
+  prev.qtyGross+=row.qty*Number(m.count);
+  prev.qtyNet+=row.qty*(Number.isFinite(Number(m.used))?Number(m.used):Number(m.count));
+  materialMap.set(key,prev);
+ }
+ return {rows,materials:[...materialMap.values()],totalCost:rows.reduce((a,r)=>a+r.qty*r.capitalPerUnit,0),
+  totalProfit:rows.reduce((a,r)=>a+r.qty*r.profit,0),journalSummary:{items:[],cost:0,fractionalCost:0}};
 }
