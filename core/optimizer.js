@@ -15,9 +15,9 @@ export function historyMetrics(data,days=14,now=Date.now()){
  const today=Math.floor(now/day)*day;
  const start=today-days*day;
  const observations=(data||[]).map(x=>({...x,t:toEpoch(x.timestamp)})).filter(x=>Number.isFinite(x.t)&&x.t>=start&&x.t<today&&Number(x.item_count)>=0);
- const byDay=new Map();let count=0;
+ const byDay=new Map();let count=0,turnover=0;
  for(const p of observations){let k=Math.floor(p.t/day);let old=byDay.get(k)||{count:0,prices:[]};let n=Math.max(0,Number(p.item_count)||0);old.count+=n;
- const avg=Number(p.avg_price);if(avg>0)old.prices.push(avg);byDay.set(k,old);count+=n;}
+ const avg=Number(p.avg_price);if(avg>0){old.prices.push(avg);turnover+=n*avg;}byDay.set(k,old);count+=n;}
  const dayCounts=[...byDay.values()].map(x=>x.count);
  const prices=[...byDay.values()].flatMap(x=>x.prices);
  const mean=prices.length?prices.reduce((a,b)=>a+b,0)/prices.length:null;
@@ -31,7 +31,8 @@ export function historyMetrics(data,days=14,now=Date.now()){
  const absoluteDeviation=medianPrice!==null?median(dailyMedians.map(p=>Math.abs(p-medianPrice))):null;
  const activeDays=byDay.size;
  return {days,observations:observations.length,activeDays,coverage:activeDays/days,count,observedDaily:count/days,
-  volatility:mean&&stdev!=null?stdev/mean:null,avgPrice:mean,
+  volatility:mean&&stdev!=null?stdev/mean:null,avgPrice:count>0&&turnover>0?turnover/count:mean,
+  observedTurnover:turnover,observedSilverDaily:turnover/days,
   medianPrice,priceDays:dailyMedians.length,priceVariation:medianPrice>0?absoluteDeviation/medianPrice:null,
   // This deliberately does not expose "sales per day" or "time to sell".
   isSalesData:false};

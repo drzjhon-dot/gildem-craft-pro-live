@@ -102,7 +102,7 @@ test('v8.3 el HUD separa los dos modos, no muestra agregados en crafting y tiene
  const css=await readFile(new URL('../styles.css',import.meta.url),'utf8');
  const html=await readFile(new URL('../index.html',import.meta.url),'utf8');
  assert(app.includes('BM_CATEGORIES.includes(g.key)'));
- assert(app.includes('const available=manualBranches(branchCategory,query)'));
+ assert(app.includes('manualBranches(branchCategory).map'));
  assert(app.includes("key==='weapons_all'||key.endsWith('_all')"));
  assert(app.includes("['refining','Refinamiento'"));
  assert(app.includes('auto-refinery-category-panel'));

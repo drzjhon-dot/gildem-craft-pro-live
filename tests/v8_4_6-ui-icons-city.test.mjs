@@ -22,8 +22,11 @@ test('el selector no imprime códigos internos y muestra tiers sin alterar el fi
  const picker=app.slice(app.indexOf('function renderItemChoices('),app.indexOf('async function refreshCraftItems'));
  assert(!picker.includes('<small>${h(x.stem)}'));
  assert(!picker.includes('title="${h(x.stem)}"'));
- assert(picker.includes("x.tiers.at(-1)"));
+ // The new compact selection chooses tiers separately, and does not show
+ // a misleading tier range in individual item-family labels.
  assert(picker.includes('data-pick-item'));
+ assert(picker.includes('${h(x.label)}'));
+ assert(picker.includes('itemimg(x.iconId,34)'));
 });
 
 test('el resultado mantiene cotizaciones y compra, sin los cuatro paneles solicitados',()=>{

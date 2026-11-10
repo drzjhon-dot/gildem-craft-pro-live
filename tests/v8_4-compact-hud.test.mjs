@@ -20,7 +20,7 @@ test('v8.4: elección de ciudad por material refinado se puede cambiar a mejor m
  assert.deepEqual(materialPurchaseCities('T5_METALBAR','Martlock',cities),['Martlock']);
 });
 test('v8.4: un solo encantamiento por pestaña, acepta .0–.4 y todos',()=>{
- assert.equal((app.match(/selectField\('Solo este encantamiento'/g)||[]).length,2);
+ assert(app.includes('QC_ENCH=[1,2,3,4]'));
  assert(!app.includes("selectField('Encantamiento máximo'"));
  for(let e=0;e<=4;e++){
   assert(itemMatches('T6_SHOES_PLATE_SET1'+(e?'@'+e:''),{enchExact:String(e)}));
@@ -38,13 +38,13 @@ test('v8.4: no se muestran opciones de refinado previo a fabricar ni en el escá
 });
 test('v8.4: refinamiento para vender continúa independiente en Encontrar oportunidades',()=>{
  assert(app.includes("['refining','Refinamiento'"));
- assert(app.includes('Refinar y vender: oportunidades independientes'));
+ assert(app.includes('createRefiningCandidates'));
  assert(refinementScanIds({families:['CLOTH'],tierMin:4,tierMax:4,enchant:0}).some(x=>x.id==='T4_CLOTH'));
 });
 test('v8.4: bonificaciones e inversión en tarjetas compactas con comportamiento responsivo',()=>{
  for(const selector of ['.craft-compact-grid','.craft-compact-card','.craft-mini-fields','.craft-market-note'])assert(styles.includes(selector));
- assert(app.includes('<section class="craft-compact-card craft-bonus-card"'));
- assert(app.includes('<section class="craft-compact-card craft-invest-card"'));
+ assert(app.includes("qcControls('craft')"));
+ assert(app.includes("qcControls('auto')"));
  assert(styles.includes('@media(max-width:1250px){.craft-compact-grid{grid-template-columns:1fr}'));
  assert(styles.includes('.craft-bonus-card .craft-mini-fields,.craft-invest-card .craft-mini-fields{grid-template-columns:1fr}'));
 });

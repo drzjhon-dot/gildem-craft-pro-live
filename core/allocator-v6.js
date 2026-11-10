@@ -2,13 +2,14 @@
 // Multi-inicio con búsqueda de intercambio local; aproximación discreta, NO
 // garantiza el óptimo matemático para todos los universos de recetas.
 import {routeProfitAtQuantity} from './depth.js';
+import {prudentListingCapacity,liquidityWeight} from './market-volume.js';
 import {allocateSmartPortfolio} from './optimizer.js';
 const f=(x,d=0)=>Number.isFinite(Number(x))?Number(x):d;
 export function capacityFor(x,capFraction,unknownCap){
  if(Number.isFinite(x.marketCapacity))return Math.max(0,Math.floor(x.marketCapacity));
  if(x.city==='Black Market'&&x.mode==='instant')return 1;
  if(x.activity?.observations){
-  const demand=Math.floor(Math.max(0,f(x.activity.observedDaily))*capFraction/Math.max(1,f(x.craftAmount,1))); 
+  const demand=prudentListingCapacity(x,capFraction); 
   // Si hay historial pero actividad demasiado baja, no fabricar lotes enormes.
   return Math.max(0,demand);
  }
@@ -16,7 +17,7 @@ export function capacityFor(x,capFraction,unknownCap){
 }
 function value(x,goal){
  const p=f(x.profit);const trust=Math.max(.15,Math.min(1,f(x.confidence?.score,40)/100));
- const slippage=x.competition?.penalty??1;
+ const slippage=(x.competition?.penalty??1)*liquidityWeight(x.activity,x.activity7);
  const risk=Math.max(.2,Math.min(1,f(x.stressProfit,p)/Math.max(1,p)));
  const personal=Math.max(.75,Math.min(1.12,f(x.personalLearning?.adjustment,1))); 
  const cash=f(x.capitalPerUnit,1);

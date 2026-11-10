@@ -3,6 +3,7 @@
 // needed from the Destiny Board. No AODP order observation is an executed sale.
 import {itemStem} from './item-selection.js';
 import {routeProfitAtQuantity} from './depth.js';
+import {prudentListingCapacity} from './market-volume.js';
 import {itemTier,itemEnch} from './engine.js';
 import {materialPurchaseCities} from './material-cities.js';
 import {filterViableCraftRoutes} from './viability.js';
@@ -72,7 +73,7 @@ function conservativeCapacity(route,capFraction=.10){
  if(route.city==='Black Market'||route.mode==='instant')return route.depthVerified&&Number.isFinite(route.marketCapacity)?Math.max(0,Math.floor(route.marketCapacity)):0;
  const activity=route.activity,days=Number(activity?.activeDays||Math.min(14,activity?.observations||0));
  if(!(days>=5&&Number(activity?.observedDaily)>=2))return 0;
- const base=Math.floor(activity.observedDaily*capFraction/units);
+ const base=prudentListingCapacity(route,capFraction)??0;
  // Independently recorded personal sales may support more than one round,
  // but a market-history endpoint alone does not demonstrate turnover.
  const multiplier=Number(route.personalLearning?.qtySold)>=3?2:1;

@@ -5,11 +5,19 @@ import {runInNewContext} from 'node:vm';
 
 const root=new URL('../',import.meta.url);
 const read=x=>readFileSync(new URL(x,root),'utf8');
-const core=read('parts/compact-core.jsfrag');
-const black=read('parts/black-page.jsfrag');
-const royal=read('parts/royal-page.jsfrag');
-const pickers=read('parts/pickers.jsfrag');
-const branches=read('parts/royal-branches.jsfrag');
+// Test the actual integrated application, not obsolete installer fragments.
+// The published GitHub project must be self-contained and need no `parts/`.
+const app=read('app.js');
+function section(start,end){
+ const a=app.indexOf(start),b=app.indexOf(end,a+start.length);
+ assert(a>=0&&b>a,`No se encuentra la sección integrada: ${start}`);
+ return app.slice(a,b);
+}
+const core=section('const QC_TIERS=[','async function refreshCraftItems(){');
+const black=section('function craftPage(){','const AUTO_CATEGORIES=');
+const royal=section('function autoPage(){','// Level Craft uses the same verified catalog');
+const pickers=section('function itemPickerHtml(','// v8.5.4: Controles compactos');
+const branches=section('function qcAutoBranchInit(){','function autoPage(){');
 const markup=core+black+royal+pickers+branches;
 
 test('solo se ven las opciones esenciales; destinos fijos',()=>{

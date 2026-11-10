@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
 test('v8.4.1: filtros de ciudad, tier y encantamiento contenidos en un único bloque compacto',()=>{
- assert.match(app,/<div class="craft-filter-row" role="group"/);
+ assert.match(app,/qcControls\('craft'\)/);
  for(const id of ['craft-city','craft-tiermin','craft-tiermax','craft-ench-exact'])assert.match(app,new RegExp("'"+id+"'"));
  assert.match(css,/#craft-form \.craft-filter-row/);
 });

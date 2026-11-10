@@ -1,143 +1,34 @@
-name: Gildem Craft Pro | Reparar, probar y empaquetar proyecto completo
+name: Gildem Craft Pro | Validar proyecto completo
 
 on:
-  workflow_dispatch:
   push:
-    paths:
-      - .github/workflows/reconstruir-gildem.yml
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
-  contents: write
-
-concurrency:
-  group: gildem-reparacion-${{ github.ref }}
-  cancel-in-progress: false
+  contents: read
 
 jobs:
-  reconstruir:
-    if: github.ref == 'refs/heads/main'
+  pruebas-y-compilacion:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     env:
       GILDEM_PREFETCH_ICONS: '0'
-      CI: 'true'
     steps:
-      - name: Obtener el proyecto REAL de GitHub
+      - name: Descargar archivos del repositorio
         uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-          persist-credentials: true
-
-      - name: Preparar Node.js 22
+      - name: Instalar Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-
-      - name: Preparar Python 3.13 en GitHub, no en Windows
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-
       - name: Instalar dependencias
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci --ignore-scripts --no-audit --no-fund
-          else
-            npm install --ignore-scripts --no-audit --no-fund
-          fi
-
-      - name: Reparar los archivos fuente en una copia validada
-        run: |
-          test -f REPARAR_NETLIFY.py || { echo 'Falta REPARAR_NETLIFY.py del repositorio'; exit 1; }
-          test -f INSTALAR_ACTUALIZACION.py || { echo 'Falta INSTALAR_ACTUALIZACION.py'; exit 1; }
-          python REPARAR_NETLIFY.py .
-
-      - name: Verificar funciones del código original
-        run: |
-          grep -Fq "qcControls('craft')" app.js
-          grep -Fq "qcControls('auto')" app.js
-          grep -Fq "qcVariantIncluded('craft'" app.js
-          grep -Fq 'function resultsPage(){' app.js
-          grep -Fq 'data-nav="resultados"' index.html
-          node --check app.js
-          node --check core/results-view.js
-
-      - name: Ejecutar todas las pruebas y construir el sitio
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Verificar versión, archivos y ejecutar todos los tests
         run: npm run build
-
-      - name: Empaquetar el proyecto íntegro listo para subir a GitHub
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          from zipfile import ZipFile, ZIP_DEFLATED
-          import json
-          from datetime import datetime, timezone
-
-          root=Path.cwd()
-          expected=['index.html','app.js','styles.css','sw.js','manifest.webmanifest','package.json','netlify.toml',
-                    'core','icons','assets','scripts','netlify','tests']
-          missing=[n for n in expected if not (root/n).exists()]
-          if missing:
-              raise SystemExit('Faltan archivos esenciales: '+', '.join(missing))
-          version=json.loads((root/'package.json').read_text())['version']
-          if version!='8.5.5':
-              raise SystemExit('La reparación no actualizó package.json a 8.5.5')
-          out=root/'Gildem_Craft_Pro_COMPLETO_VERIFICADO_v8_5_5.zip'
-          chosen=[]
-          for name in expected:
-              source=root/name
-              if source.is_file():chosen.append(source)
-              else:chosen.extend(x for x in source.rglob('*') if x.is_file())
-          for optional in ['README.md','CHANGELOG.md','EMPIEZA_AQUI.md','VERIFICAR_DESPLIEGUE.md']:
-              file=root/optional
-              if file.is_file():chosen.append(file)
-          with ZipFile(out,'w',compression=ZIP_DEFLATED,compresslevel=8) as zipfile:
-              for file in chosen:
-                  arc='Gildem_Craft_Pro_COMPLETO_v8_5_5/'+file.relative_to(root).as_posix()
-                  zipfile.write(file,arc)
-              zipfile.writestr('Gildem_Craft_Pro_COMPLETO_v8_5_5/VERIFICACION_BUILD.txt',
-                  'Validado en GitHub Actions tras npm run build.\nVersion: '+version+'\nFecha UTC: '+datetime.now(timezone.utc).isoformat()+'\n')
-          print('ZIP de proyecto COMPLETO:',out.name,'archivos:',len(chosen),'bytes:',out.stat().st_size)
-          PY
-
-      - name: Subir ZIP completo verificado para descargarlo
+      - name: Guardar sitio compilado si todo pasó
         uses: actions/upload-artifact@v4
         with:
-          name: Gildem-Craft-Pro-COMPLETO-8-5-5
-          path: Gildem_Craft_Pro_COMPLETO_VERIFICADO_v8_5_5.zip
+          name: Gildem-Craft-Pro-Sitio-Compilado
+          path: dist/
           if-no-files-found: error
-          retention-days: 30
-
-      - name: Publicar en main las correcciones que pasaron todos los tests
-        id: publicar
-        continue-on-error: true
-        run: |
-          git config user.name 'Gildem Repair Bot'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- .gitignore app.js styles.css index.html sw.js manifest.webmanifest package.json \
-            scripts/build.mjs netlify/functions/health.mjs core/ tests/ assets/
-          if git diff --cached --quiet; then
-            echo 'No hay cambios que publicar.'
-          else
-            git commit -m 'Fix: integrar Black Craft, Royal Craft y Resultados verificados'
-            git push origin HEAD:main
-          fi
-
-      - name: Informar si GitHub no permitió publicar automáticamente
-        if: steps.publicar.outcome == 'failure'
-        run: |
-          echo '::warning::La compilación pasó y el ZIP completo está disponible en Artifacts, pero GitHub no permitió el push automático. Descarga el ZIP de esta ejecución y súbelo a la rama main.'
-
-      - name: Guardar diagnóstico cuando falle alguna prueba
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: Diagnostico-Gildem-Si-Fallo
-          path: DIAGNOSTICO_EJECUCION.txt
-          if-no-files-found: ignore
           retention-days: 14
-
-      - name: Conclusión de la verificación
-        run: |
-          echo 'Se verificó npm run build y se generó ZIP completo sin ejecutar instaladores en Windows.'

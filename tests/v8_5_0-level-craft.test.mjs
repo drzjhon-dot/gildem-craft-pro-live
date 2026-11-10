@@ -109,7 +109,10 @@ test('navigational tabs renamed, Royal keeps Black Market optional and Level has
  assert(!html.includes('>Plan de crafting<'));
  assert(!html.includes('>Encontrar oportunidades<'));
  for(const id of ['level-spec','level-fame','level-budget','level-market','level-study','level-item-search','level-city','level-tiermax','level-ench'])assert(app.includes(id));
- assert(app.includes("['mixed','Royal + Black Market']"));
+ // Royal Craft now has a fixed Royal destination; Level Craft retains the
+ // independent mixed-market choice requested for spec progression.
+ assert(app.includes("qcSetValue('auto-market','royal')"));
+ assert(app.includes("['mixed','Royal + Mercado Negro']"));
  assert(app.includes("if(id==='level-form')runLevelCraft()"));
 });
 
