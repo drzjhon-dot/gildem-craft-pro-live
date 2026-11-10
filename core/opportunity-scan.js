@@ -8,13 +8,14 @@ import {compareRefining} from './refining-integration.js';
 import {materialPurchaseCities} from './material-cities.js';
 
 const mainBranch = (branches,id)=>branches.find(b=>b.test(id)&&!(/_all$/.test(b.key)||b.key==='weapons_all'))||branches.find(b=>b.test(id));
-export function selectUniversalRecipes(recipes,branches,{categories=['armor','weapons','accessories','gathering','potions','mounts','foods'],tierMin=4,tierMax=8,enchant=1,limit=240,categoryForBranch,branchKeys=null,itemFilter=null}={}){
+export function selectUniversalRecipes(recipes,branches,{categories=['armor','weapons','accessories','gathering','potions','mounts','foods'],tierMin=4,tierMax=8,enchant=1,limit=240,categoryForBranch,branchKeys=null,itemFilter=null,idFilter=null}={}){
  const offered=new Map();const seen=new Set();
  for(const [id,rec] of Object.entries(recipes||{})){
   if(!rec?.materials?.length||!rec.city)continue;
   const tier=itemTier(id),ench=itemEnch(id);
   if(tier<tierMin||tier>tierMax||ench>enchant)continue;
   if(itemFilter&&!itemMatches(id,itemFilter))continue;
+  if(idFilter&&!idFilter(id))continue;
   const eligibleBranches=branches.filter(b=>b.test(id)&&categories.includes(categoryForBranch(b.key))&&(!branchKeys||branchKeys.includes(b.key)));
   const b=eligibleBranches.find(b=>!(/_all$/.test(b.key)||b.key==='weapons_all'))||eligibleBranches[0];
   if(!b)continue;
@@ -71,8 +72,14 @@ export function createUniversalCandidates({selected,recipes,priceMap,inputs,prof
    const refiningFocusCost=cost.materials.reduce((sum,m)=>sum+m.count*(m.refining?.focusPerRefine||0),0);
    const focusGain=inputs.focus?cost.materials.reduce((sum,m)=>sum+(m.ret?m.count*m.unitPrice*(returnRate-without)/100:0),0):0;
    for(const dest of targets){if(dest==='Black Market'&&!blackMarketEligible(id))continue;
-    const mode=dest==='Black Market'?'instant':inputs.saleMode;
-    const sale=quote(priceMap,id,dest,mode==='instant'?'buy_price_max':'sell_price_min',maxAge);
+    // Royal can sell immediately to a verified buy-order OR publish a sell-order.
+    // This exposes viable alternatives when the listing market is saturated.
+    for(const mode of (dest==='Black Market'?['listed']:inputs.includeInstantRoyal?['listed','instant']:[inputs.saleMode])){
+    // El BM únicamente publica pujas verificables, no cotizaciones de ask
+    // públicas de su propio libro. Para una orden nuestra se usa la puja
+    // actual como precio base PRUDENTE: no significa que se ejecutará.
+    const referenceSide=dest==='Black Market'?'buy_price_max':(mode==='instant'?'buy_price_max':'sell_price_min');
+    const sale=quote(priceMap,id,dest,referenceSide,maxAge);
     if(!sale){missing.sale++;continue;}
     const transport=(dest===craftCity||dest==='Black Market'&&craftCity==='Caerleon')?0:products*inputs.transport;
     const lost=dest===craftCity?0:(dest==='Black Market'?inputs.riskBM:inputs.riskRoyal);
@@ -86,11 +93,12 @@ export function createUniversalCandidates({selected,recipes,priceMap,inputs,prof
     const age=Math.max(sale.ageHours,...cost.materials.map(m=>m.at?(Date.now()-m.at)/3600000:0));
     const candidate={id,itemName:nameOf(id),branch,craftCity,city:dest,mode,sell:sale.price,profit:result.profit-riskCost,cost:result.cost+riskCost,capitalPerUnit:upfront,roi:100*(result.profit-riskCost)/(result.cost+riskCost),
      returnRate,materials:cost.materials,rawMaterials:cost.rawMaterials,at:sale.at,ageHours:age,activity:null,confidence:null,personalLearning:experience.get(id+'|'+dest)||null,
-     focusPerUnit:focusPerUnit+refiningFocusCost,focusGain,stressProfit:stress.stressed-riskCost,taxRate:tax/100,saleTaxPercent:tax,craftAmount:products,recipeKind:kind||'equipo',setupRate:mode==='listed'?inputs.listingFee/100:0,transportCost:transport,transportRiskPct:lost,expectedRiskCost:riskCost,stationCost:inputs.station,buyMode:inputs.buyMode,buySetup:inputs.listingFee/100,qualityMode:'normal',qualityWeights:[100,0,0,0,0],journal:null,journalBonus:0};
+     focusPerUnit:focusPerUnit+refiningFocusCost,focusGain,stressProfit:stress.stressed-riskCost,taxRate:tax/100,saleTaxPercent:tax,craftAmount:products,recipeKind:kind||'equipo',setupRate:mode==='listed'?inputs.listingFee/100:0,referenceSide,listingUnverified:dest==='Black Market'&&mode==='listed',transportCost:transport,transportRiskPct:lost,expectedRiskCost:riskCost,stationCost:inputs.station,buyMode:inputs.buyMode,buySetup:inputs.listingFee/100,qualityMode:'normal',qualityWeights:[100,0,0,0,0],journal:null,journalBonus:0};
     // Retain one production location for the same item and destination; prevent double counting market depth.
     const key=id+'|'+dest+'|'+mode;const score=candidate.profit;
     if(!best)best=new Map();
     const old=best.get(key);if(!old||score>old.profit)best.set(key,candidate);
+    }
    }
   }
   if(best)results.push(...best.values());

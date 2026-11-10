@@ -53,3 +53,46 @@ export function limitRowsByMaterialVolume(rows, historyByMaterial=new Map(), {
   return {rows:result,changed,unverified,priceAlerts,verified:present.size-unverified.length,
     checked:present.size,remaining:limits};
 }
+
+// Executable purchase-depth guard. Material book levels are observed, not reserved.
+// Only count offers AT or BELOW the unit price budgeted by the recipe.
+export function limitRowsByMaterialBook(rows,sellLevels=new Map(),{
+  fraction=.60,unknownCraftCap=1
+}={}){
+ const safeFraction=Math.max(0,Math.min(1,Number(fraction)||0));
+ const limits=new Map(),visible=[],missing=[],rejected=[];
+ const required=new Map();
+ for(const row of rows||[])for(const material of row.materials||[])for(const part of purchaseComponents(material)){
+  if(!(part?.id&&part?.city&&n(part.count)>0))continue;
+  const k=key(part),old=required.get(k)||{id:part.id,city:part.city,unitPrice:Infinity};
+  old.unitPrice=Math.min(old.unitPrice,n(part.originalPrice)||n(part.unitPrice)||Infinity);
+  required.set(k,old);
+ }
+ for(const [k,m] of required){
+  const book=sellLevels.get(k);
+  if(!book?.length){missing.push(m);continue;}
+  const cheap=book.filter(level=>Number(level.price)>0&&level.price<=m.unitPrice+1e-7).reduce((sum,level)=>sum+n(level.amount),0);
+  const max=Math.floor(cheap*safeFraction);
+  limits.set(k,max);
+  visible.push({...m,available:cheap,max});
+ }
+ const out=(rows||[]).map(r=>({...r}));
+ const sorted=[...out].sort((a,b)=>
+  (n(b.profit)/Math.max(1,n(b.capitalPerUnit)))-(n(a.profit)/Math.max(1,n(a.capitalPerUnit))));
+ for(const row of sorted){
+  const parts=new Map();
+  for(const m of row.materials||[])for(const part of purchaseComponents(m)){
+   if(!(part?.id&&part?.city&&n(part.count)>0))continue;
+   const k=key(part);parts.set(k,(parts.get(k)||0)+n(part.count));
+  }
+  const prev=Math.floor(n(row.qty));let allowance=prev;
+  for(const [k,count] of parts){
+   if(limits.has(k))allowance=Math.min(allowance,Math.floor(limits.get(k)/count+1e-9));
+   else allowance=Math.min(allowance,Math.floor(n(unknownCraftCap)));
+  }
+  row.qty=Math.max(0,allowance);
+  for(const [k,count] of parts)if(limits.has(k))limits.set(k,Math.max(0,limits.get(k)-row.qty*count));
+  if(row.qty<prev)rejected.push({id:row.id,from:prev,to:row.qty,city:row.city});
+ }
+ return {rows:out,visible,missing,rejected,checked:required.size};
+}

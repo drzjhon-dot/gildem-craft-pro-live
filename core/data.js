@@ -45,9 +45,15 @@ async function api(kind,ids,region='west',params={},force=false){if(!ids?.length
       try{const rows=await fetchRaw(kind,chunk,region,params,force);const entry={rows,ts:Date.now()};storageSet(key,entry);return {...entry,fromCache:false};}
       catch(e){if(cache)return {...cache,fromCache:true,stale:true,error:e.message};throw e;}
     })();inflight.set(key,work);
-    try{const got=await work;sets.push(got.rows);timestamps.push(got.ts);anyFetched ||=!got.fromCache;if(got.error)errors.push(got.error);}finally{inflight.delete(key);}
+    try{const got=await work;sets.push(got.rows);timestamps.push(got.ts);anyFetched ||=!got.fromCache;if(got.error)errors.push(got.error);}
+    catch(e){errors.push(`${kind}: ${e.message} (lote de ${chunk.length} objetos incompleto)`);}
+    finally{inflight.delete(key);}
   }
-  return {rows:sets.flat(),cached:!anyFetched,fetchedAt:Math.min(...timestamps),warning:errors[0]||null};
+  // When one query chunk fails, return the surviving REAL observations with
+  // an explicit partial-coverage warning instead of losing every valid quote.
+  // Missing rows remain missing and will never become artificial prices.
+  if(!sets.length)throw new Error(errors[0]||'No se pudo consultar el mercado.');
+  return {rows:sets.flat(),cached:!anyFetched,fetchedAt:Math.min(...timestamps),warning:errors.length?`${errors.length} lotes con problemas: ${errors.slice(0,2).join(' · ')}`:null,partial:errors.length>0};
 }
 export const prices=(ids,region='west',force=false)=>api('prices',ids,region,{locations:'Bridgewatch,Fort Sterling,Lymhurst,Martlock,Thetford,Caerleon,Brecilien,Black Market',qualities:'1'},force);
 export const history=(ids,region='west',force=false)=>api('history',ids,region,{locations:'Bridgewatch,Fort Sterling,Lymhurst,Martlock,Thetford,Caerleon,Brecilien,Black Market',qualities:'1','time-scale':'24'},force);

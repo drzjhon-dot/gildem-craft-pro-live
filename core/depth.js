@@ -55,7 +55,7 @@ export function routeProfitAtQuantity(route,crafts){
 }
 export function enrichWithDepth(candidate,levels){
  const craftAmount=Math.max(1,candidate.craftAmount||1);
- if(!levels?.length||candidate.mode!=='instant'||candidate.qualityMode==='mix')return {...candidate,depthVerified:false,marketCapacity:candidate.city==='Black Market'&&candidate.mode==='instant'?1:null,bookCoverage:'Sin profundidad verificada'};
+ if(!levels?.length||candidate.mode!=='instant'||candidate.qualityMode==='mix')return {...candidate,depthVerified:false,marketCapacity:candidate.mode==='instant'&&candidate.city==='Black Market'?1:null,bookCoverage:candidate.mode==='listed'?'Orden propia pendiente de comprador':'Sin profundidad verificada'};
  const tax=candidate.saleTaxPercent;
  // La ganancia incremental de cada nivel toma como base el profit del candidato.
  const perItemCost=(candidate.sell*(1-tax/100)-candidate.profit/craftAmount);

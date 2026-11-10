@@ -37,7 +37,7 @@ export function historyMetrics(data,days=14,now=Date.now()){
   // This deliberately does not expose "sales per day" or "time to sell".
   isSalesData:false};
 }
-export function confidenceOf({ageHours=Infinity,activity=null,market='Royal',spread=null,completeness=1,depthVerified=false}={}){
+export function confidenceOf({ageHours=Infinity,activity=null,market='Royal',spread=null,completeness=1,depthVerified=false,listed=false}={}){
  if(!Number.isFinite(ageHours)||ageHours<0)return {score:0,label:'Sin datos',tone:'red',reasons:['Falta fecha válida']};
  let score=100,reasons=[];
  if(ageHours>48){score-=65;reasons.push('Cotización con más de 48 horas');}
@@ -50,8 +50,9 @@ export function confidenceOf({ageHours=Infinity,activity=null,market='Royal',spr
  if(activity.volatility!=null&&activity.volatility>.3){score-=20;reasons.push('Precio histórico volátil');}}
  if(spread!=null&&spread>.4){score-=10;reasons.push('Diferencia amplia entre compra y venta');}
  if(completeness<1){score-=Math.round(20*(1-completeness));reasons.push('Calidades o datos incompletos');}
- if(market==='Black Market'&&!depthVerified){score=Math.min(score,54);reasons.push('Sin profundidad de órdenes verificable; solo 1 unidad provisional');}
- if(market==='Black Market'&&depthVerified){score=Math.min(score+12,95);reasons.push('Niveles de órdenes observados (pueden cambiar)');}
+ if(market==='Black Market'&&!depthVerified&&!listed){score=Math.min(score,54);reasons.push('Sin profundidad de órdenes verificable; solo 1 unidad provisional');}
+ if(market==='Black Market'&&depthVerified&&!listed){score=Math.min(score+12,95);reasons.push('Niveles de órdenes observados (pueden cambiar)');}
+ if(market==='Black Market'&&listed){score=Math.min(score,74);reasons.push('Orden propia BM pendiente de compra; la puja observada NO asegura ejecución');}
  score=Math.max(0,Math.min(100,Math.round(score)));
  return {score,label:score>=75?'Alta':score>=45?'Media':'Baja',tone:score>=75?'green':score>=45?'amber':'red',reasons};
 }

@@ -140,17 +140,46 @@ export const BRANCH_CATEGORIES=[
  {key:'gathering',label:'Recolección',icon:'♧',description:'Equipos, mochilas y herramientas · Royal'},
  {key:'potions',label:'Pociones',icon:'⚗',description:'Alquimia · Royal'},
  {key:'mounts',label:'Monturas',icon:'♞',description:'Ensillado · Royal'},
- {key:'foods',label:'Comidas',icon:'♨',description:'Cocina · Royal'}
+ {key:'foods',label:'Comidas',icon:'♨',description:'Cocina · Royal'},
+ {key:'refining',label:'Refinamiento',icon:'♻',description:'Lingotes, tablas, telas, cueros y bloques · Royal'}
 ];
+// Royal Craft exhibe categorías sin ramas superpuestas. La colección y las
+// herramientas se agrupan por profesión; una montura se elige desde una sola rama.
+export const ROYAL_REFINING_BRANCHES = Object.freeze([
+ {key:'refining_all',label:'Todos los refinados',family:null,iconId:'T4_METALBAR'},
+ {key:'refining_METALBAR',label:'Lingotes',family:'METALBAR',iconId:'T4_METALBAR'},
+ {key:'refining_PLANKS',label:'Tablones',family:'PLANKS',iconId:'T4_PLANKS'},
+ {key:'refining_CLOTH',label:'Tela',family:'CLOTH',iconId:'T4_CLOTH'},
+ {key:'refining_LEATHER',label:'Cuero',family:'LEATHER',iconId:'T4_LEATHER'},
+ {key:'refining_STONEBLOCK',label:'Bloques de piedra',family:'STONEBLOCK',iconId:'T4_STONEBLOCK'}
+]);
+// Estas ramas representan resultados del proceso de refinamiento, no recetas
+// normales de equipamiento. Las crea el motor de refinado con su receta exacta.
+for(const b of ROYAL_REFINING_BRANCHES)BRANCHES.push({...b,market:'royal',city:null,test:()=>false});
+export const ROYAL_VISIBLE_BRANCH_KEYS = Object.freeze({
+ gathering:['gather_wood','gather_hide','gather_ore','gather_fiber','gather_rock','gather_fish'],
+ mounts:['mount_all'],
+ refining:ROYAL_REFINING_BRANCHES.map(b=>b.key)
+});
+export function visibleRoyalBranches(category){
+ const keys=ROYAL_VISIBLE_BRANCH_KEYS[category];
+ if(keys)return keys.map(k=>BRANCHES.find(b=>b.key===k)).filter(Boolean);
+ return BRANCHES.filter(b=>categoryForBranch(b.key)===category&&!(['weapons_all','gather_all','potion_all','food_all'].includes(b.key)||b.key.endsWith('_all')));
+}
+export function refiningBranchFamilies(key){
+ const b=ROYAL_REFINING_BRANCHES.find(x=>x.key===key);
+ if(!b)return [];
+ return b.family?[b.family]:ROYAL_REFINING_BRANCHES.map(x=>x.family).filter(Boolean);
+}
 export function categoryForBranch(b){const k=typeof b==='string'?b:b?.key||'';
- if(k.startsWith('food_'))return 'foods';if(k.startsWith('potion'))return 'potions';if(k.startsWith('mount'))return 'mounts';
+ if(k.startsWith('refining_'))return 'refining';if(k.startsWith('food_'))return 'foods';if(k.startsWith('potion'))return 'potions';if(k.startsWith('mount'))return 'mounts';
  if(k==='gather_tool_tracking')return 'kits';
  if(k==='siege'||k==='siege_banner')return 'siege';
  if(k.startsWith('gather_'))return 'gathering';
  if(k==='bags'||k==='capes')return 'accessories';
  if(k==='offhand')return 'offhands';
  if(/^(boots|heads|chests)/.test(k))return 'armor';return 'weapons';}
-export function branchIsRoyalOnly(key){return ['gathering','potions','mounts','foods','kits','siege'].includes(categoryForBranch(key));}
+export function branchIsRoyalOnly(key){return ['gathering','potions','mounts','foods','kits','siege','refining'].includes(categoryForBranch(key));}
 export function sortedBranches(category,query=''){
  const normalized=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
  const term=normalized(query).trim();return BRANCHES.filter(b=>categoryForBranch(b)===category&&(!term||normalized(b.label).includes(term)));
@@ -167,7 +196,8 @@ const CATEGORY_ICON_MAP={
  gathering:'T4_ARMOR_GATHERER_WOOD',
  potions:'T4_POTION_HEAL',
  mounts:'T4_MOUNT_HORSE',
- foods:'T4_MEAL_SALAD'
+ foods:'T4_MEAL_SALAD',
+ refining:'T4_METALBAR'
 };
 const BRANCH_ICON_MAP={
  boots_plate:'T4_SHOES_PLATE_SET1',boots_cloth:'T4_SHOES_CLOTH_SET1',boots_leather:'T4_SHOES_LEATHER_SET1',boots_all:'T4_SHOES_PLATE_SET1',
@@ -184,7 +214,7 @@ const BRANCH_ICON_MAP={
  food_all:'T4_MEAL_SALAD',food_soup:'T5_MEAL_SOUP',food_salad:'T4_MEAL_SALAD',food_pie:'T5_MEAL_PIE',food_omelette:'T5_MEAL_OMELETTE',food_stew:'T6_MEAL_STEW',food_sandwich:'T6_MEAL_SANDWICH',food_roast:'T5_MEAL_ROAST',food_fish:'T4_MEAL_SALAD_FISH',food_avalon:'T6_MEAL_STEW_AVALON'
 };
 export function categoryIconId(key){return CATEGORY_ICON_MAP[key]||'T4_BAG';}
-export function branchIconId(key){const b=branchByKey(key);return BRANCH_ICON_MAP[b.key]||CATEGORY_ICON_MAP[categoryForBranch(b.key)]||'T4_BAG';}
+export function branchIconId(key){const b=branchByKey(key);return b.iconId||BRANCH_ICON_MAP[b.key]||CATEGORY_ICON_MAP[categoryForBranch(b.key)]||'T4_BAG';}
 for(const c of BRANCH_CATEGORIES){if(!c.iconId)c.iconId=categoryIconId(c.key);}
 for(const b of BRANCHES){if(!b.iconId)b.iconId=branchIconId(b.key);}
 

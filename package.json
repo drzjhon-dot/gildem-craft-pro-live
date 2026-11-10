@@ -1,13 +1,13 @@
 {
   "name": "gildem-craft-pro",
   "private": true,
-  "version": "8.5.5",
+  "version": "8.5.7",
   "type": "module",
   "description": "Planificador Royal + Mercado Negro con selector manual de ramas y filtros compactos, escáner de oportunidades y refinamiento independiente.",
   "scripts": {
     "start": "python3 -m http.server 8080",
     "test": "node --test tests/*.test.mjs",
-    "build": "npm run preflight && node --check app.js && node --check netlify/functions/private-sync.mjs && node --check netlify/functions/market.mjs && node --check netlify/functions/recipes.mjs && node --check netlify/functions/item-image.mjs && node --check netlify/functions/hourly-prices.mjs && node --check netlify/functions/snapshot.mjs && npm test && node scripts/build.mjs",
+    "build": "npm run preflight && node --check app.js && node --check netlify/functions/private-sync.mjs && node --check netlify/functions/market.mjs && node --check netlify/functions/recipes.mjs && node --check netlify/functions/item-image.mjs && node --check netlify/functions/hourly-prices.mjs && node --check netlify/functions/snapshot.mjs && node --check netlify/functions/market-references.mjs && npm test && node scripts/build.mjs",
     "preflight": "node scripts/check-deploy.mjs"
   },
   "engines": {

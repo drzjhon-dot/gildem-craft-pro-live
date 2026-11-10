@@ -23,8 +23,16 @@ export function evaluateCraftViability(route,{budget=Infinity,mode='royal',minRO
  if(!(Number.isFinite(route?.stressProfit)&&route.stressProfit>0))reasons.push('pérdida en escenario conservador');
  if(Number.isFinite(budget)&&budget>0&&capital>budget*(strict ? .22 : .35))reasons.push('una sola unidad inmoviliza demasiado capital');
  if(isBM){
-  if(!route.depthVerified||!(valid(route.marketCapacity)>0)||!route.orderLevels?.length)reasons.push('Mercado Negro sin compras verificadas');
-  else if(!(routeProfitAtQuantity(route,1)>0))reasons.push('la primera orden del Mercado Negro no cubre el costo');
+  if(!listed){
+   if(!route.depthVerified||!(valid(route.marketCapacity)>0)||!route.orderLevels?.length)reasons.push('Mercado Negro sin compras verificadas');
+   else if(!(routeProfitAtQuantity(route,1)>0))reasons.push('la primera orden del Mercado Negro no cubre el costo');
+  }else{
+   // Una orden de venta espera a la puja del NPC. No existe capacidad BM
+   // de compra instantánea que represente absorción de nuestro anuncio.
+   // Preferimos un historial observado con >= 3 días; si no, no comprar.
+   if(!(days>=3&&frequency>=1)&&personal<3)reasons.push('BM: actividad histórica insuficiente para anunciar y esperar');
+   if(route.referenceSide!=='buy_price_max')reasons.push('BM: precio de referencia no corresponde a la puja del NPC');
+  }
  }else{
   if(route.mode==='instant'){
    if(!route.depthVerified||!(valid(route.marketCapacity)>0))reasons.push('venta inmediata sin compras verificadas');
@@ -74,7 +82,7 @@ export function filterViableCraftRoutes(routes,{budget=Infinity,mode='royal',cap
   if(check.ok){const safe={...route,profit:check.prudentProfit,stressProfit:check.prudentStress,priceDeduction:Math.max(0,route.profit-check.prudentProfit),costReserve:check.costReserve,roi:100*check.prudentProfit/Math.max(1,route.cost)};
    // Hard upper bound, independent of what later allocator decides.
    if(Number.isFinite(route.marketCapacity))safe.marketCapacity=Math.min(route.marketCapacity,check.maxInitialCrafts);
-   if(route.city==='Black Market'||route.mode==='instant')safe.marketCapacity=Math.min(safe.marketCapacity??0,safeBookCraftCapacity(safe,mode==='level' ? .09 : .06));
+   if(route.mode==='instant')safe.marketCapacity=Math.min(safe.marketCapacity??0,safeBookCraftCapacity(safe,mode==='level' ? .09 : .06));
    if(Number.isFinite(safe.marketCapacity)&&safe.marketCapacity<1){
     const reason='la profundidad verificable no admite una fabricación con margen seguro';
     rejected.push({id:route.id,city:route.city,reasons:[reason]});

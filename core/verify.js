@@ -41,7 +41,7 @@ export function verifyPlannedPrices(rows,priceRows,{budget,focusLimit=null,maxAg
    materials.push(updated);netMaterials+=updated.cost;grossMaterials+=updated.count*effective;
   }
   if(stale)continue;
-  const saleSide=r.mode==='instant'?'buy_price_max':'sell_price_min';
+  const saleSide=r.city==='Black Market'?'buy_price_max':(r.mode==='instant'?'buy_price_max':'sell_price_min');
   let sale=quote(map,r.id,r.city,saleSide,maxAgeHours);
   if(r.qualityMode==='mix'){
    const values={};for(let k=1;k<=5;k++)values[k]=quote(map,r.id,r.city,saleSide,maxAgeHours,k);

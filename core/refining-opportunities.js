@@ -31,23 +31,24 @@ export function refiningPriceIds(items){
 }
 
 export function createRefiningCandidates({selected=[],priceMap,market='mixed',mode='listed',maxAge=24,
-  stationFee=0,dailyBonus=0,materialShipping=0,transport=0,royalTax=4,listingFee=2.5,
+  stationFee=0,dailyBonus=0,bonusCity=true,materialShipping=0,transport=0,royalTax=4,listingFee=2.5,
   riskRoyal=0,priceStress=8,resourceStress=7,nameOf=id=>id}={}){
  const result=[];const missing={materials:0,sales:0};
  if(market==='black')return {candidates:result,missing};
  if(!['listed','instant'].includes(mode))throw Error('Forma de venta del refinado no válida');
  const fee=Math.max(0,finite(stationFee)),shipping=Math.max(0,finite(materialShipping)),delivery=Math.max(0,finite(transport));
  const tax=Math.max(0,finite(royalTax)),setup=mode==='listed'?Math.max(0,finite(listingFee)):0;
- const rate=refiningReturnRate({bonusCity:true,dailyBonus});
+ const rate=refiningReturnRate({bonusCity,dailyBonus});
  for(const {id,recipe:r} of selected){
   // Comprobación defensiva: no se construyen productos que no tengan receta reconocida.
   if(!r||!refiningRecipeFor(id))continue;
+  const refiningCity=bonusCity?r.city:(r.city==='Caerleon'?'Bridgewatch':'Caerleon');
   const inputs=[{id:r.rawId,count:r.rawCount},...(r.previousId?[{id:r.previousId,count:1}]:[])];
   const materials=[];
   for(const m of inputs){
    let best=null;
    for(const city of CITIES){const q=quote(priceMap,m.id,city,'sell_price_min',maxAge);if(!q)continue;
-    const freight=city===r.city?0:shipping;
+    const freight=city===refiningCity?0:shipping;
     const effective=q.price+freight;
     if(!best||effective<best.unitPrice)best={...m,city,at:q.at,unitPrice:effective,originalPrice:q.price,shippingPerUnit:freight};
    }
@@ -61,7 +62,7 @@ export function createRefiningCandidates({selected=[],priceMap,market='mixed',mo
   for(const saleCity of CITIES){
    const q=quote(priceMap,id,saleCity,mode==='listed'?'sell_price_min':'buy_price_max',maxAge);
    if(!q){missing.sales++;continue;}
-   const shippingSale=saleCity===r.city?0:delivery;
+   const shippingSale=saleCity===refiningCity?0:delivery;
    const riskCost=net*Math.max(0,finite(riskRoyal))/100;
    const cost=net+fee+shippingSale+riskCost;
    const upfront=gross+fee+shippingSale;
@@ -71,12 +72,12 @@ export function createRefiningCandidates({selected=[],priceMap,market='mixed',mo
    const stressRevenue=q.price*(1-Math.max(0,finite(priceStress))/100)*(1-(tax+setup)/100);
    const stressCost=net*(1+Math.max(0,finite(resourceStress))/100)+fee+shippingSale+riskCost;
    const at=Math.min(q.at,...materials.map(m=>m.at));
-   result.push({id,itemName:nameOf(id),branch:'refining_'+r.family,craftCity:r.city,city:saleCity,mode,
+   result.push({id,itemName:nameOf(id),branch:'refining_'+r.family,craftCity:refiningCity,city:saleCity,mode,
     sell:q.price,profit,cost,capitalPerUnit:upfront,roi:profit/cost*100,returnRate:rate,
     materials,rawMaterials:gross,at:q.at,ageHours:(Date.now()-at)/3600000,
     activity:null,confidence:null,personalLearning:null,focusPerUnit:0,focusGain:0,
     stressProfit:stressRevenue-stressCost,taxRate:tax/100,saleTaxPercent:tax,craftAmount:1,
-    recipeKind:'refining',setupRate:setup/100,transportCost:shippingSale,
+    recipeKind:'refining',setupRate:setup/100,referenceSide:mode==='listed'?'sell_price_min':'buy_price_max',transportCost:shippingSale,
     transportRiskPct:0,expectedRiskCost:riskCost,stationCost:fee,
     buyMode:'instant',buySetup:0,qualityMode:'normal',qualityWeights:[100,0,0,0,0],
     journal:null,journalBonus:0});

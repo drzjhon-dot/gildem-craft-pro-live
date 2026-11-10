@@ -1,13 +1,6 @@
-GILDEM CRAFT PRO v8.5.5 - REPORTE DE VERIFICACION
-Fecha: 2026-11-09 (hora de EE.UU.) / 2026-11-10 UTC
-Base: ZIP del repositorio proporcionado por el usuario.
-Pruebas originales: 185/189 aprobadas, 4 fallos de integración.
-Después de instalar los módulos faltantes: 189/196, 7 fallos de versión o cupos.
-Estado corregido: 197/197 pruebas aprobadas.
-node --check app.js: OK
-npm run preflight: OK
-npm run build: OK (genera dist/ y version.json)
-Navegador Chromium de prueba: Black Craft, Royal Craft, selectors de tier y objetos, tab Resultados, cuatro KPI y tablas con plan simulado; 0 errores JS de página.
-Las imágenes de ítems se cargan desde fuentes externas del juego cuando están disponibles. Los datos reales de AODP, la sesión del usuario y la publicación en Netlify no se pueden garantizar desde el entorno local.
-
-Este ZIP contiene la aplicación directamente. No necesita ejecutar ningún instalador.
+GILDEM CRAFT PRO v8.5.7 - VERIFICACIÓN LOCAL
+Node.js 22.16.0; npm run preflight: OK; npm run build: OK
+211 pruebas automáticas completas: 211 aprobadas, 0 fallidas.
+Smoke Chromium con catálogo sintético: Black Craft, Royal Craft, Resultados, 1 rama monturas, 6 profesiones de recolección y 6 opciones de refinamiento, sin errores JavaScript.
+Test refinamiento con bonificación y 20% diario, anuncios BM sin ejecutar órdenes: OK.
+No se han verificado ni ejecutado órdenes reales de Albion Online. Las cuatro webs externas se revisan por accesibilidad, sus cifras NO se importan automáticamente.

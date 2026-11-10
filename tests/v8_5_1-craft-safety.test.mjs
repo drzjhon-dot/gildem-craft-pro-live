@@ -90,8 +90,10 @@ test('study is opt-in, requires fee, and can never consume over 20% of upfront b
 });
 test('Black and Royal scan call the shared safety filter before investment allocation',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- assert(app.includes('filterViableCraftRoutes(selectCraftSaleRoutes(candidates,market)'));
- assert(app.includes('filterViableCraftRoutes(selectCraftSaleRoutes(candidates,input.market)'));
+ assert(app.includes('filterViableCraftRoutes(candidates,{budget,mode:'));
+ assert(app.includes('selectCraftSaleRoutes(viable.accepted,market)'));
+ assert(app.includes('filterViableCraftRoutes(candidates,{budget:input.budget,mode:'));
+ assert(app.includes('selectCraftSaleRoutes(viable.accepted,input.market)'));
  assert(app.includes("allowLoss:false"));
  assert(app.includes('normalizeSellBook(books.rows,ids,cities,prefs.maxAge)'));
 });
