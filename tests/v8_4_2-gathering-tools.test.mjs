@@ -21,7 +21,6 @@ test('v8.4.2 reconoce herramientas reales, avalonianas y excluye asedio',()=>{
   assert.equal(GATHER_TOOL_PATTERN.test('T4_2H_TOOL_SIEGEHAMMER'),false);
   assert.equal(blackMarketEligible('T4_MAIN_AXE'),true);
 });
-
 test('v8.4.2 extrae recetas oficiales sin inventar materiales o cantidades',()=>{
   const r=extractSpecialRecipes(fixture());
   assert.equal(Object.keys(r).length,toolIds.length+1);
@@ -31,7 +30,6 @@ test('v8.4.2 extrae recetas oficiales sin inventar materiales o cantidades',()=>
   }
   assert.equal(r.T4_2H_TOOL_SIEGEHAMMER.kind,'siege');
 });
-
 test('v8.4.2 recoge cada herramienta bajo su profesión y permite elegir solo herramientas',()=>{
   const checks={gather_wood:'T4_2H_TOOL_AXE',gather_ore:'T5_2H_TOOL_PICK',gather_fiber:'T6_2H_TOOL_SICKLE_AVALON',
     gather_hide:'T7_2H_TOOL_KNIFE',gather_rock:'T5_2H_TOOL_HAMMER_AVALON',gather_fish:'T4_2H_TOOL_FISHINGROD',gather_tool_tracking:'T6_2H_TOOL_TRACKING'};
@@ -46,7 +44,6 @@ test('v8.4.2 recoge cada herramienta bajo su profesión y permite elegir solo he
   assert(!branchByKey('gather_tools').test('T6_2H_TOOL_SIEGEHAMMER'));
   assert.deepEqual(recipesForBranch(sampleRecipes,'gather_tool_pick',4,8,4,100),['T5_2H_TOOL_PICK']);
 });
-
 test('v8.4.2 Encontrar oportunidades respeta filtros de ramas y objetos de herramientas',()=>{
  const options={categories:['gathering','kits'],tierMin:4,tierMax:8,enchant:4,limit:200,categoryForBranch};
  const all=selectUniversalRecipes(sampleRecipes,BRANCHES,options);
@@ -56,9 +53,8 @@ test('v8.4.2 Encontrar oportunidades respeta filtros de ramas y objetos de herra
  const av=selectUniversalRecipes(sampleRecipes,BRANCHES,{...options,branchKeys:['gather_tools'],itemFilter:{mode:'selected',stems:['2H_TOOL_SICKLE_AVALON']}});
  assert.deepEqual(av.chosen.map(x=>x.id),['T6_2H_TOOL_SICKLE_AVALON']);
  const none=selectUniversalRecipes(sampleRecipes,BRANCHES,{...options,branchKeys:['gather_tool_pick'],itemFilter:{mode:'selected',stems:['2H_TOOL_AXE']}});
- assert.equal(none.chosen.length,0);
+ assert.deepEqual(none.chosen.map(x=>x.id),[]);
 });
-
 test('v8.4.2 herramientas entran al cálculo de capital y profit con precios Royal recientes',()=>{
  const iso=new Date(Date.now()-5000).toISOString();
  const records=[['T4_PLANKS','Caerleon','sell_price_min',100],['T4_METALBAR','Caerleon','sell_price_min',100],
@@ -68,12 +64,12 @@ test('v8.4.2 herramientas entran al cálculo de capital y profit con precios Roy
  const p=result.candidates.find(x=>x.city==='Bridgewatch');
  assert(p);assert(p.profit>0);assert(p.capitalPerUnit>0);assert.equal(p.recipeKind,'gather');assert.equal(p.craftCity,'Caerleon');
 });
-
 test('v8.4.2 frontend, backend y service worker renuevan versión de recetas',()=>{
  const catalog=readFileSync(new URL('../core/catalog.js',import.meta.url),'utf8');
  const netlify=readFileSync(new URL('../netlify/functions/recipes.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
+ const pkg=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));
  assert(catalog.includes('special-recipes-v5-kits-siege-offhands'));
  assert(netlify.includes('special-recipes-v5-kits-siege-offhands'));
- assert(sw.includes('gildem-craft-pro-v8.7.0'));
+ assert(sw.includes(`gildem-craft-pro-v${pkg.version}`));
 });

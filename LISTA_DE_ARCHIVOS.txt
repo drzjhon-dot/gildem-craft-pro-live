@@ -1,0 +1,31 @@
+GILDEM CRAFT PRO v9.0.0 · ARCHIVOS DIRECTOS PARA GITHUB
+
+REEMPLAZAR EXISTENTES:
+  index.html
+  manifest.webmanifest
+  package.json
+  sw.js
+  scripts/build.mjs
+  scripts/check-deploy.mjs
+  tests/v7_2.test.mjs
+  tests/v8_4_2-gathering-tools.test.mjs
+  netlify/functions/health.mjs
+
+AGREGAR NUEVOS:
+  v9/ui-tables.js
+  v9/tier-sort.js
+  v9/tables.css
+  scripts/check-v9-dist.mjs
+  tests/v9_0-tier-layout.test.mjs
+
+CONSERVAR SIN TOCAR:
+  app.js
+  styles.css
+  netlify.toml
+  core/*
+  tests anteriores
+  assets/*
+  icons/*
+
+REGLA: DESCOMPRIMIR/COMBINAR CON LOS ARCHIVOS ACTUALES DEL REPOSITORIO.
+NO BORRAR LOS ARCHIVOS EXISTENTES QUE NO FIGURAN EN ESTE PAQUETE.

@@ -1,0 +1,10 @@
+import {access,readFile} from 'node:fs/promises';
+import assert from 'node:assert/strict';
+for(const path of ['dist/index.html','dist/app.js','dist/styles.css','dist/sw.js','dist/version.json','dist/v9/ui-tables.js','dist/v9/tier-sort.js','dist/v9/tables.css'])await access(path);
+const [html,app,sw,ui,css,version]=await Promise.all(['dist/index.html','dist/app.js','dist/sw.js','dist/v9/ui-tables.js','dist/v9/tables.css','dist/version.json'].map(f=>readFile(f,'utf8')));
+assert.equal(JSON.parse(version).version,'9.0.0');
+assert.ok(html.includes('v9/ui-tables.js?v=9.0.0')&&html.includes('v9/tables.css?v=9.0.0'));
+assert.ok(app.includes('GCP_DEMAND_FIRST_871')&&app.includes('draftPlanForLedger'));
+assert.ok(sw.includes('gildem-craft-pro-v9.0.0'));
+assert.ok(ui.includes('orderedByTier')&&css.includes('gcp-v9-table'));
+console.log('DIST v9.0 OK: HTML, app, tablas, estilos, caché y versión incluidos.');

@@ -51,8 +51,9 @@ test('v7.2 Netlify incluye función de recetas y fallback de iconos',()=>{
  const build=readFileSync(new URL('../package.json',import.meta.url),'utf-8');
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf-8');
  const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf-8');
+ const version=JSON.parse(build).version;
  assert.ok(build.includes('node --check netlify/functions/recipes.mjs'));
- assert.ok(app.includes("data-icon-step"));
- assert.ok(readFileSync(new URL("../core/icons.js",import.meta.url),"utf8").includes("item-fallback.svg"));
- assert.ok(sw.includes('gildem-craft-pro-v8.7.0'));
+ assert.ok(app.includes('data-icon-step'));
+ assert.ok(readFileSync(new URL('../core/icons.js',import.meta.url),'utf8').includes('item-fallback.svg'));
+ assert.ok(sw.includes(`gildem-craft-pro-v${version}`));
 });
