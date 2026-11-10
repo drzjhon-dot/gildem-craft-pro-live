@@ -618,3 +618,67 @@ body.gcp-results-active #main-content{max-width:1750px;padding-top:17px}
 .gcp-results .gcp-first-stage .table-scroll,.gcp-results .gcp-depth-details .table-scroll{max-width:100%;overflow-x:hidden}
 @media(max-width:1120px){.gcp-results .gcp-compact-grid{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:600px){.gcp-results .gcp-result-panel{padding:10px}.gcp-results .gcp-compact-card{padding:9px}.gcp-results .gcp-compact-item .item-cell img{width:31px;height:31px}.gcp-results .gcp-compact-item .item-cell strong{font-size:11px}.gcp-results .gcp-panel-title h3{font-size:16px}.gcp-results .gcp-compact-meta{gap:4px 8px}.gcp-results .gcp-shopping-total strong{font-size:14px}}
+
+
+/* v8.6.9: Los estados vacíos ocupan las 12 columnas de page-grid.
+   Evita una tarjeta de 1/12 del ancho y botones que sobresalen en móvil. */
+.page-grid > .gcp-no-craft-plan {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: break-word;
+  padding: clamp(16px, 2.2vw, 26px);
+}
+.gcp-no-craft-plan > h3 {
+  margin: 0 0 10px;
+  color: #f2dfba;
+  font-size: clamp(16px, 1.6vw, 20px);
+  line-height: 1.4;
+}
+.gcp-no-craft-plan > p { max-width: 88ch; line-height: 1.65; }
+.gcp-no-craft-plan .button-row {
+  margin: 16px 0;
+  display: flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  max-width: 100%;
+  gap: 9px;
+}
+.gcp-no-craft-plan .button-row > .btn {
+  white-space: normal;
+  text-align: center;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+@media (max-width: 600px) {
+  .gcp-no-craft-plan .button-row { flex-direction: column; }
+  .gcp-no-craft-plan .button-row > .btn { width: 100%; }
+}
+
+/* v8.7.0: el plan condicionado ocupa todo el ancho, sin confundirlo con
+   compras ejecutables ni con un calculo de profit garantizado. */
+.gcp-conditional-wrap{width:100%;min-width:0;max-width:100%;grid-column:1/-1;box-sizing:border-box;display:block;padding:clamp(12px,2vw,24px);border:1px solid #806338;border-radius:15px;background:#101d2d;color:#eaf1fa;overflow-wrap:anywhere}
+.gcp-conditional-head{max-width:950px;margin-bottom:19px}
+.gcp-conditional-head h2{margin:11px 0;font-size:clamp(1.2rem,2.2vw,1.65rem)}
+.gcp-conditional-head p,.gcp-conditional-disclaimer{color:#b3c2d5;line-height:1.65}
+.gcp-conditional-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0}
+.gcp-conditional-stats>div{background:#0b1829;border:1px solid #2d4059;border-radius:11px;min-width:0;padding:12px}
+.gcp-conditional-stats small,.gcp-conditional-data small{display:block;color:#a9bcd0;font-size:.76rem}
+.gcp-conditional-stats strong{display:block;margin-top:5px;font-size:clamp(1.1rem,2vw,1.4rem)}
+.gcp-conditional-wrap>h3{margin:23px 0 12px;font-size:1.08rem}
+.gcp-conditional-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:12px;min-width:0}
+.gcp-conditional-card{min-width:0;border:1px solid #31435b;border-radius:12px;background:#0b1829;padding:14px}
+.gcp-conditional-product{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
+.gcp-conditional-product>:first-child{min-width:0}
+.gcp-conditional-data{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}
+.gcp-conditional-data>span{min-width:0}.gcp-conditional-data strong{display:block;margin-top:5px;font-size:.98rem}
+.gcp-conditional-route{color:#d3ddeb;font-size:.87rem;line-height:1.5}
+.gcp-conditional-blocker{font-size:.78rem;line-height:1.45;color:#e6c48a;margin:11px 0 0}
+.gcp-conditional-materials{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,310px),1fr));gap:9px}
+.gcp-conditional-material{background:#0b1829;border:1px solid #31435b;border-radius:10px;min-width:0;display:grid;gap:5px;padding:10px}
+.gcp-conditional-material small{color:#aec1d6}.gcp-conditional-warning{padding:14px;margin-top:18px;background:#2a211b;border:1px solid #a07a3e;border-radius:10px;line-height:1.65;color:#f1d2a4}
+.gcp-conditional-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:17px}.gcp-conditional-actions .btn{max-width:100%;white-space:normal}
+@media(max-width:760px){.gcp-conditional-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:400px){.gcp-conditional-wrap{padding:12px}.gcp-conditional-product{flex-wrap:wrap}}

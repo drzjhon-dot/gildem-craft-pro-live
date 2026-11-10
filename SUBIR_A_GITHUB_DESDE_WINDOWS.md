@@ -1,12 +1,15 @@
-# GitHub Desktop → Netlify · v8.6.8
+# Actualizar Gildem Craft Pro a v8.7.0 desde Windows
 
-La rama `main` de GitHub estaba en `v8.6.6` al preparar esta actualización.
+- Si en GitHub `package.json` indica 8.6.8, usa el ZIP **DESDE_8_6_8**.
+- Si ya instalaste v8.6.9, usa el ZIP **DESDE_8_6_9**.
+- Si no sabes tu versión local, utiliza el ZIP completo copiando su CONTENIDO sobre una copia limpia del repositorio.
 
-1. Si GitHub Desktop muestra conflictos, guarda una copia de tu trabajo y cancela el Merge antes de continuar; no hagas Force Push.
-2. Haz Fetch origin / Pull en `main` y comprueba que los cambios remotos estén integrados.
-3. Descarga el ZIP **SOLO_CAMBIOS_DESDE_8_6_6**, que contiene menos de 100 archivos.
-4. Descomprime, abre Repository → Show in Explorer y copia los archivos *dentro* de la raíz del repositorio. Debe existir `app.js` junto a `index.html`, no una subcarpeta que los envuelva.
-5. En GitHub Desktop, confirma los cambios, escribe un resumen de commit y haz Commit to main → Push origin.
-6. En Netlify confirma el estado `Published`. Recarga la web con Ctrl + Shift + R y comprueba `v8.6.8`.
+1. Abre GitHub Desktop. Si hay un Merge en curso, resuélvelo o cancélalo antes de reemplazar archivos. Haz una copia de seguridad de tus cambios locales.
+2. Selecciona el repositorio y haz Fetch origin/Pull origin sobre main.
+3. Pulsa Repository > Show in Explorer.
+4. Descomprime el ZIP apropiado y COPIA las carpetas y archivos que están DENTRO, no la carpeta contenedora. Acepta reemplazar.
+5. En GitHub Desktop, Commit to main y Push origin.
+6. Verifica Published en Netlify. Recarga la web con Ctrl+Shift+R.
 
-El ZIP completo es una alternativa si clonas el repositorio en una carpeta nueva y limpia. No subas todos sus archivos mediante el cargador web de GitHub, que puede limitar las operaciones a 100 archivos.
+Esta versión agrega el módulo `core/always-plan.js`; debe viajar junto con app.js y sw.js.
+**IMPORTANTE:** el plan condicionado NO autoriza compra de materiales ni presupone ventas. Para obtener un plan real, actualiza y verifica cotizaciones West.
