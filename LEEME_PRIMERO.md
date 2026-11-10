@@ -1,62 +1,47 @@
-# Gildem Craft Pro | Revisión por movimiento + integración `ao-bin-dumps`
+# Gildem Craft Pro · Reparación definitiva de integración Netlify
 
-**Fecha:** 10 de noviembre de 2026  
-**Repositorio objetivo:** `drzjhon-dot/gildem-craft-pro-live` (rama `main`, distribución 8.7.0)
+## Error observado el 10 de noviembre de 2026
 
-## Causa exacta del fallo de Netlify
+El código publicado en GitHub `drzjhon-dot/gildem-craft-pro-live/main` todavía tenía `app.js` de la versión anterior. El repositorio sí recibió `tests/v8_7_1-demand-first.test.mjs`, `core/always-plan.js`, `core/ao-gear-recipes.js` y la prueba adicional 8.7.2. Por eso Netlify tenía **311/312 pruebas correctas** y fallaba la n.º 306: el test exigía `GCP_DEMAND_FIRST_871` en `app.js`, y no estaba. También faltaba completar `scripts/build.mjs` para integrar `ao-bin-dumps`.
 
-La prueba `tests/v8_7_1-demand-first.test.mjs` se subió al repositorio y exige `GCP_DEMAND_FIRST_871`. Sin embargo, el `app.js` publicado todavía era el original; la prueba de integración n.º 306 falló. No era un problema de Node, Netlify ni `npm install`.
+**No se corrige quitando el test ni agregando solo una marca.** Esta reparación aplica toda la interfaz, compras, presupuestos e integración de recetas juntas. No desactiva los tests de Netlify.
 
-**No es correcto arreglarlo agregando solo un comentario con el marcador.** La pantalla, el flujo de guardado y la generación por demanda también deben implementarse. Este paquete incorpora todo junto.
+## Camino simple (Windows)
 
-## Instalación segura con GitHub Desktop (Windows)
+1. Instala [Python 3](https://www.python.org/downloads/) y [Node.js 22](https://nodejs.org/). Si no tienes Git, instala [Git for Windows](https://git-scm.com/downloads/win); el BAT también busca el Git integrado de GitHub Desktop.
+2. Abre GitHub Desktop y abre el repositorio **`drzjhon-dot/gildem-craft-pro-live`**. Si no lo tienes en el PC, clónalo desde GitHub Desktop.
+3. En GitHub Desktop pulsa **Repository > Show in Explorer** y copia la ruta de la carpeta. Asegúrate de que contiene `app.js`, `core/`, `tests/` y `package.json`.
+4. Extrae **todo el ZIP** en Descargas u otra carpeta **fuera del repositorio**.
+5. Haz doble clic en **`REPARAR_Y_PUBLICAR_EN_GITHUB.bat`**, pega la ruta y pulsa Enter.
+6. El instalador exige repositorio limpio y sincronizado con `main` en GitHub. Aplica TODOS los cambios en conjunto y ejecuta: `node --check`, `npm test` y `npm run build`. Si un test falla, restaura el código anterior y **NO hace push**. Si pasa, verifica los marcadores, crea un solo commit y envía `git push origin main` a tu propio GitHub.
+7. En Netlify abre el nuevo despliegue tras el push. Busca los resultados de todas las pruebas y **Deploy succeeded**. La publicación **no está confirmada** hasta verlo en Netlify.
 
-1. En GitHub Desktop, selecciona `drzjhon-dot/gildem-craft-pro-live` y pulsa **Repository > Show in Explorer**. Copia la ruta de la carpeta que contiene `app.js`, `core/` y `tests/`.
-2. Descomprime **este ZIP fuera del repositorio**, por ejemplo en Descargas. No copies solo los archivos `tests/` a GitHub: volvería a ocurrir el fallo 306.
-3. Instala **Python 3** y **Node.js 22**, si todavía no los tienes en tu PC.
-4. Haz doble clic en `ACTUALIZAR_Y_VERIFICAR_WINDOWS.bat` y pega la ruta de GitHub Desktop. Alternativa desde una terminal: `py -3 INSTALAR_REVISION.py "C:\ruta\gildem-craft-pro-live"`.
-5. El instalador verifica **sintaxis, preflight, TODOS los tests existentes y `npm run build`** en el repositorio local. Si algo falla, **restaura los archivos anteriores y devuelve código de error**. No hace `git push` ni instala un despliegue defectuoso.
-6. **Solo cuando aparezca `REVISIÓN OK`**, abre GitHub Desktop y comprueba que estén incluidos `app.js`, `core/always-plan.js`, `core/ao-gear-recipes.js`, `scripts/build.mjs`, `scripts/check-deploy.mjs` y los tests. Haz un único **Commit to main** y **Push origin**.
-7. Netlify debe compilar de nuevo. Confirma que los tests y el build terminen en verde. Abre la web y recarga `Ctrl+Shift+R`. Para probarlo, genera un plan de arcos T4–T6; la página debe indicar **PLAN POR ROTACIÓN · SIN FILTRO DE PROFIT MÍNIMO**.
+### Otra opción
 
-## Motor de fabricación por movimiento
+Si no quieres que el script haga commit y push, usa `REPARAR_SIN_PUBLICAR.bat`. Una vez diga `REVISIÓN OK`, haz **Commit** y **Push origin** desde GitHub Desktop, comprobando que `app.js`, `scripts/build.mjs` y `scripts/check-deploy.mjs` están incluidos.
 
-- Elimina el veto global por precio de equilibrio o ROI mínimo **del nuevo plan visible** en Black Craft y Royal Craft. El beneficio/pérdida calculado sigue visible, con signo.
-- Elige recetas según **actividad observada en el mercado específico**, no por la mejor ganancia teórica. No presenta observaciones de AODP como ventas ya cobradas.
-- Limita cantidades con una participación orientativa del **6 % del volumen observado** en un horizonte de venta configurable, límite de concentración y presupuesto. Descuenta unidades pendientes ya registradas en **Mi negocio**.
-- Si un objeto es caro o los materiales faltan, no desplaza automáticamente a otros asequibles. Las pérdidas esperadas tienen límite de exposición muy reducido.
-- Muestra fabricación por ciudad, destino, cantidad, materiales brutos, rotación semanal, antigüedad de cotización y resultado neto orientativo.
-- Permite guardar como **plan pendiente** rutas que tengan precios y costes observados, incluso con profit negativo. **Guardar nunca descuenta silver**. Confirmar compra efectivamente realizada es una acción distinta y requiere confirmación adicional.
-- **NO se recomienda comprar sin revisar datos dentro del juego.** Los libros de órdenes y la materia prima pueden agotarse y el precio por unidad aumentar. El plan visible no reserva materiales ni garantiza venta.
+**Muy importante:** no subas por separado solamente `core/` o `tests/`, ni el propio ZIP como un archivo dentro del repositorio. Eso reproduce exactamente el fallo. Tampoco desactives pruebas para que el sitio parezca sano.
 
-## Integración `ao-data/ao-bin-dumps`
+## Qué cambia realmente
 
-Fuente: https://github.com/ao-data/ao-bin-dumps
+* **Black Craft y Royal Craft:** generan resultados priorizados por **actividad observada** de cada artículo en su mercado de destino, no por beneficio mínimo. Muestran tier, unidades, precio estimado, capital, materiales, retorno y **beneficio o pérdida**. Los precios de equilibrio son informativos. Se añade advertencia si la actividad/precio no son actuales o son incompletos.
+* **Riesgo y logística:** límites de exposición por objeto y presupuesto, máximo prudente respecto al historial observado, inventario pendiente ya registrado en Mi negocio, compras de materiales no reservadas, advertencia de posible deslizamiento al comprar varias unidades. Los lotes estimados con pérdidas se limitan aún más. No se garantiza venta o beneficio.
+* **Mi negocio:** guardar un plan basado en actividad como borrador **NO descuenta silver**. Registrar una compra requiere confirmación expresa de haberla realizado. Una ruta sin precio y coste suficiente no puede guardarse como compromiso real.
+* **ao-bin-dumps:** se incorpora `core/ao-gear-recipes.js` para extraer recetas de equipo de `items.json` **RAW** durante la construcción Netlify. Si GitHub/CDN no está disponible, conserva el catálogo legítimo de respaldo. No interpreta `formatted/items.json` como recetas ni inventa bonos. Las recetas especiales ya usaban el dump original.
+* **Pruebas:** test 306 permanece en el repositorio, junto a verificaciones nuevas de la integración. `scripts/check-deploy.mjs` impide volver a subir pruebas de demanda sin `app.js` actualizado.
 
-- `core/ao-gear-recipes.js` contiene un extractor probado para `items.json` RAW del juego. NO utiliza `formatted/items.json`: ese es un índice de objetos, no un archivo completo de recetas.
-- Cuando Netlify publica, `scripts/build.mjs` intenta descargar el RAW, extraer recetas T1–T8 de equipo tradicional y reconocer variantes encantadas, cantidades de materiales, artefactos sin devolución y cantidades producidas. **Si no puede leer/validar el RAW, conserva el catálogo previo**; el build no se cae por una caída de GitHub/CDN.
-- No inventa ciudad con bono cuando el mapeo de la familia no está identificado. Los mapas de ciudad deben revisarse cuando un parche cambie bonos.
-- Las recetas especiales de monturas, recolección, kits, asedio, comidas y pociones **ya usaban** `ao-bin-dumps` mediante `core/special-recipes.js` y `netlify/functions/recipes.mjs`; esta actualización amplía la integración a armas/armaduras/equipamiento tradicional.
-- Publica `/catalog/ao-bin-source.json` con fuente elegida, fecha de construcción y cantidades de recetas extraídas. El juego/mercado puede cambiar después de construir: no representa datos en vivo.
-- AODP **West (América)** sigue siendo la fuente de cotizaciones y actividad, con sus límites y fechas. `ao-bin-dumps` no es un API de demanda o órdenes actuales.
+## Qué se verificó
 
-## Qué se comprobó realmente
+* Estado del repositorio público **leído directamente de GitHub**: el `app.js` antiguo era el culpable y los demás archivos estaban solo parcialmente integrados.
+* El instalador de este paquete pasó sintaxis, preflight, `npm test` y `npm run build` **en un repositorio de prueba sintético**. Las 16 pruebas dirigidas de demanda/catálogo pasaron en esa instalación de prueba.
+* No se ha clonado ni compilado el repositorio completo real dentro del entorno del asistente. **Esta reparación verifica la copia real antes de permitir publicar**. Nunca se debe presentar el sitio como ya reparado hasta que se ejecute y Netlify confirme `Deploy succeeded`.
+* La conexión GitHub para esta sesión **respondió HTTP 403** al intentar crear una rama. No se hicieron commits remotos desde ChatGPT.
 
-- Se reprodujo la discrepancia viendo que el test 8.7.1 existía en `main`, mientras `app.js` aún no tenía `GCP_DEMAND_FIRST_871`.
-- **16 pruebas dirigidas** sobre el motor por demanda y extractor de juego pasaron en un banco de pruebas local (incluyendo inventario pendiente). Se ejecutó el instalador completo de principio a fin contra un repositorio sintético que imita la estructura previa; pasó su verificación de sintaxis, test y build.
-- **Limitación importante:** el repositorio completo real no pudo clonarse dentro de esta sesión, y la conexión a GitHub permite leer, pero rechazó crear una rama (403). Por eso **no afirmamos** haber ejecutado ya el paquete completo de 306 pruebas dentro del código real ni haber publicado la web. El instalador lo ejecutará en tu copia local y **cancelará todos los cambios** si falla.
-- Antes de subir, el usuario debe ver `REVISIÓN OK`. No hagas commit/push si muestra error.
+## Si el script se detiene
 
-## Archivos que modifica el instalador
-
-- `app.js`
-- `core/always-plan.js`
-- `core/ao-gear-recipes.js` (nuevo)
-- `scripts/build.mjs`
-- `scripts/check-deploy.mjs`
-- `tests/v8_7_1-demand-first.test.mjs` (actualiza o conserva, siempre junto a la implementación)
-- `tests/v8_7_2-ao-bin-dumps.test.mjs` (nuevo)
-
-**No cambia:** archivos de datos personales, localStorage, credenciales, precios manuales ni inventarios. Crea una copia de seguridad fuera del repositorio, incluyendo el log del test y build.
-
-**Versión visible:** sigue `8.7.0` por compatibilidad con pruebas estrictas y la caché actual; los marcadores internos identifican las dos ampliaciones. Si deseas un salto de versión visible, hay que coordinar `package.json`, `index.html`, `sw.js`, `scripts/build.mjs`, `netlify/functions/health.mjs`, tests y preflight en una actualización distinta.
+* **Repositorio tiene cambios sin confirmar:** guarda/commitea esos cambios primero desde GitHub Desktop; vuelve a ejecutar. Se evita mezclar trabajos anteriores.
+* **Main atrasado/divergente:** usa Fetch/Pull en GitHub Desktop antes de ejecutar.
+* **No se pudo ejecutar Node o Python:** instala Node.js 22 y Python 3 y reinicia la terminal.
+* **Tests/build fallidos:** el instalador restaura los archivos anteriores y guarda `revision-log.txt` en una carpeta de respaldo fuera del repositorio. No hagas push.
+* **Commit local completado pero GitHub rechazó el push:** abre GitHub Desktop y pulsa Push origin. No copies archivos aislados.
+* **Netlify muestra la misma prueba de `GCP_DEMAND_FIRST_871`:** comprueba en GitHub que `main/app.js` incluye el marcador y que Netlify construye **ese mismo commit**.
