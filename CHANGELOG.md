@@ -1,3 +1,21 @@
+## v8.6.5 (2026-11-10) · Cartera inteligente y límites de riesgo
+
+- Diversificación en Black y Royal; hasta 12 objetos distintos iniciales y 15 rutas, sin forzar ganancias imaginarias.
+- Máximo 12% del presupuesto invertible por objeto y límites por mercado/tier cuando existen alternativas.
+- Reserva opcional del 15% por defecto; respeta la caja reservada también en ediciones y techos de compra.
+- Descuento de lotes pendientes marcados como iniciados en Mi negocio.
+- Compra por tramos de precio, primera compra orientativa y exportación rápida al portapapeles.
+- Auditoría de actividad alta/media/lenta sin confundir órdenes históricas con ventas confirmadas.
+- 265 pruebas y compilación correctas; falta comprobar despliegue real.
+
+## v8.6.4 (2026-11-10) · Destinos Royal y pantalla Resultados simplificada
+- Royal Craft permite marcar cualquiera de los siete mercados Royal para vender; de fábrica están todos marcados.
+- El filtro de ciudades solo afecta a los DESTINOS de venta, no a las compras de materiales ni a la ciudad de elaboración.
+- El filtro se aplica a fabricación, refinamiento, competencia, investigación y resultados. Se conserva localmente entre sesiones.
+- Resultados oculta cinco paneles solicitados: mercados examinados, referencias externas, calidad de datos, comprobación previa y distribución del presupuesto.
+- El botón de verificar antes de comprar permanece activo; la comprobación sigue calculándose sin un panel adicional.
+- Nuevas pruebas de exclusión real de mercados y de ocultamiento visual.
+
 ## v8.6.3 (2026-11-10) · AODP West y pruebas por objeto
 
 - Ranking equilibrado con retorno por capital y rotación observada.

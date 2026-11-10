@@ -36,7 +36,8 @@ export function selectUniversalRecipes(recipes,branches,{categories=['armor','we
  return {chosen,eligible:seen.size,branches:offered.size,scanned:chosen.length,coverage:seen.size?chosen.length/seen.size:0,partial:chosen.length<seen.size};
 }
 export function createUniversalCandidates({selected,recipes,priceMap,inputs,profile={},experience=new Map(),nameOf=id=>id,maxAge=24}){
- const targets=inputs.market==='black'?['Black Market']:inputs.market==='royal'?inputs.cities: [...inputs.cities,'Black Market'];
+ const saleCities=Array.isArray(inputs.saleCities)?inputs.saleCities:inputs.cities;
+ const targets=inputs.market==='black'?['Black Market']:inputs.market==='royal'?saleCities: [...saleCities,'Black Market'];
  const results=[],missing={material:0,sale:0,focus:0},side=inputs.buyMode==='order'?'buy_price_max':'sell_price_min';
  for(const {id,branch} of selected){const r=recipes[id];if(!r?.materials?.length||!r.city)continue;
   const kind=specialType(id),products=Math.max(1,Number(r.amountCrafted)||1),noSpecial=r.specialtyEnabled===false;

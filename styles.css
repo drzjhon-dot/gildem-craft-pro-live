@@ -547,3 +547,30 @@ body.gcp-results-active #main-content{max-width:1750px;padding-top:17px}
 .gcp-market-proof td{vertical-align:top}
 .gcp-evidence-muted{display:block;margin-top:3px;color:#a8b6c8;font-size:.76rem;line-height:1.4}
 @media(max-width:680px){.gcp-market-proof{padding:12px}.gcp-proof-stats{display:grid;grid-template-columns:1fr}.gcp-market-proof .data-table{min-width:790px}}
+
+/* v8.6.4: Resultados compactos. Los auditores permanecen en memoria y el
+   botón de verificación sigue funcionando; estos paneles no se muestran. */
+.gcp-results .gcp-market-audit,
+.gcp-results .gcp-market-references,
+.gcp-results .gcp-market-proof,
+.gcp-results .gcp-panel-preflight,
+.gcp-results .gcp-panel-budget,
+.gcp-results #preflight-results{display:none !important}
+
+/* Preferencias de destinos Royal: selección multiciudad independiente del crafting. */
+.qc-royal-market-config{margin-top:0}
+.qc-royal-market-config .qc-title{gap:12px;flex-wrap:wrap}
+.qc-royal-market-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px}
+.qc-royal-market-option{width:100%}
+.qc-royal-market-option span{padding:11px 8px;font-size:.81rem}
+.qc-royal-market-help{margin:12px 1px 0;color:var(--muted,#9eb2c7);font-size:.74rem;line-height:1.55}
+@media(max-width:560px){.qc-royal-market-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.qc-royal-market-config .qc-title h3{font-size:1rem}}
+
+/* v8.6.5: Cartera inteligente, discreta y legible dentro de Resultados */
+.gcp-smart-summary{margin:14px 0;padding:14px 17px;border:1px solid rgba(215,174,91,.27);border-radius:13px;background:linear-gradient(115deg,rgba(48,44,27,.72),rgba(22,27,29,.78));color:#f0eadc;font-size:13px;line-height:1.55}
+.gcp-smart-summary strong{color:#f5ce7b;font-weight:750}
+.gcp-smart-summary small{display:block;margin-top:5px;color:#b7b7af;font-size:11px}
+.gcp-depth-details,.gcp-first-stage{margin-top:11px;padding:10px 12px;border:1px solid rgba(192,170,125,.23);border-radius:10px;background:rgba(12,18,22,.35)}
+.gcp-depth-details summary,.gcp-first-stage summary{cursor:pointer;color:#e7d8b8;font-weight:650}
+.gcp-depth-details p,.gcp-first-stage p{margin:9px 0;color:#b5c0bd;font-size:12px}
+.gcp-depth-details .table-scroll,.gcp-first-stage .table-scroll{max-height:265px;overflow:auto}

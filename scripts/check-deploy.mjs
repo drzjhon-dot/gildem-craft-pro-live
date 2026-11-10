@@ -2,13 +2,13 @@ import {access,readFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import assert from 'node:assert/strict';
 const must=['package.json','netlify.toml','index.html','app.js','styles.css',
-'core/catalog.js','core/special-recipes.js','core/market-discovery.js','core/demand-first.js','core/market-proof.js','core/external-demand.js','core/server-policy.js','core/west-ai-brief.js','core/procurement-liquidity.js','scripts/build.mjs',
+'core/catalog.js','core/special-recipes.js','core/market-discovery.js','core/demand-first.js','core/market-proof.js','core/external-demand.js','core/royal-sale-markets.js','core/server-policy.js','core/west-ai-brief.js','core/procurement-liquidity.js','scripts/build.mjs',
 'netlify/functions/health.mjs','netlify/functions/market.mjs',
 'netlify/functions/recipes.mjs','netlify/functions/catalog.mjs','netlify/functions/item-image.mjs','netlify/functions/market-references.mjs',
 'netlify/functions/hourly-prices.mjs','netlify/functions/snapshot.mjs'];
 for(const path of must)await access(join(process.cwd(),path));
 const pkg=JSON.parse(await readFile('package.json','utf8'));
-assert.match(pkg.version,/^8\.6\.3$/,'La distribución debe declarar la versión 8.6.3');
+assert.match(pkg.version,/^8\.6\.5$/,'La distribución debe declarar la versión 8.6.5');
 // Prevent the regression that sent only test files to GitHub while keeping
 // app.js/index.html on an older version. These checks run in every Netlify build.
 const html=await readFile('index.html','utf8');
@@ -17,9 +17,14 @@ const sw=await readFile('sw.js','utf8');
 const builder=await readFile('scripts/build.mjs','utf8');
 assert.ok(html.includes('data-nav="resultados"'),'La pestaña Resultados falta en index.html');
 assert.ok(source.includes('function resultsPage(){'),'La pantalla Resultados falta en app.js');
+assert.ok(source.includes('royalSaleCitiesHtml()')&&source.includes('selectedRoyalSaleCities()'),'Royal Craft debe permitir elegir destinos de venta');
+const css=await readFile('styles.css','utf8');
+assert.ok(css.includes('.gcp-results .gcp-market-audit')&&css.includes('.gcp-results .gcp-panel-budget'),'Los paneles secundarios deben permanecer ocultos en Resultados');
 assert.ok(source.includes("qcControls('craft')")&&source.includes("qcControls('auto')"),'Black/Royal no tienen controles compactos');
-assert.ok(source.includes('marketCoverageHtml(p)')&&source.includes('chosenDemandIds('),'Falta la exploración por demanda de v8.6.3');
+assert.ok(source.includes('marketCoverageHtml(p)')&&source.includes('chosenDemandIds('),'Falta la exploración por demanda de v8.6.5');
 assert.ok(source.includes('evidenceForPlan(b,')&&source.includes('marketCoverage.historyObserved='),'Falta auditoría de precio, historial y abastecimiento');
+assert.ok(source.includes('pendingUnitsByMarket(loadPortfolios())')&&source.includes('intelligent:true'),'Falta Cartera inteligente en Black/Royal');
+assert.ok(source.includes('reserveSmart')&&source.includes('materialDepthAssessment('),'Faltan protección de silver y compra por tramos');
 assert.ok(html.includes('v'+pkg.version)&&sw.includes('gildem-craft-pro-v'+pkg.version),'Versión incorrecta en HTML o caché del navegador');
 assert.ok(builder.includes("version:'"+pkg.version+"'"),'Versión incorrecta en scripts/build.mjs');
 assert.ok(!source.includes('vanatoliyv.github.io'),'Referencia europea no debe estar en la aplicación');

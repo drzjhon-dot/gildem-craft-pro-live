@@ -57,7 +57,7 @@ export function limitRowsByMaterialVolume(rows, historyByMaterial=new Map(), {
 // Executable purchase-depth guard. Material book levels are observed, not reserved.
 // Only count offers AT or BELOW the unit price budgeted by the recipe.
 export function limitRowsByMaterialBook(rows,sellLevels=new Map(),{
-  fraction=.60,unknownCraftCap=1
+  fraction=.60,unknownCraftCap=1,priceCeilingByMaterial=new Map()
 }={}){
  const safeFraction=Math.max(0,Math.min(1,Number(fraction)||0));
  const limits=new Map(),visible=[],missing=[],rejected=[];
@@ -71,7 +71,8 @@ export function limitRowsByMaterialBook(rows,sellLevels=new Map(),{
  for(const [k,m] of required){
   const book=sellLevels.get(k);
   if(!book?.length){missing.push(m);continue;}
-  const cheap=book.filter(level=>Number(level.price)>0&&level.price<=m.unitPrice+1e-7).reduce((sum,level)=>sum+n(level.amount),0);
+  const ceiling=Math.max(m.unitPrice,n(priceCeilingByMaterial.get(k))||0);
+  const cheap=book.filter(level=>Number(level.price)>0&&level.price<=ceiling+1e-7).reduce((sum,level)=>sum+n(level.amount),0);
   const max=Math.floor(cheap*safeFraction);
   limits.set(k,max);
   visible.push({...m,available:cheap,max});

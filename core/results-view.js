@@ -55,7 +55,7 @@ export function shoppingWithCeilings(source){
     unitPrice:nonnegative(m.unitPrice)
   }));
   const totalMaterial=gross.reduce((s,m)=>s+m.qtyGross*m.unitPrice,0);
-  const spare=Math.max(0,nonnegative(source?.budget)-nonnegative(plan.totalCost));
+  const spare=Math.max(0,nonnegative(source?.investableBudget??source?.budget)-nonnegative(plan.totalCost));
   const extra=Math.min(spare,Math.max(0,amount(plan.totalProfit))*.25);
   return gross.map(m=>{
     const cost=m.qtyGross*m.unitPrice;

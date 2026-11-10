@@ -5,6 +5,7 @@ import {routeProfitAtQuantity} from './depth.js';
 import {prudentListingCapacity,liquidityWeight} from './market-volume.js';
 import {listingCapacity} from './demand-first.js';
 import {allocateSmartPortfolio} from './optimizer.js';
+import {pendingAdjustedCapacity,portfolioDiversityStats} from './intelligent-portfolio.js';
 const f=(x,d=0)=>Number.isFinite(Number(x))?Number(x):d;
 export function capacityFor(x,capFraction,unknownCap,horizonDays=14){
  if(Number.isFinite(x.marketCapacity))return Math.max(0,Math.floor(x.marketCapacity));
@@ -34,86 +35,109 @@ function value(x,goal){
 }
 export function routePriority(route,goal='balanced'){return value(route,goal);}
 export function allocatePortfolioV6(candidates,budget,opts={}){
- const budgetValue=f(budget),focusLimit=opts.focusLimit==null?Infinity:f(opts.focusLimit),maxVariants=Math.min(80,Math.max(1,opts.maxVariants??70));
+ const budgetValue=f(budget),focusLimit=opts.focusLimit==null?Infinity:f(opts.focusLimit);
+ const maxVariants=Math.min(80,Math.max(1,opts.maxVariants??70));
  const capFraction=opts.capFraction??.06,unknownCap=opts.unknownCap??1,goal=opts.goal||'balanced',horizonDays=opts.horizonDays??14;
- const minConfidence=opts.minimumConfidence||0,exposureLimit=opts.useAll?Infinity:budgetValue*(opts.maxPerItemFraction??.30);
- if(!(budgetValue>0)||focusLimit<0)return {rows:[],capital:budgetValue,totalCost:0,totalNetCost:0,totalProfit:0,focusUsed:0,remaining:budgetValue};
+ const minConfidence=opts.minimumConfidence||0;
+ const smart=opts.intelligent===true;
+ // "Usar todo" allows spending available funds, never the removal of exposure caps.
+ const itemFraction=smart?Math.min(.30,Math.max(.05,f(opts.maxPerItemFraction,.12))):
+   Math.min(1,Math.max(0,f(opts.maxPerItemFraction,.30)));
+ const itemExposureLimit=budgetValue*itemFraction;
+ const pending=opts.pendingByMarket instanceof Map?opts.pendingByMarket:new Map();
+ const empty={rows:[],capital:budgetValue,totalCost:0,totalNetCost:0,totalProfit:0,
+  focusUsed:0,remaining:budgetValue,method:'Sin rutas rentables verificables'};
+ if(!(budgetValue>0)||focusLimit<0)return empty;
  const valid=(candidates||[]).filter(x=>x?.id&&x?.city&&f(x.profit)>0&&f(x.capitalPerUnit)>0&&f(x.cost)>0&&f(x.confidence?.score)>=minConfidence);
- // Un mismo mercado y objeto no puede consumir DOS veces el mismo libro de órdenes
- // al comparar ciudades de fabricación alternativas.
+ // Never buy the same listing book twice through different production cities.
  const byRoute=new Map();for(const x of valid){const key=x.id+'|'+x.city+'|'+x.mode;
   const old=byRoute.get(key);if(!old||value(x,goal)>value(old,goal))byRoute.set(key,x);
  }
- const all=[...byRoute.values()].filter(x=>capacityFor(x,capFraction,unknownCap,horizonDays)>0);
+ const all=[...byRoute.values()].map(x=>{
+  const capacity=pendingAdjustedCapacity(x,capacityFor(x,capFraction,unknownCap,horizonDays),pending);
+  return {...x,intelligentCapacity:capacity,pendingUnits:pending.get(x.id+'|'+x.city)||0};
+ }).filter(x=>x.intelligentCapacity>0);
+ if(!all.length)return empty;
  all.sort((a,b)=>value(b,goal)-value(a,goal));
- // Evaluamos varias carteras con distintos órdenes de exploración y cambios 1x1.
- const variants=[
+ const destinations=new Set(all.map(x=>x.city));
+ const tiers=new Set(all.map(x=>String(x.id).match(/^T([4-8])_/)?.[1]).filter(Boolean));
+ // A single selected Royal city or the sole BM market must not be arbitrarily
+ // capped as though the player had selected several destinations.
+ const cityLimit=smart&&destinations.size>1?budgetValue*Math.max(.45,1/destinations.size+.12):Infinity;
+ const tierLimit=smart&&tiers.size>1?budgetValue*.60:Infinity;
+ const desiredItems=Math.min(15,Math.max(8,Math.floor(f(opts.targetDifferentItems,12))));
+ const orders=[
   all,
   [...all].sort((a,b)=>b.profit/b.capitalPerUnit-a.profit/a.capitalPerUnit),
   [...all].sort((a,b)=>b.profit-a.profit),
-  [...all].sort((a,b)=>(b.stressProfit||0)-(a.stressProfit||0))
+  [...all].sort((a,b)=>f(b.demandDaily,b.activity?.observedDaily)-f(a.demandDaily,a.activity?.observedDaily))
  ];
  let best=null;
- for(const ordered of variants){
-  const quantities=new Map(),byItem=new Map();let spent=0,focus=0;
+ for(const ordered of orders){
+  const counts=new Map(),byItem=new Map(),byCity=new Map(),byTier=new Map();
+  let spent=0,focus=0;
+  const tierOf=x=>String(x.id).match(/^T([4-8])_/)?.[1]||'?';
   const maxFor=x=>{
-   const previous=quantities.get(x)||0;
-   const capitalRoom=Math.floor((budgetValue-spent+1e-8)/x.capitalPerUnit);
-   const focRoom=Number.isFinite(focusLimit)&&f(x.focusPerUnit)>0?Math.floor((focusLimit-focus+1e-8)/x.focusPerUnit):Infinity;
-   const itemRoom=Number.isFinite(exposureLimit)?Math.floor((exposureLimit-(byItem.get(x.id)||0)+1e-8)/x.capitalPerUnit):Infinity;
-   const routeRoom=capacityFor(x,capFraction,unknownCap,horizonDays)-previous;
-   return Math.max(0,Math.min(routeRoom,capitalRoom,focRoom,itemRoom));
+   const qty=counts.get(x)||0;
+   const cashRoom=Math.floor((budgetValue-spent+1e-8)/x.capitalPerUnit);
+   const focusRoom=Number.isFinite(focusLimit)&&f(x.focusPerUnit)>0?Math.floor((focusLimit-focus+1e-8)/x.focusPerUnit):Infinity;
+   const itemRoom=Math.floor((itemExposureLimit-(byItem.get(x.id)||0)+1e-8)/x.capitalPerUnit);
+   const cityRoom=Math.floor((cityLimit-(byCity.get(x.city)||0)+1e-8)/x.capitalPerUnit);
+   const tierRoom=Math.floor((tierLimit-(byTier.get(tierOf(x))||0)+1e-8)/x.capitalPerUnit);
+   return Math.max(0,Math.min(x.intelligentCapacity-qty,cashRoom,focusRoom,itemRoom,cityRoom,tierRoom));
   };
-  const take=(x,n)=>{if(!quantities.has(x)&&quantities.size>=maxVariants)return 0;const q=Math.min(n,maxFor(x));if(q<1)return 0;quantities.set(x,(quantities.get(x)||0)+q);spent+=q*x.capitalPerUnit;focus+=q*f(x.focusPerUnit);byItem.set(x.id,(byItem.get(x.id)||0)+q*x.capitalPerUnit);return q;};
-  // Intentar ambos destinos solo cuando cada lado ofrece beneficio verificable.
-  if(opts.ensureBothMarkets){const b=ordered.find(x=>x.city==='Black Market'),r=ordered.find(x=>x.city!=='Black Market');
-   if(b&&r&&b.capitalPerUnit+r.capitalPerUnit<=budgetValue&&b.focusPerUnit+r.focusPerUnit<=focusLimit){take(b,1);take(r,1);}
-  }
-  for(const x of ordered){const amount=maxFor(x);if(amount>0)take(x,amount);}
-  // Intercambios locales: cambiar una unidad de una ruta por otra que deje una
-  // mejor cartera conjunta. Así evitamos quedarnos solo con el primer greedy.
-  for(let pass=0;pass<2;pass++){
-   let bestSwap=null;
-   const selected=[...quantities].filter(([,q])=>q>0);
-   for(const [from,qty] of selected.slice(0,55)){
-    const costFreed=from.capitalPerUnit,focusFreed=f(from.focusPerUnit);
-    for(const to of ordered.slice(0,75)){
-     if(to===from)continue;
-     const current=quantities.get(to)||0;
-     if(!current&&selected.length>=maxVariants&&qty>1)continue;
-     if(current>=capacityFor(to,capFraction,unknownCap,horizonDays))continue;
-     const room=budgetValue-spent+costFreed;
-     if(to.capitalPerUnit>room+1e-8)continue;
-     if(Number.isFinite(focusLimit)&&focus-focusFreed+f(to.focusPerUnit)>focusLimit+1e-8)continue;
-     if(Number.isFinite(exposureLimit)){
-      const next=byItem.get(to.id)||0;
-      const adjusted=next-(from.id===to.id?costFreed:0)+to.capitalPerUnit;
-      if(adjusted>exposureLimit+1e-8)continue;
-     }
-     const delta=value(to,goal)-value(from,goal);
-     if(delta>1e-8&&(!bestSwap||delta>bestSwap.delta))bestSwap={from,to,delta};
-    }
+  const take=(x,count)=>{
+   if(!counts.has(x)&&counts.size>=maxVariants)return 0;
+   const n=Math.floor(Math.min(count,maxFor(x)));
+   if(n<1)return 0;
+   counts.set(x,(counts.get(x)||0)+n);spent+=n*x.capitalPerUnit;focus+=n*f(x.focusPerUnit);
+   byItem.set(x.id,(byItem.get(x.id)||0)+n*x.capitalPerUnit);
+   byCity.set(x.city,(byCity.get(x.city)||0)+n*x.capitalPerUnit);
+   byTier.set(tierOf(x),(byTier.get(tierOf(x))||0)+n*x.capitalPerUnit);
+   return n;
+  };
+  if(smart){
+   // Phase one: seed a broad range of different items BEFORE larger batches.
+   const seeded=new Set();
+   for(const x of ordered){
+    if(seeded.size>=desiredItems||counts.size>=maxVariants)break;
+    if(seeded.has(x.id))continue;
+    if(take(x,1))seeded.add(x.id);
    }
-   if(!bestSwap)break;
-   const {from,to}=bestSwap,remainFrom=quantities.get(from)-1;
-   if(remainFrom>0)quantities.set(from,remainFrom);else quantities.delete(from);
-   quantities.set(to,(quantities.get(to)||0)+1);
-   spent+=to.capitalPerUnit-from.capitalPerUnit;
-   focus+=f(to.focusPerUnit)-f(from.focusPerUnit);
-   byItem.set(from.id,(byItem.get(from.id)||0)-from.capitalPerUnit);
-   byItem.set(to.id,(byItem.get(to.id)||0)+to.capitalPerUnit);
+   // If capital allows, round-robin remaining items instead of monopolizing
+   // the first route. This only considers routes with positive calculated profit.
+   const available=ordered.filter(x=>counts.has(x));
+   for(let pass=0;pass<12;pass++){
+    let added=0;
+    for(const x of available)added+=take(x,Math.max(1,Math.min(4,Math.floor(maxFor(x)/Math.max(1,12-pass)))));
+    if(!added)break;
+   }
+  }else{
+   // Legacy route behavior for calculators that call this allocator directly.
+   for(const x of ordered)take(x,maxFor(x));
   }
-  const normalized=[...quantities].filter(([,q])=>q>0).map(([x,qty])=>({...x,qty,maxCrafts:capacityFor(x,capFraction,unknownCap,horizonDays),allocation:qty*x.capitalPerUnit,totalProfit:routeProfitAtQuantity(x,qty)})).filter(x=>x.totalProfit>0);
-  const objective=normalized.reduce((s,x)=>s+x.totalProfit,0);
-  // Dar prioridad al objetivo elegido sin dejar de comprobar beneficio neto.
-  const metric=normalized.reduce((s,x)=>s+x.qty*value(x,goal),0);
-  if(!best||metric>best.metric+1e-8||Math.abs(metric-best.metric)<1e-8&&objective>best.profit){best={rows:normalized,metric,profit:objective};}
+  // Finish with constrained profit-weighted capacity, even in smart mode.
+  // The limits remain active for every item and city.
+  for(const x of ordered)take(x,maxFor(x));
+  const rows=[...counts].filter(([,q])=>q>0).map(([x,qty])=>({
+   ...x,qty,maxCrafts:x.intelligentCapacity,allocation:qty*x.capitalPerUnit,
+   totalProfit:routeProfitAtQuantity(x,qty)
+  })).filter(x=>x.totalProfit>0);
+  const score=rows.reduce((a,x)=>a+x.qty*value(x,goal),0);
+  const profit=rows.reduce((a,x)=>a+x.totalProfit,0);
+  const itemCount=new Set(rows.map(x=>x.id)).size;
+  // Reward having several profitable, truly distinct items but avoid driving
+  // profit below zero or manufacturing unprofitable filler stock.
+  const metric=score*(smart?(1+.04*Math.min(12,itemCount)):1);
+  if(!best||metric>best.metric+1e-8||(Math.abs(metric-best.metric)<1e-8&&profit>best.profit))
+   best={rows,metric,profit};
  }
- if(!best)return {rows:[],capital:budgetValue,totalCost:0,totalNetCost:0,totalProfit:0,focusUsed:0,remaining:budgetValue};
- // Exponer misma forma básica que el asignador anterior; fitPlan calcula
- // diarios ENTEROS y valida gastos finales en una segunda etapa.
- const rows=best.rows;const totalCost=rows.reduce((s,x)=>s+x.allocation,0);
- const totalNetCost=rows.reduce((s,x)=>s+x.qty*x.cost,0);
- const focusUsed=rows.reduce((s,x)=>s+x.qty*f(x.focusPerUnit),0);
- return {rows,capital:budgetValue,totalCost,totalNetCost,totalProfit:best.profit,focusUsed,remaining:Math.max(0,budgetValue-totalCost),method:'asignación conjunta multi-inicio; resultado aproximado'};
+ if(!best)return empty;
+ const rows=best.rows,totalCost=rows.reduce((a,x)=>a+x.allocation,0);
+ const stats=portfolioDiversityStats(rows,{budget:budgetValue,pending});
+ return {rows,capital:budgetValue,totalCost,totalNetCost:rows.reduce((a,x)=>a+x.qty*x.cost,0),
+  totalProfit:best.profit,focusUsed:rows.reduce((a,x)=>a+x.qty*f(x.focusPerUnit),0),
+  remaining:Math.max(0,budgetValue-totalCost),diversity:stats,
+  method:smart?'Cartera inteligente: objetos distintos primero; topes por artículo, tier, destino e inventario pendiente':
+   'asignación conjunta multi-inicio; resultado aproximado'};
 }

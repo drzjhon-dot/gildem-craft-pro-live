@@ -30,7 +30,7 @@ export function refiningPriceIds(items){
  return [...ids];
 }
 
-export function createRefiningCandidates({selected=[],priceMap,market='mixed',mode='listed',maxAge=24,
+export function createRefiningCandidates({selected=[],priceMap,market='mixed',saleCities=CITIES,mode='listed',maxAge=24,
   stationFee=0,dailyBonus=0,bonusCity=true,materialShipping=0,transport=0,royalTax=4,listingFee=2.5,
   riskRoyal=0,priceStress=8,resourceStress=7,nameOf=id=>id}={}){
  const result=[];const missing={materials:0,sales:0};
@@ -59,7 +59,7 @@ export function createRefiningCandidates({selected=[],priceMap,market='mixed',mo
   if(materials.length!==inputs.length){missing.materials++;continue;}
   const gross=materials.reduce((v,m)=>v+m.count*m.unitPrice,0);
   const net=materials.reduce((v,m)=>v+m.cost,0);
-  for(const saleCity of CITIES){
+  for(const saleCity of CITIES.filter(city=>saleCities.includes(city))){
    const q=quote(priceMap,id,saleCity,mode==='listed'?'sell_price_min':'buy_price_max',maxAge);
    if(!q){missing.sales++;continue;}
    const shippingSale=saleCity===refiningCity?0:delivery;
