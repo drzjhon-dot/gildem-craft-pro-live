@@ -14,6 +14,8 @@ test('El stock pendiente limita futuras cantidades',()=>{const old=prepare('blac
 test('Royal y BM nunca mezclan mercados en un plan',()=>{assert(prepare('black').rows.every(x=>x.city==='Black Market'));assert(prepare('royal').rows.every(x=>x.city!=='Black Market'));});
 test('Orden por tier de fabricación y compras',()=>{for(const p of [prepare('black'),prepare('royal')])for(const arr of [p.rows,p.shopping]){for(let i=1;i<arr.length;i++)assert(+arr[i].id.match(/^T(\d)/)[1]>=+arr[i-1].id.match(/^T(\d)/)[1]);}});
 test('No hay insumos de items descartados por 1 lote',()=>{const p=prepare('black',{perItemBudget:.02});assert(p.rows.every(x=>x.qty>=2));assert(validatePlan(p));});
+
+test('Cada plan calcula diarios sugeridos por lote',()=>{const p=prepare('black');assert(p.rows.length>0);assert(p.journals.length>0);assert(p.journals.every(j=>j.qty>=2));});
 test('Compras por etapas suman el total exacto',()=>{const p=prepare('royal');const steps=purchaseStages(p,4);for(const m of p.shopping){const sum=steps.reduce((s,x)=>s+(x.materials.find(t=>t.id===m.id&&t.city===m.city)?.qty||0),0);assert.equal(sum,m.qty);}});
 for(const [id] of itemSpecs)test('Cálculo por cada ítem '+id,()=>{const subset=recipes.filter(r=>r.id===id),data=buildPlan(subset,{market:'black',priceRows:priceIndex(fakePriceRows(ids,now)),historyRows:weeklyObserved(fakeHistoryRows(ids,now),now),now});assert(data.rows.length<=1);assert(data.rows.every(x=>x.qty>=2));assert(validatePlan(data));});
 test('Sin precio del material no se generan costos falsos',()=>{const p=buildPlan(recipes,{market:'black',priceRows:priceIndex(fakePriceRows(recipes.map(r=>r.id),now)),historyRows:weeklyObserved(fakeHistoryRows(ids,now),now),now});assert.equal(p.rows.length,0);});

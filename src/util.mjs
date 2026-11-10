@@ -14,7 +14,36 @@ export function parseUTC(value){if(!value)return NaN;const s=String(value).trim(
 export function dateAgeHours(value,now=Date.now()){const t=parseUTC(value);return Number.isFinite(t)?(now-t)/3600000:null;}
 export function iso(value){const d=parseUTC(value);return Number.isFinite(d)?new Date(d).toLocaleString('es-ES'):'sin fecha';}
 export function chunk(items,size=40){const out=[];for(let i=0;i<items.length;i+=size)out.push(items.slice(i,i+size));return out;}
-export const CATEGORY_KEYS=['Todas','Espadas','Arcos','Hachas','Bastones','Mazas','Martillos','Dagas','Lanzas','Ballestas','Armaduras','Cascos','Botas','Capas y bolsas','Pociones','Comidas','Monturas','Recolección','Otros'];
+
+export const CATEGORY_META=Object.freeze([
+ {key:'Todas',label:'Todas',note:'Todas las ramas',icon:'T5_BAG'},
+ {key:'Espadas',label:'Espadas',note:'Espadas y claymores',icon:'T5_MAIN_SWORD'},
+ {key:'Arcos',label:'Arcos',note:'Arcos y warbows',icon:'T5_2H_BOW'},
+ {key:'Hachas',label:'Hachas',note:'Hachas y alabardas',icon:'T5_MAIN_AXE'},
+ {key:'Bastones',label:'Bastones',note:'Mágicos y de apoyo',icon:'T5_2H_FIRESTAFF'},
+ {key:'Mazas',label:'Mazas',note:'Mazas y flails',icon:'T5_MAIN_MACE'},
+ {key:'Martillos',label:'Martillos',note:'Martillos y polehammers',icon:'T5_MAIN_HAMMER'},
+ {key:'Dagas',label:'Dagas',note:'Dagas y bloodletters',icon:'T5_MAIN_DAGGER'},
+ {key:'Lanzas',label:'Lanzas',note:'Lanzas y tridents',icon:'T5_MAIN_SPEAR'},
+ {key:'Ballestas',label:'Ballestas',note:'Ballestas y one-shot',icon:'T5_2H_CROSSBOW'},
+ {key:'Armaduras',label:'Armaduras',note:'Chest pieces',icon:'T5_ARMOR_CLOTH_SET1'},
+ {key:'Cascos',label:'Cascos',note:'Head pieces',icon:'T5_HEAD_LEATHER_SET1'},
+ {key:'Botas',label:'Botas',note:'Shoes y sandals',icon:'T5_SHOES_PLATE_SET1'},
+ {key:'Capas y bolsas',label:'Capas y bolsas',note:'Capes y bags',icon:'T5_CAPE'},
+ {key:'Pociones',label:'Pociones',note:'Alquimia',icon:'T5_POTION_HEAL'},
+ {key:'Comidas',label:'Comidas',note:'Cocina',icon:'T5_MEAL_SOUP'},
+ {key:'Monturas',label:'Monturas',note:'Saddles y mounts',icon:'T5_MOUNT_HORSE'},
+ {key:'Recolección',label:'Recolección',note:'Gear y tools',icon:'T5_HEAD_GATHERER_FIBER'},
+ {key:'Otros',label:'Otros',note:'Offhands y varios',icon:'T5_OFF_BOOK'}
+]);
+export const CATEGORY_KEYS=CATEGORY_META.map(x=>x.key);
+export const CATEGORY_GROUPS=Object.freeze([
+ {title:'Armas',keys:['Espadas','Arcos','Hachas','Bastones','Mazas','Martillos','Dagas','Lanzas','Ballestas']},
+ {title:'Equipo',keys:['Armaduras','Cascos','Botas','Capas y bolsas']},
+ {title:'Especiales',keys:['Pociones','Comidas','Monturas','Recolección','Otros']}
+]);
+export const categoryMeta=key=>CATEGORY_META.find(x=>x.key===key)||CATEGORY_META[0];
+
 export function familyOf(id,meta={}){
  const sub=String(meta?.sub||'').toLowerCase(),uid=String(id).toUpperCase();
  if(/BOW/.test(uid)||sub.includes('bow'))return 'Arcos';
@@ -30,5 +59,21 @@ export function familyOf(id,meta={}){
  if(/HEAD_/.test(uid))return 'Cascos';
  if(/ARMOR_/.test(uid))return 'Armaduras';
  if(/BAG|CAPE/.test(uid))return 'Capas y bolsas';
+ if(/_POTION_/.test(uid))return 'Pociones';
+ if(/_MEAL_/.test(uid))return 'Comidas';
+ if(/_MOUNT_/.test(uid))return 'Monturas';
+ if(/_GATHERER_|_TOOL_/.test(uid))return 'Recolección';
  return 'Otros';
+}
+
+export function journalDisciplineForMaterial(id=''){
+ const uid=String(id).toUpperCase();
+ if(/CLOTH/.test(uid))return 'Imbuidor';
+ if(/LEATHER|HIDE/.test(uid))return 'Peletero';
+ if(/METALBAR|ORE/.test(uid))return 'Herrero';
+ if(/PLANKS|WOOD/.test(uid))return 'Carpintero';
+ if(/STONEBLOCK|ROCK/.test(uid))return 'Cantero';
+ if(/POTION|HERB/.test(uid))return 'Alquimista';
+ if(/MEAL|FISH|MEAT|CROP/.test(uid))return 'Cocinero';
+ return 'Artesano';
 }
