@@ -66,7 +66,7 @@ test('consolidation cannot recreate a route with no market capacity',()=>{
 test('Royal Craft exposes a real city limit persisted in scan configuration',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert(app.includes("'auto-max-cities'"));
- assert(app.includes('chooseCraftingCities(original,{maxCities:maxCraftCities,budget})')&&app.includes('chooseCraftingCities(selected,{maxCities:maxCraftCities,budget})'));
+ assert(app.includes('chooseCraftingCities(strictRoutes,{maxCities:maxCraftCities,budget})')&&app.includes('chooseCraftingCities(selected,{maxCities:maxCraftCities,budget})'));
  assert(app.includes('idFilter:id=>qcVariantIncluded('));
  assert(app.includes('craftCities:cityChoice.cities'));
 });

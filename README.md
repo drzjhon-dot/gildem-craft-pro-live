@@ -1,6 +1,6 @@
-# Gildem Craft Pro v8.6.5
+# Gildem Craft Pro v8.6.6
 
-**Novedades 8.6.5:** modo Cartera inteligente por defecto, topes de concentración aun cuando elijas usar todo, reserva opcional del 15%, inventario pendiente descontado y compras por tramos con primera lista verificable. Consulta `RELEASE_NOTES_8_6_5.md`.
+**Novedades 8.6.6:** modo fabricación de volumen, mínimo de más de 50 observaciones semanales, sin reserva automática, hasta 65 rutas y asignación ajustada a riesgo y capital disponible. Consulta `RELEASE_NOTES_8_6_6.md`.
 
 **Novedades 8.6.4:** Royal Craft permite elegir uno o varios mercados de venta (todas las ciudades marcadas por defecto), sin limitar dónde comprar materiales ni dónde fabricar. La tab Resultados conserva KPIs, fabricación, compras y botones, ocultando cinco paneles secundarios. Ver `RELEASE_NOTES_8_6_4.md`.
 

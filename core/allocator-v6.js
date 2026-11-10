@@ -41,7 +41,7 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  const minConfidence=opts.minimumConfidence||0;
  const smart=opts.intelligent===true;
  // "Usar todo" allows spending available funds, never the removal of exposure caps.
- const itemFraction=smart?Math.min(.30,Math.max(.05,f(opts.maxPerItemFraction,.12))):
+ const itemFraction=smart?Math.min(.50,Math.max(.05,f(opts.maxPerItemFraction,.12))):
    Math.min(1,Math.max(0,f(opts.maxPerItemFraction,.30)));
  const itemExposureLimit=budgetValue*itemFraction;
  const pending=opts.pendingByMarket instanceof Map?opts.pendingByMarket:new Map();
@@ -63,9 +63,9 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  const tiers=new Set(all.map(x=>String(x.id).match(/^T([4-8])_/)?.[1]).filter(Boolean));
  // A single selected Royal city or the sole BM market must not be arbitrarily
  // capped as though the player had selected several destinations.
- const cityLimit=smart&&destinations.size>1?budgetValue*Math.max(.45,1/destinations.size+.12):Infinity;
- const tierLimit=smart&&tiers.size>1?budgetValue*.60:Infinity;
- const desiredItems=Math.min(15,Math.max(8,Math.floor(f(opts.targetDifferentItems,12))));
+ const cityLimit=smart&&destinations.size>1?budgetValue*(opts.bulkMode?Math.max(.72,1/destinations.size+.20):Math.max(.45,1/destinations.size+.12)):Infinity;
+ const tierLimit=smart&&tiers.size>1?budgetValue*(opts.bulkMode?.85:.60):Infinity;
+ const desiredItems=Math.min(maxVariants,Math.max(8,Math.floor(f(opts.targetDifferentItems,12))));
  const orders=[
   all,
   [...all].sort((a,b)=>b.profit/b.capitalPerUnit-a.profit/a.capitalPerUnit),
@@ -128,7 +128,7 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
   const itemCount=new Set(rows.map(x=>x.id)).size;
   // Reward having several profitable, truly distinct items but avoid driving
   // profit below zero or manufacturing unprofitable filler stock.
-  const metric=score*(smart?(1+.04*Math.min(12,itemCount)):1);
+  const metric=score*(smart?(1+.04*Math.min(24,itemCount)):1)+(opts.bulkMode&&opts.useAll?(spent/Math.max(1,budgetValue))*Math.max(1,score)*.35:0);
   if(!best||metric>best.metric+1e-8||(Math.abs(metric-best.metric)<1e-8&&profit>best.profit))
    best={rows,metric,profit};
  }
@@ -138,6 +138,6 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  return {rows,capital:budgetValue,totalCost,totalNetCost:rows.reduce((a,x)=>a+x.qty*x.cost,0),
   totalProfit:best.profit,focusUsed:rows.reduce((a,x)=>a+x.qty*f(x.focusPerUnit),0),
   remaining:Math.max(0,budgetValue-totalCost),diversity:stats,
-  method:smart?'Cartera inteligente: objetos distintos primero; topes por artículo, tier, destino e inventario pendiente':
+  method:opts.bulkMode?'Producción de volumen: actividad semanal superior a 50; reinversión del presupuesto sin reserva; topes dinámicos, mercado e inventario pendiente':smart?'Cartera inteligente: objetos distintos primero; topes por artículo, tier, destino e inventario pendiente':
    'asignación conjunta multi-inicio; resultado aproximado'};
 }

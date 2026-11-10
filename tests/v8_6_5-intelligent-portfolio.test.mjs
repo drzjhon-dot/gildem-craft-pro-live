@@ -15,8 +15,8 @@ const candidate=(i,{city='Black Market',id=`T${4+i%3}_SHOES_PLATE_TEST${i}`,prof
 
 const a = new Intl.NumberFormat('en-US');
 
-test('reserva predeterminada del 15%; usuario puede elegir 0%; nunca supera el capital real',()=>{
- assert.deepEqual(investmentBudget(10_000_000),{gross:10_000_000,spendable:8_500_000,reserve:1_500_000,reservePercent:15});
+test('inversión sin reserva predeterminada; presupuesto real siempre acotado',()=>{
+ assert.deepEqual(investmentBudget(10_000_000),{gross:10_000_000,spendable:10_000_000,reserve:0,reservePercent:0});
  assert.equal(investmentBudget(10_000_000,{reservePercent:0}).spendable,10_000_000);
  assert.equal(investmentBudget(100,{reservePercent:85}).spendable,50);
 });
@@ -108,8 +108,8 @@ test('lista de primera compra no suma todo el objetivo y desglosa refinado por i
 test('Black y Royal enlazan reserva, pending sales y libro por tramos a planes nuevos',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
- assert.match(app,/reserveSmart:input\.reserveSmart/);
- assert.match(app,/reserveSmart:autoPrefs\.reserveSmart!==false/);
+ assert.doesNotMatch(app,/id=\"\$\{prefix\}-qc-reserve/);
+ assert.match(app,/bulkMarketCandidates\(candidates/);
  assert.match(app,/pendingUnitsByMarket\(loadPortfolios\(\)\)/);
  assert.match(app,/intelligent:true/);
  assert.match(app,/materialDepthAssessment\(constrained\.materials,books/);

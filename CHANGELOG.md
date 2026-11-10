@@ -1,3 +1,10 @@
+## v8.6.6 (2026-11-10) · Plan de volumen y uso integral del presupuesto
+
+- Elimina el control Reservar 15%; generación Black Craft / Royal Craft con 100% del capital autorizado cuando se elige usar todo.
+- Umbral de más de 50 observaciones semanales por mercado y objeto (no ventas probadas); estrés positivo; comparador de carteras verificadas frente a objetivos de compra por etapas.
+- Diversificación hasta 65 rutas y 28 objetos, exposición variable y saldo sin invertir explicado.
+- Mantiene los controles de profundidad, ciudad y pendientes.
+
 ## v8.6.5 (2026-11-10) · Cartera inteligente y límites de riesgo
 
 - Diversificación en Black y Royal; hasta 12 objetos distintos iniciales y 15 rutas, sin forzar ganancias imaginarias.

@@ -29,7 +29,7 @@ export function pendingAdjustedCapacity(route, baseCapacity, pending = new Map()
 
 // No es un límite del mercado. Define cuánto capital autoriza a inmovilizar el
 // usuario en esta cartera antes de una nueva verificación.
-export function investmentBudget(budget, { reservePercent = 15 } = {}) {
+export function investmentBudget(budget, { reservePercent = 0 } = {}) {
  const gross = positive(budget), fraction = Math.min(.50, Math.max(0, positive(reservePercent) / 100));
  const spendable = Math.floor(gross * (1 - fraction));
  return { gross, spendable, reserve: gross - spendable, reservePercent: fraction * 100 };
@@ -131,8 +131,8 @@ export function observedRotation(route){
  return {label:'Actividad lenta',tier:'slow',daily};
 }
 
-export function validateIntelligentEdits(rows = [],budget,{itemFraction=.12}={}) {
- const cap=positive(budget),eachCap=cap*Math.min(.30,Math.max(.05,positive(itemFraction)));
+export function validateIntelligentEdits(rows = [],budget,{itemFraction=.12,bulkMode=false}={}) {
+ const cap=positive(budget),eachCap=cap*Math.min(.50,Math.max(.05,positive(itemFraction)));
  const totals=new Map(),cities=new Map(),tiers=new Map();let grand=0;
  for(const row of rows||[]){
   if(!Number.isSafeInteger(Number(row.qty))||Number(row.qty)<0)return {ok:false,reason:'La cantidad debe ser un entero no negativo'};
@@ -142,11 +142,11 @@ export function validateIntelligentEdits(rows = [],budget,{itemFraction=.12}={})
   const tier=String(row.id).match(/^T([4-8])_/)?.[1];
   if(tier)tiers.set(tier,(tiers.get(tier)||0)+spend);
  }
- if(grand>cap+.001)return {ok:false,reason:'La edición consumiría silver reservado. Reduce cantidades o desactiva la reserva y genera un nuevo plan.'};
- for(const [id,spent] of totals)if(spent>eachCap+.001)return {ok:false,reason:`Exposición excesiva en ${id}: máximo 12% del capital invertible por objeto en Cartera inteligente.`};
- if(cities.size>1){const max=cap*Math.max(.45,1/cities.size+.12);
+ if(grand>cap+.001)return {ok:false,reason:'La edición supera el presupuesto. Reduce cantidades o genera un nuevo plan.'};
+ for(const [id,spent] of totals)if(spent>eachCap+.001)return {ok:false,reason:`Exposición excesiva en ${id}: máximo autorizado del capital por objeto en Cartera inteligente.`};
+ if(cities.size>1){const max=cap*(bulkMode?Math.max(.72,1/cities.size+.20):Math.max(.45,1/cities.size+.12));
   if([...cities.values()].some(spent=>spent>max+.001))return {ok:false,reason:'Demasiado capital concentrado en una ciudad Royal. Reduce cantidades o regenera el plan.'};}
- if(tiers.size>1&&[...tiers.values()].some(spent=>spent>cap*.60+.001))
+ if(tiers.size>1&&[...tiers.values()].some(spent=>spent>cap*(bulkMode?.85:.60)+.001))
   return {ok:false,reason:'Demasiado capital concentrado en un mismo tier. Reduce cantidades o regenera el plan.'};
  return {ok:true,committed:grand,remaining:Math.max(0,cap-grand)};
 }
