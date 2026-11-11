@@ -216,22 +216,3 @@ Logo solo en esquina superior izquierda y tests de branding actualizados para Ne
 
 ## v9.8.5
 - Botón de copiar movido junto al final del nombre en materiales, diarios y listas de resultados.
-
-## v9.9.1
-- Protección opcional de rotación rápida y más variedad, activa por defecto en Black/Royal. Respeta margen, capacidades, inventario y datos faltantes.
-
-## v9.9.2
-- Objetivos y estilos vuelven a influir realmente en lotes, prioridad y diversidad bajo rotación rápida.
-
-## v9.9.3 · Top Mercado
-- Historial de todas las calidades, días UTC completos y catálogo de objetos más amplio; sin cambio a planificación.
-
-## v9.9.4
-- AODP West REST: fechas UTC completas en Top Mercado, manejo de límites 429, fuente y frescura explícitas.
-- NATS West opcional: worker persistente de observación de órdenes sin duplicar las ventas ni alterar los cálculos.
-
-## v9.9.5
-- Presupuesto manual, variantes exactas, comprobación final y portafolios más diversificados.
-
-## v9.9.6
-- Unified Top Mercado/Black Craft/Royal Craft history evidence and fail-closed patient fallback.

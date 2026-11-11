@@ -3,14 +3,6 @@ export const HOUR=3600000;
 import {REGION,requireWest,AODP_WEST} from './server-policy.js';
 const prefixes={west:AODP_WEST};
 const inflight=new Map();
-// AODP: fechas de History limitan la descarga. No alteran los datos de crafting.
-export function completeUtcHistoryRange(days=7,now=Date.now()){
- const span=[1,3,7,14,30].includes(Number(days))?Number(days):7;
- const finish=Math.floor(now/86400000)*86400000;
- return {date:new Date(finish-span*86400000).toISOString().slice(0,10),
-  end_date:new Date(finish).toISOString().slice(0,10)};
-}
-
 const prefix='gildem-aodp-v2:';
 let lastCall=0;
 let coolUntil=0;
@@ -44,7 +36,7 @@ async function fetchRaw(kind,ids,region,params,force=false){requireWest(region);
   const data=await res.json();if(!Array.isArray(data)&&!(kind==='orderbook'&&data&&typeof data==='object'))throw new Error('Respuesta inesperada del servidor');return data;
 }
 async function api(kind,ids,region='west',params={},force=false){requireWest(region);if(!ids?.length)return {rows:[],cached:true,fetchedAt:Date.now()};
-  const chunks=split(ids),sets=[],timestamps=[],errors=[];let anyFetched=false,anyStale=false;
+  const chunks=split(ids),sets=[],timestamps=[],errors=[];let anyFetched=false;
   for(const chunk of chunks){const key=[region,kind,[...chunk].sort().join(','),JSON.stringify(params)].join('|');const cache=storageGet(key);
     if(!force&&cache&&Date.now()-cache.ts<(kind==='orderbook'?300000:HOUR)){sets.push(cache.rows);timestamps.push(cache.ts);continue;}
     if(inflight.has(key)){const got=await inflight.get(key);sets.push(got.rows);timestamps.push(got.ts);anyFetched ||=!got.fromCache;continue;}
@@ -54,7 +46,7 @@ async function api(kind,ids,region='west',params={},force=false){requireWest(reg
       try{const rows=await fetchRaw(kind,chunk,region,params,force);const entry={rows,ts:Date.now()};storageSet(key,entry);return {...entry,fromCache:false};}
       catch(e){if(cache)return {...cache,fromCache:true,stale:true,error:e.message};throw e;}
     })();inflight.set(key,work);
-    try{const got=await work;sets.push(got.rows);timestamps.push(got.ts);anyFetched ||=!got.fromCache;if(got.error)errors.push(got.error);if(got.stale)anyStale=true;}
+    try{const got=await work;sets.push(got.rows);timestamps.push(got.ts);anyFetched ||=!got.fromCache;if(got.error)errors.push(got.error);}
     catch(e){errors.push(`${kind}: ${e.message} (lote de ${chunk.length} objetos incompleto)`);}
     finally{inflight.delete(key);}
   }
@@ -62,19 +54,11 @@ async function api(kind,ids,region='west',params={},force=false){requireWest(reg
   // an explicit partial-coverage warning instead of losing every valid quote.
   // Missing rows remain missing and will never become artificial prices.
   if(!sets.length)throw new Error(errors[0]||'No se pudo consultar el mercado.');
-  return {rows:sets.flat(),cached:!anyFetched,fetchedAt:Math.min(...timestamps),warning:errors.length?`${errors.length} lotes con problemas: ${errors.slice(0,2).join(' · ')}`:null,partial:errors.length>0,stale:anyStale};
+  return {rows:sets.flat(),cached:!anyFetched,fetchedAt:Math.min(...timestamps),warning:errors.length?`${errors.length} lotes con problemas: ${errors.slice(0,2).join(' · ')}`:null,partial:errors.length>0};
 }
 export const prices=(ids,region='west',force=false)=>api('prices',ids,region,{locations:'Bridgewatch,Fort Sterling,Lymhurst,Martlock,Thetford,Caerleon,Brecilien,Black Market',qualities:'1'},force);
 export const history=(ids,region='west',force=false)=>api('history',ids,region,{locations:'Bridgewatch,Fort Sterling,Lymhurst,Martlock,Thetford,Caerleon,Brecilien,Black Market',qualities:'1','time-scale':'24'},force);
-// Top Mercado separado de las estimaciones de crafting: consulta TODAS las
-// calidades y solo los mercados elegidos, sin tocar history() ni los motores.
-export const historyTopMarket=(ids,region='west',force=false,cities=['Black Market'],days=7)=>
- api('history',ids,region,{locations:cities.join(','),qualities:'1,2,3,4,5','time-scale':'24',...completeUtcHistoryRange(days)},force);
 // v8.9.0 · Volumen de las calidades 2 y 3 (cada calidad es un mercado aparte).
-// Los planes utilizan EXACTAMENTE el mismo historial que Top Mercado:
-// calidad 1-5, días completos y parámetro de West idéntico.
-export const historyCraftMarket=(ids,region='west',force=false,cities=['Black Market'],days=14)=>
- historyTopMarket(ids,region,force,cities,days);
 export const historyHourly=(ids,region='west',force=false)=>api('history',ids,region,{locations:'Bridgewatch,Fort Sterling,Lymhurst,Martlock,Thetford,Caerleon,Brecilien,Black Market',qualities:'1','time-scale':'1'},force);
 // Eventos confirmados del juego (festivities). 404 = sin eventos confirmados.
 export async function festivities(region='west',force=false){

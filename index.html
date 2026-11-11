@@ -7,8 +7,8 @@
   <meta name="description" content="Planificador de crafting Royal y Mercado Negro para Albion Online. Ramas, bonos, Focus, presupuesto, diarios y listas de compras.">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=9.9.6">
-  <title>Gildem Albion Lab · Craft Pro v9.9.6</title>
+  <link rel="stylesheet" href="./styles.css?v=9.9.0">
+  <title>Gildem Albion Lab · Craft Pro v9.9.0</title>
 </head>
 <body data-page="crafting">
 <div class="app-shell">
@@ -51,7 +51,7 @@
   if(text)text.textContent=message||'No se pudo iniciar el panel. Puedes reparar la carga sin borrar tus inversiones.';
   const title=boot.querySelector('h2');if(title)title.textContent='No se pudo iniciar Gildem Craft Pro';
  }
- // v9.9.6 · Diagnóstico: además del aviso, averigua QUÉ módulo falló. Un error de
+ // v9.9.0 · Diagnóstico: además del aviso, averigua QUÉ módulo falló. Un error de
  // «export» casi siempre significa un despliegue mezclado (un archivo de core/ de
  // una versión anterior junto a un app.js nuevo).
  let probed=false;
@@ -74,10 +74,10 @@
   button.disabled=true;button.textContent='Limpiando caché…';
   try{if('serviceWorker' in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(x=>x.unregister()));}}catch{}
   try{if('caches' in window){const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('gildem-craft-pro-')).map(k=>caches.delete(k)));}}catch{}
-  const url=new URL(window.location.href);url.searchParams.set('carga','9.9.6');window.location.replace(url.toString());
+  const url=new URL(window.location.href);url.searchParams.set('carga','9.9.0');window.location.replace(url.toString());
  });
 })();
 </script>
-<script type="module" src="./app.js?v=9.9.6"></script>
+<script type="module" src="./app.js?v=9.9.0"></script>
 </body>
 </html>

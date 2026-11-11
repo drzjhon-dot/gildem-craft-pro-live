@@ -5,7 +5,7 @@ import {routeProfitAtQuantity} from './depth.js';
 import {prudentListingCapacity,liquidityWeight} from './market-volume.js';
 import {listingCapacity} from './demand-first.js';
 import {allocateSmartPortfolio} from './optimizer.js';
-import {resolveStyle,impactCapacity,horizonVolumeUnits,rotationCapacity,FAST_ROTATION,rotationStyleProfile,DEFAULT_STYLE} from './market-impact.js';
+import {resolveStyle,impactCapacity,horizonVolumeUnits} from './market-impact.js';
 import {needWeight} from './market-mechanics.js';
 import {pendingAdjustedCapacity,portfolioDiversityStats} from './intelligent-portfolio.js';
 const f=(x,d=0)=>Number.isFinite(Number(x))?Number(x):d;
@@ -36,24 +36,6 @@ function value(x,goal){
  return p*trust*slippage*risk*personal*turnover;
 }
 export function routePriority(route,goal='balanced'){return value(route,goal);}
-// Explorar tiers y encantamientos intercalados, sin introducir nuevas rutas:
-// todas pasan los mismos filtros de margen y actividad antes de distribuir capital.
-export function diversifiedRouteOrder(routes=[],{by='tier',priority=x=>f(x.profit)/Math.max(1,f(x.capitalPerUnit))}={}) {
- const groups=new Map();
- for(const route of routes){
-  const tier=Number(String(route.id||'').match(/^T([1-8])_/)?.[1]||0);
-  const ench=Number(String(route.id||'').split('@')[1]||0);
-  const k=by==='enchant'?ench+'|'+tier:tier+'|'+ench;
-  if(!groups.has(k))groups.set(k,[]);
-  groups.get(k).push(route);
- }
- const lanes=[...groups.values()].map(rows=>rows.sort((a,b)=>priority(b)-priority(a)));
- lanes.sort((a,b)=>priority(b[0])-priority(a[0]));
- const result=[];let at=0;
- while(result.length<routes.length){let any=false;for(const lane of lanes){if(lane[at]){result.push(lane[at]);any=true;}}if(!any)break;at++;}
- return result;
-}
-
 // v9.1.0 · Lote mínimo útil. En el Mercado Negro un lote de 1 no compensa el viaje
 // a Caerleon: o la ruta recibe una parte real de lo que su mercado absorbe, o no
 // entra en el plan. En Royal se permite 1 unidad (se publica y se espera).
@@ -84,7 +66,6 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  const capFraction=opts.capFraction??.06,unknownCap=opts.unknownCap??1,goal=opts.goal||'balanced',horizonDays=opts.horizonDays??14;
  const minConfidence=opts.minimumConfidence||0;
  const smart=opts.intelligent===true;
- const rotationGuard=opts.rotationGuard===true;
  // "Usar todo" allows spending available funds, never the removal of exposure caps.
  const itemFraction=smart?Math.min(.50,Math.max(.05,f(opts.maxPerItemFraction,.12))):
    Math.min(1,Math.max(0,f(opts.maxPerItemFraction,.30)));
@@ -95,7 +76,6 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  if(!(budgetValue>0)||focusLimit<0)return empty;
  const sat=opts.saturation!=null&&opts.saturation!==false?resolveStyle(opts.saturation):null;
  const fameWeight=Math.max(0,Math.min(1,f(opts.fameWeight)));
- const rotationStyle=rotationStyleProfile(sat||DEFAULT_STYLE);
  const fameOf=fameFactorFor(candidates,fameWeight);
  const val=x=>value(x,goal)*fameOf(x);
  const valid=(candidates||[]).filter(x=>x?.id&&x?.city&&f(x.profit)>0&&f(x.capitalPerUnit)>0&&f(x.cost)>0&&f(x.confidence?.score)>=minConfidence);
@@ -118,7 +98,6 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
     base=Math.min(base,impactCapacity(x,{horizonDays,style}));
    }
   }
-  if(rotationGuard)base=Math.min(base,rotationCapacity(x,{days:horizonDays,share:rotationStyle.share}));
   const capacity=pendingAdjustedCapacity(x,base,pending);
   return {...x,saturation:saturation||x.saturation||null,intelligentCapacity:capacity,minLot:minUsefulLot(x,capacity),pendingUnits:pending.get(x.id+'|'+x.city)||0};
  }).filter(x=>x.intelligentCapacity>0);
@@ -128,23 +107,13 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  // objeto ya no es un porcentaje plano del presupuesto: cada ruta recibe una cuota
  // del capital según cuánto capital puede absorber su mercado (capacidad x coste).
  const demandWeighted=opts.bulkMode===true&&opts.demandWeighted!==false;
- // La versión anterior ponderaba solo capacidad y demanda: podía devolver
- // cantidades IDÉNTICAS para los tres estilos incluso con precios distintos.
- // Ahora Prudente distribuye según actividad y Agresivo concentra (siempre
- // dentro del techo de rotación) hacia las oportunidades mejor puntuadas.
- const priorities=all.map(x=>value(x,goal)).filter(v=>v>0).sort((a,b)=>a-b);
- const medianPriority=priorities[Math.floor(priorities.length/2)]||1;
- const priorityPower=rotationGuard?(sat?.id==='aggressive'?1.8:sat?.id==='balanced'?.7:0):0;
- const capitalAbsorbed=x=>{
-  const relative=Math.max(.35,Math.min(2.8,value(x,goal)/medianPriority));
-  return x.intelligentCapacity*x.capitalPerUnit*fameOf(x)*Math.pow(relative,priorityPower);
- };
+ const capitalAbsorbed=x=>x.intelligentCapacity*x.capitalPerUnit*fameOf(x);
  const totalAbsorbed=all.reduce((a,x)=>a+capitalAbsorbed(x),0)||1;
  const routeShare=new Map(all.map(x=>[x,capitalAbsorbed(x)/totalAbsorbed]));
  // Con presupuesto escaso no caben todos: una ruta cuya parte proporcional no llega a
  // su lote mínimo útil sale del reparto y su capital pasa a las demás. Se repite
  // hasta que todas las que quedan reciben un lote real. Siempre queda al menos una.
- if(demandWeighted&&!rotationGuard){
+ if(demandWeighted){
   let pool=[...all];
   for(let round=0;round<all.length;round++){
    const sum=pool.reduce((a,x)=>a+capitalAbsorbed(x),0)||1;
@@ -163,11 +132,7 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  }
  const itemShare=new Map();
  for(const x of all)itemShare.set(x.id,(itemShare.get(x.id)||0)+routeShare.get(x));
- // No elevar exposición al 60% para gastar todo: diversidad ANTES que
- // inversión forzada. Las cantidades siguen sujetas a demanda y beneficio.
- const goalExposure= fameWeight>=.75?.12 : fameWeight>=.25?.16 : Infinity;
- const itemFractionFor=id=>rotationGuard?Math.min(rotationStyle.maxItemFraction,itemFraction,goalExposure):
-  demandWeighted?Math.max(itemFraction,Math.min(.60,(itemShare.get(id)||0)*1.5)):itemFraction;
+ const itemFractionFor=id=>demandWeighted?Math.max(itemFraction,Math.min(.60,(itemShare.get(id)||0)*1.5)):itemFraction;
  const destinations=new Set(all.map(x=>x.city));
  const tiers=new Set(all.map(x=>String(x.id).match(/^T([4-8])_/)?.[1]).filter(Boolean));
  // A single selected Royal city or the sole BM market must not be arbitrarily
@@ -177,17 +142,12 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  // arbitrary 72% destination ceiling can leave silver idle with no market basis.
  const tierLimit=smart&&!opts.bulkMode&&tiers.size>1?budgetValue*.60:Infinity;
  // Likewise, never force 15% cash idle just because most viable items share T4.
- // Silver: profundidad en las rutas fuertes; fama: mayor abanico de recetas
- // rentables. No se fuerza un mínimo de objetos si no existen rutas verificadas.
- const objectiveTarget=fameWeight>=.75?34:fameWeight>=.25?22:12;
- const desiredItems=Math.min(maxVariants,Math.max(1,Math.floor(f(opts.targetDifferentItems,12)),objectiveTarget));
+ const desiredItems=Math.min(maxVariants,Math.max(8,Math.floor(f(opts.targetDifferentItems,12))));
  const orders=[
   all,
   [...all].sort((a,b)=>b.profit/b.capitalPerUnit-a.profit/a.capitalPerUnit),
   [...all].sort((a,b)=>b.profit-a.profit),
-  [...all].sort((a,b)=>f(b.demandDaily,b.activity?.observedDaily)-f(a.demandDaily,a.activity?.observedDaily)),
-  diversifiedRouteOrder(all,{by:'tier',priority:val}),
-  diversifiedRouteOrder(all,{by:'enchant',priority:val})
+  [...all].sort((a,b)=>f(b.demandDaily,b.activity?.observedDaily)-f(a.demandDaily,a.activity?.observedDaily))
  ];
  if(fameWeight>0)orders.push([...all].sort((a,b)=>f(b.craftFame)/b.capitalPerUnit-f(a.craftFame)/a.capitalPerUnit));
  let best=null;
@@ -260,11 +220,7 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
   const itemCount=new Set(rows.map(x=>x.id)).size;
   // Reward having several profitable, truly distinct items but avoid driving
   // profit below zero or manufacturing unprofitable filler stock.
-  const selectedTiers=new Set(rows.map(x=>String(x.id).match(/^T([1-8])_/)?.[1]).filter(Boolean)).size;
-  const selectedEnchantments=new Set(rows.map(x=>Number(String(x.id).split('@')[1]||0))).size;
-  const breadthReward=fameWeight>0?1+Math.min(.10,(selectedTiers-1)*.012+(selectedEnchantments-1)*.008)*fameWeight:1;
-  const metric=score*(smart?(1+(rotationGuard?.12:.04)*Math.min(24,itemCount)):1)*breadthReward
-   +(opts.bulkMode&&opts.useAll&&!rotationGuard?(spent/Math.max(1,budgetValue))*Math.max(1,score)*.35:0);
+  const metric=score*(smart?(1+.04*Math.min(24,itemCount)):1)+(opts.bulkMode&&opts.useAll?(spent/Math.max(1,budgetValue))*Math.max(1,score)*.35:0);
   if(!best||metric>best.metric+1e-8||(Math.abs(metric-best.metric)<1e-8&&profit>best.profit))
    best={rows,metric,profit};
  }
@@ -274,6 +230,6 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  return {rows,capital:budgetValue,totalCost,totalNetCost:rows.reduce((a,x)=>a+x.qty*x.cost,0),
   totalProfit:best.profit,focusUsed:rows.reduce((a,x)=>a+x.qty*f(x.focusPerUnit),0),
   remaining:Math.max(0,budgetValue-totalCost),diversity:stats,totalFame:rows.reduce((a,x)=>a+f(x.fameTotal),0),fameWeight,
-  method:rotationGuard?'Rotación rápida: máximo 7 días de actividad observable, 8% de cuota por ruta y 18% del presupuesto por objeto; diversificación y stock pendiente':opts.bulkMode?'Producción de volumen: actividad semanal superior a 50; reinversión del presupuesto sin reserva; topes dinámicos, mercado e inventario pendiente':smart?'Cartera inteligente: objetos distintos primero; topes por artículo, tier, destino e inventario pendiente':
+  method:opts.bulkMode?'Producción de volumen: actividad semanal superior a 50; reinversión del presupuesto sin reserva; topes dinámicos, mercado e inventario pendiente':smart?'Cartera inteligente: objetos distintos primero; topes por artículo, tier, destino e inventario pendiente':
    'asignación conjunta multi-inicio; resultado aproximado'};
 }

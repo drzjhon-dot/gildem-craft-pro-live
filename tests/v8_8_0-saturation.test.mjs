@@ -83,7 +83,7 @@ test('una caída reciente de actividad reduce el volumen del horizonte; una subi
 test('la interfaz ofrece estilo del plan, usa el horizonte como días hasta el próximo craft y muestra la cuota',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert(app.includes("Estilo del plan"));
- assert(app.includes('Días de planificación (ventas no garantizadas)'));
+ assert(app.includes('Días para vender el lote'));
  assert(app.includes('saturation:style'));
  assert(app.includes('saturationSummary(rows)'));
  const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');

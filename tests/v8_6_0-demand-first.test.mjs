@@ -63,7 +63,7 @@ test('la interfaz conserva valor seleccionado y muestra el motivo de cantidades'
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert(app.includes("chosenDemandIds(ids,900)"));
  assert(app.includes("chosenDemandIds([...new Set([...ids,...scanRefining.map(x=>x.id)])],900)"));
- assert(app.includes('QC_HORIZON=[3,5,7,14,30]'));
+ assert(app.includes('QC_HORIZON=[7,14,30]'));
  assert(app.includes("demandSource||'historial'"));
  assert(app.includes("saveExternalMarketVolume()"));
  assert(!app.includes('const marketHistoryIds=marketAuditIds(ids,preferred'));
