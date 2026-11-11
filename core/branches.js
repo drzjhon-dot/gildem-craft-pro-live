@@ -114,6 +114,7 @@ BRANCHES.push(
  {key:'food_avalon',label:'Comidas avalonianas',city:'Caerleon',test:byId(/^T[1-8]_MEAL_.*_AVALON(?:@|$)/),market:'royal'}
 );
 export function branchByKey(key){return BRANCHES.find(b=>b.key===key)||BRANCHES[0];}
+import {diversifiedRecipeIds} from './craft-plan-controls.js';
 export function recipesForBranch(recipes,key,minTier=4,maxTier=7,maxEnchant=1,limit=110,city='auto',itemFilter=null){
   const b=branchByKey(key);
   const ids=Object.keys(recipes).filter(id=>{
@@ -122,11 +123,8 @@ export function recipesForBranch(recipes,key,minTier=4,maxTier=7,maxEnchant=1,li
     const tier=Number(m[1]),ench=Number(id.split('@')[1]||0);
     return tier>=minTier&&tier<=maxTier&&ench<=maxEnchant&&recipes[id]?.materials?.length&&!!recipes[id]?.city&&(city==='auto'||recipes[id].city===city);
   });
-  // Balance tiers so T4 variants cannot hide all T6/T7 recipes under an API size limit.
-  const lanes=new Map();for(const id of ids){const t=Number(id.match(/^T(\d)/)[1]);const a=lanes.get(t)||[];a.push(id);lanes.set(t,a);}
-  const result=[],active=[...lanes.keys()].sort();let index=0;
-  while(result.length<limit&&active.length){for(let i=active.length-1;i>=0;i--){const arr=lanes.get(active[i]);if(index<arr.length)result.push(arr[index]);else active.splice(i,1);if(result.length>=limit)break;}index++;}
-  return result;
+  // Cada carril T/encantamiento recibe un turno antes de truncar por API.
+  return diversifiedRecipeIds(ids,{limit});
 }
 
 // Categorías visuales: orden lógico y búsqueda sin alterar los IDs de las ramas.

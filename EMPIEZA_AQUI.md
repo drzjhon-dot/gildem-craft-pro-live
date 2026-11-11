@@ -1,3 +1,5 @@
+**Versión actual: Gildem Albion Lab v9.9.0-top.4**. Suba el contenido COMPLETO del ZIP al repositorio de GitHub, incluyendo `core/`, `tests/`, `scripts/`, `netlify/` y `assets/`. Netlify ejecuta `npm run build`. Lea `COMPROBAR_PLANES_TOP_4.md` para validar las configuraciones y límites de las propuestas.
+
 # Gildem Albion Lab · v9.9.0-top.3
 
 Este ZIP contiene la prueba **AODP como única fuente de mercado**. No necesitas instalar nada extra en GitHub: reemplaza todos los archivos, haz Commit y Netlify ejecutará `npm run build`.

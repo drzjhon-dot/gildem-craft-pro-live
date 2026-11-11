@@ -10,7 +10,8 @@ export function observedWeeklyActivity(route){
   return {units:finite(route.demandDaily)*7,source:route.demandSource||'Importación manual West',provisional:true};
  const recent=route.activity7;
  if(recent?.observations>0&&finite(recent.count)!==null)
-  return {units:finite(recent.count),source:'AODP West · observaciones últimos 7 días',provisional:true};
+  return {units:finite(recent.count)*Math.min(1.46,Math.max(1,finite(route.qualityFactor)||1)),
+   source:'AODP West · actividad de 7 días ajustada con calidades (estimación, no ventas)',provisional:true};
  const daily=finite(route.demandDaily??(route.activity?.observations>0?route.activity.observedDaily:null));
  if(daily!==null)return {units:daily*7,source:'AODP West · promedio histórico extrapolado a 7 días',provisional:true};
  return null;

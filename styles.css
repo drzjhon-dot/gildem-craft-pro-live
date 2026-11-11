@@ -1097,3 +1097,21 @@ body.gcp-results-active .workspace{
 .gcp-cal-origin p{margin:6px 0;font-weight:650;color:#f1e5c9;font-size:12px}
 .gcp-cal-origin small{display:block;color:#beaeca;line-height:1.5;font-size:11px}
 .gcp-cal-transfer-inline{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:12px;padding:12px;border:1px solid #b1895366;border-radius:12px;color:#f4dca8;background:#3c30272d}
+
+/* v9.9.0-top.4 · Cabecera del ranking y alineación con su propia cuadrícula. */
+.gcp-top-scroll{max-width:100%;overflow-x:auto;overflow-y:visible;scrollbar-width:thin;border:1px solid color-mix(in srgb,var(--line) 65%,transparent);border-radius:13px}
+.gcp-top-list{min-width:1120px;overflow:visible}
+.gcp-top-list>.gx-top-row{grid-template-columns:42px minmax(270px,2fr) minmax(158px,1fr) 126px 116px 120px 168px;column-gap:12px;align-items:center}
+.gcp-top-list>.gx-head{font-size:12px;letter-spacing:0;text-transform:none;white-space:nowrap;line-height:1.3}
+.gcp-top-list>.gx-head>span{min-width:0;display:block}
+.gcp-top-list>.gx-head>span:nth-child(4),.gcp-top-list>.gx-head>span:nth-child(5),.gcp-top-list>.gx-head>span:nth-child(6){text-align:right}
+.gcp-top-list>.gx-top-row>.gx-cell-num{text-align:right;align-items:flex-end;min-width:0}
+.gcp-top-list>.gx-top-row>.gx-cell-plan{display:flex;justify-content:flex-end}
+.gcp-top-list>.gx-top-row>.gx-cell-plan .btn{font-size:11px;white-space:nowrap}
+.gcp-top-list .gx-item{min-width:0}
+.qc-budget-field .qc-options{margin-bottom:10px}
+.qc-budget-label{display:block;font-size:12px;font-weight:650;color:var(--mist);margin:7px 0 5px}
+.qc-budget-field input[type=number]{width:100%;max-width:330px;border:1px solid var(--line);border-radius:10px;background:#100c1c;color:var(--parch);min-height:41px;padding:9px 12px;font:inherit}
+.qc-budget-field input[type=number]:invalid{border-color:#d96a75;outline-color:#d96a75}
+.qc-budget-field .qc-budget-note{display:block;color:var(--mist);font-size:11px;margin-top:7px}
+@media(max-width:860px){.gcp-top-list{min-width:0}.gcp-top-list>.gx-top-row.gx-head{display:none}.gcp-top-list>.gx-row.gx-top-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.gcp-top-list>.gx-row.gx-top-row .gx-cell-num{text-align:right}}

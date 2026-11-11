@@ -86,10 +86,10 @@ test('UI elimina el checkbox 15%; usa todo no tiene parada de 10 productos; resu
  assert(!app.includes('qc-reserve'));
  assert(!app.includes('Reservar 15%'));
  assert(app.includes("reservePercent:0"));
- assert(app.includes('maxVariants:65'));
+ assert(app.includes('maxVariants:80'));
  assert(app.includes("invest:autoPrefs.invest||'all'"));
  assert(!app.includes('safeUnits>=10'));
  assert(app.includes('patientFunds>safeFunds*1.15'));
  assert(app.includes('current.fill?.percent'));
- assert(app.includes('bulkMarketCandidates(candidates'));
+ assert(app.includes('bulkMarketCandidates(eligible'));
 });

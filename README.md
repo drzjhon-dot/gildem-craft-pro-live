@@ -1,5 +1,8 @@
 # Versión actual: Gildem Albion Lab v9.9.0-top.2
 
+**Novedad v9.9.0-top.4:** los generadores permiten presupuesto manual, exploran combinaciones tier/encantamiento de manera más equilibrada, validan las restricciones sobre el plan final y ajustan la distribución por estilo/objetivo. La tabla Top Mercado alinea todas sus columnas. Consulte [COMPROBAR_PLANES_TOP_4.md](COMPROBAR_PLANES_TOP_4.md) para las pruebas de regresión y limitaciones de los datos.
+
+
 ## Experimento v9.9.0-top.3 · Mercado exclusivamente AODP West
 
 **Única fuente automática y manual admitida para precios, cotizaciones, historial, actividad y profundidad de órdenes: [Albion Online Data Project (West)](https://west.albion-online-data.com/api-docs).** Las importaciones manuales de rankings de terceros se han desactivado y los respaldos antiguos con esos rankings no intervienen en los planes.

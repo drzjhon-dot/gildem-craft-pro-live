@@ -29,17 +29,17 @@ export const CRAFT_QUALITY_SHARE=Object.freeze([.689,.25,.05,.01,.001]);
 //   todo el lote cabe en el total             →        N ≤ V1+V2+V3
 export function addressableDemand(normalDaily,higher=null,share=CRAFT_QUALITY_SHARE[0]){
  if(normalDaily===null||normalDaily===undefined)return {daily:null,factor:1,byQuality:null};
- const v1=n(normalDaily),v2=n(higher?.[2]),v3=n(higher?.[3]);
- if(!(v1>0)||!(v2+v3>0))return {daily:v1,factor:1,byQuality:{1:v1,2:v2,3:v3}};
- const daily=Math.min(v1/Math.max(.5,share),v1+v2+v3);
- return {daily,factor:daily/v1,byQuality:{1:v1,2:v2,3:v3}};
+ const v1=n(normalDaily),v2=n(higher?.[2]),v3=n(higher?.[3]),v4=n(higher?.[4]),v5=n(higher?.[5]);
+ if(!(v1>0)||!(v2+v3+v4+v5>0))return {daily:v1,factor:1,byQuality:{1:v1,2:v2,3:v3,4:v4,5:v5}};
+ const daily=Math.min(v1/Math.max(.5,share),v1+v2+v3+v4+v5);
+ return {daily,factor:daily/v1,byQuality:{1:v1,2:v2,3:v3,4:v4,5:v5}};
 }
 // Volumen diario (14 días) de las calidades 2 y 3 por «objeto|ciudad».
 export function qualityVolumeIndex(rows=[],days=14,now=Date.now()){
  const out=new Map();
  for(const r of rows||[]){
   const q=Number(r?.quality);const city=r?.location||r?.city;
-  if(!r?.item_id||!city||![2,3].includes(q))continue;
+  if(!r?.item_id||!city||![2,3,4,5].includes(q))continue;
   const daily=historyMetrics(Array.isArray(r.data)?r.data:[],days,now).observedDaily;
   const key=r.item_id+'|'+city,entry=out.get(key)||{};
   entry[q]=Math.max(n(entry[q]),n(daily));out.set(key,entry);

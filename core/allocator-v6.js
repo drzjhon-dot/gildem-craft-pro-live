@@ -77,7 +77,21 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  const sat=opts.saturation!=null&&opts.saturation!==false?resolveStyle(opts.saturation):null;
  const fameWeight=Math.max(0,Math.min(1,f(opts.fameWeight)));
  const fameOf=fameFactorFor(candidates,fameWeight);
- const val=x=>value(x,goal)*fameOf(x);
+ // El objetivo MÁS FAMA debe comparar fama/stock invertido, no solo multiplicar
+ // la prioridad de silver por un factor leve (de lo contrario dos botones dan
+ // planes prácticamente idénticos aunque una ruta dé mucha más fama).
+ const median=a=>{const v=[...a].filter(x=>x>0&&Number.isFinite(x)).sort((x,y)=>x-y);return v.length?v[Math.floor(v.length/2)]:1;};
+ const fameRate=x=>f(x.craftFame)/Math.max(1,f(x.capitalPerUnit,1));
+ const rateMedian=median((candidates||[]).map(fameRate));
+ const financialMedian=median((candidates||[]).map(x=>value(x,goal)));
+ const val=x=>{
+  const financial=value(x,goal);
+  if(fameWeight===0)return financial;
+  if(!(f(x.craftFame)>0))return financial*.25;
+  const relative=Math.max(.10,Math.min(8,fameRate(x)/Math.max(1e-8,rateMedian)));
+  const famous=financialMedian*Math.sqrt(Math.max(.05,financial/Math.max(1e-8,financialMedian)))*relative;
+  return financial*(1-.78*fameWeight)+famous*(.78*fameWeight);
+ };
  const valid=(candidates||[]).filter(x=>x?.id&&x?.city&&f(x.profit)>0&&f(x.capitalPerUnit)>0&&f(x.cost)>0&&f(x.confidence?.score)>=minConfidence);
  // Never buy the same listing book twice through different production cities.
  const byRoute=new Map();for(const x of valid){const key=x.id+'|'+x.city+'|'+x.mode;
@@ -132,7 +146,7 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  }
  const itemShare=new Map();
  for(const x of all)itemShare.set(x.id,(itemShare.get(x.id)||0)+routeShare.get(x));
- const itemFractionFor=id=>demandWeighted?Math.max(itemFraction,Math.min(.60,(itemShare.get(id)||0)*1.5)):itemFraction;
+ const itemFractionFor=id=>demandWeighted?Math.max(itemFraction,Math.min(opts.diversityLanes?.32:.60,(itemShare.get(id)||0)*1.5)):itemFraction;
  const destinations=new Set(all.map(x=>x.city));
  const tiers=new Set(all.map(x=>String(x.id).match(/^T([4-8])_/)?.[1]).filter(Boolean));
  // A single selected Royal city or the sole BM market must not be arbitrarily
@@ -142,7 +156,7 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  // arbitrary 72% destination ceiling can leave silver idle with no market basis.
  const tierLimit=smart&&!opts.bulkMode&&tiers.size>1?budgetValue*.60:Infinity;
  // Likewise, never force 15% cash idle just because most viable items share T4.
- const desiredItems=Math.min(maxVariants,Math.max(8,Math.floor(f(opts.targetDifferentItems,12))));
+ const desiredItems=Math.min(maxVariants,Math.max(1,Math.floor(f(opts.targetDifferentItems,12))));
  const orders=[
   all,
   [...all].sort((a,b)=>b.profit/b.capitalPerUnit-a.profit/a.capitalPerUnit),
@@ -177,9 +191,16 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
    return n;
   };
   if(smart){
-   // Phase one: seed a broad range of different items BEFORE larger batches.
+   // Phase one: recorrer combinaciones T/encantamiento con margen y actividad.
+   const seedOrder=opts.diversityLanes?(()=>{
+    const lanes=new Map();for(const x of ordered){const match=String(x.id).match(/^T([1-8])_.*?(?:@([1-4]))?$/);
+     const key=match?`${match[1]}.${match[2]||0}`:'?';const group=lanes.get(key)||[];group.push(x);lanes.set(key,group);}
+    const groups=[...lanes.values()].sort((a,b)=>val(b[0])-val(a[0]));const pool=[];
+    let index=0;while(index<ordered.length){let added=0;for(const group of groups)if(group[index]){pool.push(group[index]);added++;}if(!added)break;index++;}
+    return pool;
+   })():ordered;
    const seeded=new Set();
-   for(const x of ordered){
+   for(const x of seedOrder){
     if(seeded.size>=desiredItems||counts.size>=maxVariants)break;
     if(seeded.has(x.id))continue;
     if(take(x,1))seeded.add(x.id);
@@ -218,9 +239,10 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
   const score=rows.reduce((a,x)=>a+x.qty*val(x),0);
   const profit=rows.reduce((a,x)=>a+x.totalProfit,0);
   const itemCount=new Set(rows.map(x=>x.id)).size;
+  const variantCount=new Set(rows.map(x=>{const m=String(x.id).match(/^T([1-8])_.*?(?:@([1-4]))?$/);return m?m[1]+'.'+(m[2]||0):'?' })).size;
   // Reward having several profitable, truly distinct items but avoid driving
   // profit below zero or manufacturing unprofitable filler stock.
-  const metric=score*(smart?(1+.04*Math.min(24,itemCount)):1)+(opts.bulkMode&&opts.useAll?(spent/Math.max(1,budgetValue))*Math.max(1,score)*.35:0);
+  const metric=score*(smart?(1+.04*Math.min(24,itemCount)+Math.min(.30,Number(opts.diversityWeight||0)*Math.max(0,variantCount-1))):1)+(opts.bulkMode&&opts.useAll?(spent/Math.max(1,budgetValue))*Math.max(1,score)*.20:0);
   if(!best||metric>best.metric+1e-8||(Math.abs(metric-best.metric)<1e-8&&profit>best.profit))
    best={rows,metric,profit};
  }

@@ -2,13 +2,13 @@ import {access,readFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import assert from 'node:assert/strict';
 const must=['package.json','netlify.toml','index.html','app.js','styles.css',
-'core/catalog.js','core/special-recipes.js','core/market-discovery.js','core/demand-first.js','core/market-proof.js','core/external-demand.js','core/royal-sale-markets.js','core/server-policy.js','core/west-ai-brief.js','core/procurement-liquidity.js','core/high-volume.js','core/bm-listing-prices.js','scripts/build.mjs',
+'core/craft-plan-controls.js','core/catalog.js','core/special-recipes.js','core/market-discovery.js','core/demand-first.js','core/market-proof.js','core/external-demand.js','core/royal-sale-markets.js','core/server-policy.js','core/west-ai-brief.js','core/procurement-liquidity.js','core/high-volume.js','core/bm-listing-prices.js','scripts/build.mjs',
 'netlify/functions/health.mjs','netlify/functions/market.mjs',
 'netlify/functions/recipes.mjs','netlify/functions/catalog.mjs','netlify/functions/item-image.mjs','netlify/functions/market-references.mjs',
 'netlify/functions/hourly-prices.mjs','netlify/functions/snapshot.mjs'];
 for(const path of must)await access(join(process.cwd(),path));
 const pkg=JSON.parse(await readFile('package.json','utf8'));
-assert.match(pkg.version,/^9\.9\.0-top\.3$/,'La distribución debe declarar la versión 9.9.0-top.3');
+assert.match(pkg.version,/^9\.9\.0-top\.4$/,'La distribución debe declarar la versión 9.9.0-top.4');
 // Prevent the regression that sent only test files to GitHub while keeping
 // app.js/index.html on an older version. These checks run in every Netlify build.
 const html=await readFile('index.html','utf8');

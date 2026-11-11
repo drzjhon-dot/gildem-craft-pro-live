@@ -4,6 +4,7 @@ import {itemTier,itemEnch,craftCost,craftProfit,craftingReturnRate,quote} from '
 import {specialType,blackMarketEligible} from './special-recipes.js';
 import {scenarioProfit} from './optimizer.js';
 import {itemMatches} from './item-selection.js';
+import {diversifiedRecipeIds} from './craft-plan-controls.js';
 import {compareRefining} from './refining-integration.js';
 import {materialPurchaseCities} from './material-cities.js';
 
@@ -25,7 +26,7 @@ export function selectUniversalRecipes(recipes,branches,{categories=['armor','we
  }
  const buckets=[...offered.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
  // Round-robin across branches, then tiers, to prevent T4 armors dominating the scan.
- for(const [,ids] of buckets){ids.sort((a,b)=>itemEnch(a)-itemEnch(b)||itemTier(a)-itemTier(b)||a.localeCompare(b));}
+ for(const [,ids] of buckets){const balanced=diversifiedRecipeIds(ids);ids.splice(0,ids.length,...balanced);}
  const chosen=[],used=new Set();let pass=0;
  while(chosen.length<limit){let progress=false;
   for(const [branch,ids] of buckets){const id=ids[pass];if(!id||used.has(id))continue;

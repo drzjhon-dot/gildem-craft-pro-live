@@ -60,7 +60,7 @@ test('las casillas permiten tiers y encantamientos NO consecutivos',()=>{
  assert.equal(api.qcVariantIncluded('auto','T5_MAIN_AXE@2','axes'),true);
  assert.equal(api.qcVariantIncluded('auto','T8_MAIN_AXE@4','axes'),true);
  assert.equal(api.qcVariantIncluded('auto','T6_MAIN_AXE@4','axes'),false);
- assert.equal(api.qcVariantIncluded('auto','T5_POTION_HEAL','alchemy'),true);
+ assert.equal(api.qcVariantIncluded('auto','T5_POTION_HEAL','alchemy'),false);
  assert(api.qcChoices('craft','budget',[[5000000,'5M'],[10000000,'10M']],10000000).includes('data-qc-single="craft-budget"'));
  assert.deepEqual(Array.from(api.qcArray([1,3,3,9],[1,2,3,4],[1,2])),[1,3]);
 });

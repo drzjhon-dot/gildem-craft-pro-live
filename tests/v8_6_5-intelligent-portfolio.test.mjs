@@ -109,7 +109,7 @@ test('Black y Royal enlazan reserva, pending sales y libro por tramos a planes n
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
  assert.doesNotMatch(app,/id=\"\$\{prefix\}-qc-reserve/);
- assert.match(app,/bulkMarketCandidates\(candidates/);
+ assert.match(app,/bulkMarketCandidates\(eligible/);
  assert.match(app,/pendingUnitsByMarket\(loadPortfolios\(\)\)/);
  assert.match(app,/intelligent:true/);
  assert.match(app,/materialDepthAssessment\(constrained\.materials,books/);

@@ -229,3 +229,10 @@ Logo solo en esquina superior izquierda y tests de branding actualizados para Ne
 - AODP West exclusivo para precios, historial, profundidad y demanda del planificador.
 - Inhabilitada estadística externa importada; retirados verificadores de otras webs de mercado.
 - Se conservan recetas y traducciones del juego como datos de crafting.
+
+## v9.9.0-top.4 — Planes diversificados, filtros estrictos y Top Mercado
+- Presupuesto manual exacto en ambos generadores.
+- Exploración balanceada entre tiers y encantamientos y validación posterior a la asignación.
+- Objetivos Silver/fama diferenciados con límites de saturación y sin saltarse la rentabilidad.
+- Tabla de Top Mercado alineada en escritorio y móvil.
+- Pruebas con escenarios sintéticos y regresión de Netlify.

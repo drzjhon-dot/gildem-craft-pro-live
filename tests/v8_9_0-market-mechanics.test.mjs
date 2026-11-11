@@ -30,14 +30,15 @@ test('demanda atendible: lo Normal limita el lote y las calidades 2-3 lo amplía
  assert(Math.abs(many.daily-100/.689)<1e-9&&many.factor<1.46);
  assert.equal(addressableDemand(0,{2:500}).daily,0,'sin demanda Normal no se puede colocar el 69 % del lote');
 });
-test('índice de calidades: solo 2 y 3, por objeto y ciudad, media diaria de 14 días',()=>{
+test('índice de calidades: 2–5, por objeto y ciudad, media diaria de 14 días',()=>{
  const rows=[{item_id:'T5_BAG',location:'Black Market',quality:2,data:series(28)},
   {item_id:'T5_BAG',location:'Black Market',quality:3,data:series(7)},
   {item_id:'T5_BAG',location:'Black Market',quality:1,data:series(999)},
   {item_id:'T5_BAG',location:'Lymhurst',quality:5,data:series(999)}];
  const idx=qualityVolumeIndex(rows,14,now);
  assert.deepEqual(idx.get('T5_BAG|Black Market'),{2:28,3:7});
- assert.equal(idx.has('T5_BAG|Lymhurst'),false);
+ assert.equal(idx.has('T5_BAG|Lymhurst'),true)
+ assert.equal(idx.get('T5_BAG|Lymhurst')[5],999);
 });
 test('la caída reciente se compara con la demanda ya escalada por calidad',()=>{
  const r={demandDaily:140,qualityFactor:1.4,activity:{observations:14,observedDaily:100},activity7:{observations:7,observedDaily:100}};
@@ -92,6 +93,6 @@ test('la app consulta calidades 2-3, ya no muestra el panel «Qué pide el merca
  assert(!app.includes('Qué pide el mercado ahora'));
  assert(app.includes('applyBmReversion(x)'));
  const data=readFileSync(new URL('../core/data.js',import.meta.url),'utf8');
- assert(data.includes("qualities:'2,3'"));
+ assert(data.includes("qualities:'2,3,4,5'"));
  assert(readFileSync(new URL('../sw.js',import.meta.url),'utf8').includes('./core/market-mechanics.js'));
 });

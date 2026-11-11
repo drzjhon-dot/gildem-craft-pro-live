@@ -89,7 +89,7 @@ export async function festivities(region='west',force=false){
   return {events:null,error:e.message};
  }
 }
-export const historyQuality=(ids,region='west',force=false,cities=['Black Market'])=>api('history',ids,region,{locations:cities.join(','),qualities:'2,3','time-scale':'24'},force);
+export const historyQuality=(ids,region='west',force=false,cities=['Black Market'])=>api('history',ids,region,{locations:cities.join(','),qualities:'2,3,4,5','time-scale':'24'},force);
 export const orderbook=(ids,region='west',force=false,cities=['Black Market'])=>api('orderbook',ids,region,{locations:cities.join(','),qualities:'1'},force);
 export function clearCache(){try{Object.keys(localStorage).filter(k=>k.startsWith(prefix)).forEach(k=>localStorage.removeItem(k));}catch{}}
 export function cachedCount(){try{return Object.keys(localStorage).filter(k=>k.startsWith(prefix)).length;}catch{return 0;}}
