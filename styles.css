@@ -954,7 +954,7 @@ body[data-page="craftcal"]{--glow:#8f7bff}
 .gcp-production-grid .gx-item>.gcp-copyable-name,.gcp-logistics-grid .gx-item>.gcp-copyable-name{min-width:0}
 .gcp-results .gx-item .gcp-copyable-name .item-cell strong{white-space:normal;overflow-wrap:anywhere;line-height:1.27}
 .gcp-results .gx-item .gcp-copyable-name .item-cell{gap:7px}
-.gcp-results .gx-item .gcp-copy-name{margin-left:auto}
+.gcp-results .gx-item .gcp-copy-name{margin-left:4px;align-self:center}
 .gcp-results .gx-item .gcp-copy-name{flex-basis:29px}
 .gcp-results .gcp-shopping-item .gcp-copyable-name{min-width:0;flex:1 1 auto}
 .gcp-results .gcp-shopping-item .gcp-copyable-name .item-cell{min-width:0}
@@ -1079,3 +1079,11 @@ body.gcp-results-active .workspace{
   .sidebar .brand.brand-logo-only{margin:-27px -14px 2px;padding:18px 14px 12px;min-height:242px}
   .sidebar .brand-logo-only-img{max-width:218px}
 }
+
+
+/* v9.8.5 · Botón copiar pegado al nombre en listas de materiales/diarios/resultados. */
+.gcp-results .gx-item .gcp-copyable-name{display:inline-flex;align-items:center;gap:6px;flex:0 1 auto}
+.gcp-results .gx-item .gcp-copyable-name>.item-cell{flex:0 1 auto}
+.gcp-results .gx-item .gcp-copyable-name>.item-cell>div{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.gcp-results .gx-item .gcp-copyable-name>.item-cell strong{display:inline;white-space:normal}
+.gcp-results .gx-item .gcp-copyable-name>.item-cell small{display:block;flex-basis:100%}

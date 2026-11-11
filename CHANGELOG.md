@@ -209,3 +209,6 @@ Logo solo en esquina superior izquierda y tests de branding actualizados para Ne
 ## v9.8.4
 - Eliminar «Mi taller» y fundir el logo original con el sidebar sin recuadro.
 - Actualizar precaché, etiquetas de versión y prueba visual.
+
+## v9.8.5
+- Botón de copiar movido junto al final del nombre en materiales, diarios y listas de resultados.
