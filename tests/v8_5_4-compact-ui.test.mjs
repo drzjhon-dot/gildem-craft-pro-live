@@ -15,7 +15,7 @@ test('Black y Royal Craft: formularios compactos y destinos exclusivos',()=>{
  assert(app.includes('qcRoyalBranchPicker()'));
 });
 test('selecciones reales de tiers, encantamientos, y uso de todo el presupuesto',()=>{
- assert(app.includes("ids=ids.filter(id=>qcVariantIncluded('craft'"));
+ assert(app.includes("recipeUniverse.slice(0,1800).filter(id=>qcVariantIncluded('craft'"));
  assert(app.includes("pick.chosen=pick.chosen.filter(x=>qcVariantIncluded('auto'"));
  assert(app.includes("QC_TIERS=[4,5,6,7,8]"));
  assert(app.includes("QC_ENCH=[1,2,3,4]"));

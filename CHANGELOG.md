@@ -236,3 +236,8 @@ Logo solo en esquina superior izquierda y tests de branding actualizados para Ne
 - Objetivos Silver/fama diferenciados con límites de saturación y sin saltarse la rentabilidad.
 - Tabla de Top Mercado alineada en escritorio y móvil.
 - Pruebas con escenarios sintéticos y regresión de Netlify.
+
+## 9.9.0-top.5
+- Búsqueda ampliada con carriles T/encantamiento y cobertura explícita.
+- Comparación de tres propuestas y revalidación antes del envío a Calculadora de Craft.
+- Nuevas simulaciones sintéticas de seguridad, diversificación y coste.

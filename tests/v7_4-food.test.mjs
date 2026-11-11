@@ -94,7 +94,7 @@ test('v7.4 compara Caerleon bonificado y otra ciudad sin bono',()=>{
  assert.match(app,/kind==='food'\?'Bridgewatch':'Caerleon'/);
  assert.match(app,/input\.transport\*outputAmount/);
  assert.match(app,/\['mounts','potions','foods'\]\.includes/);
- assert.match(app,/ids=ids\.filter\(id=>qcVariantIncluded\('craft'/);
+ assert.match(app,/recipeUniverse\.slice\(0,1800\)\.filter\(id=>qcVariantIncluded\('craft'/);
 });
 
 test('v7.4 backend verifica comida junto a las categorías existentes',async()=>{

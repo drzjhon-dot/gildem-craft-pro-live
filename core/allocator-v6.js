@@ -8,6 +8,7 @@ import {allocateSmartPortfolio} from './optimizer.js';
 import {resolveStyle,impactCapacity,horizonVolumeUnits} from './market-impact.js';
 import {needWeight} from './market-mechanics.js';
 import {pendingAdjustedCapacity,portfolioDiversityStats} from './intelligent-portfolio.js';
+import {variantParts} from './craft-plan-controls.js';
 const f=(x,d=0)=>Number.isFinite(Number(x))?Number(x):d;
 export function capacityFor(x,capFraction,unknownCap,horizonDays=14){
  if(Number.isFinite(x.marketCapacity))return Math.max(0,Math.floor(x.marketCapacity));
@@ -121,7 +122,12 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  // objeto ya no es un porcentaje plano del presupuesto: cada ruta recibe una cuota
  // del capital según cuánto capital puede absorber su mercado (capacidad x coste).
  const demandWeighted=opts.bulkMode===true&&opts.demandWeighted!==false;
- const capitalAbsorbed=x=>x.intelligentCapacity*x.capitalPerUnit*fameOf(x);
+ // El valor de cartera pondera actividad y objetivo, no solo precio × cantidad.
+ const capitalAbsorbed=x=>{
+  const base=x.intelligentCapacity*x.capitalPerUnit*fameOf(x);
+  const v=Math.max(0,val(x)),median=1+Math.max(0,Number(x.profit)||0);
+  return base*Math.max(.55,Math.min(2.1,(v/Math.sqrt(median))**.22));
+ };
  const totalAbsorbed=all.reduce((a,x)=>a+capitalAbsorbed(x),0)||1;
  const routeShare=new Map(all.map(x=>[x,capitalAbsorbed(x)/totalAbsorbed]));
  // Con presupuesto escaso no caben todos: una ruta cuya parte proporcional no llega a
@@ -147,6 +153,12 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  const itemShare=new Map();
  for(const x of all)itemShare.set(x.id,(itemShare.get(x.id)||0)+routeShare.get(x));
  const itemFractionFor=id=>demandWeighted?Math.max(itemFraction,Math.min(opts.diversityLanes?.32:.60,(itemShare.get(id)||0)*1.5)):itemFraction;
+ // Diversificación real de tier+enchant, solo si hay suficientes carriles
+ // con actividad, beneficio bajo estrés y capital para lotes mínimos.
+ const laneOf=x=>{const p=variantParts(x.id);return p?`${p.tier}.${p.enchant}`:'?';};
+ const lanes=new Set(all.map(laneOf));
+ const laneCapFactor=opts.diversityLanes&&lanes.size>1?(fameWeight>=.9?.44:fameWeight>=.4?.65:.86):1;
+ const laneLimit=budgetValue*Math.max(1/lanes.size,Math.min(1,laneCapFactor));
  const destinations=new Set(all.map(x=>x.city));
  const tiers=new Set(all.map(x=>String(x.id).match(/^T([4-8])_/)?.[1]).filter(Boolean));
  // A single selected Royal city or the sole BM market must not be arbitrarily
@@ -166,7 +178,7 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  if(fameWeight>0)orders.push([...all].sort((a,b)=>f(b.craftFame)/b.capitalPerUnit-f(a.craftFame)/a.capitalPerUnit));
  let best=null;
  for(const ordered of orders){
-  const counts=new Map(),byItem=new Map(),byCity=new Map(),byTier=new Map();
+  const counts=new Map(),byItem=new Map(),byCity=new Map(),byTier=new Map(),byLane=new Map();
   let spent=0,focus=0;
   const tierOf=x=>String(x.id).match(/^T([4-8])_/)?.[1]||'?';
   const maxFor=x=>{
@@ -176,7 +188,8 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
    const itemRoom=Math.floor((budgetValue*itemFractionFor(x.id)-(byItem.get(x.id)||0)+1e-8)/x.capitalPerUnit);
    const cityRoom=Math.floor((cityLimit-(byCity.get(x.city)||0)+1e-8)/x.capitalPerUnit);
    const tierRoom=Math.floor((tierLimit-(byTier.get(tierOf(x))||0)+1e-8)/x.capitalPerUnit);
-   return Math.max(0,Math.min(x.intelligentCapacity-qty,cashRoom,focusRoom,itemRoom,cityRoom,tierRoom));
+   const laneRoom=Math.floor((laneLimit-(byLane.get(laneOf(x))||0)+1e-8)/x.capitalPerUnit);
+   return Math.max(0,Math.min(x.intelligentCapacity-qty,cashRoom,focusRoom,itemRoom,cityRoom,tierRoom,laneRoom));
   };
   const take=(x,count)=>{
    if(!counts.has(x)&&counts.size>=maxVariants)return 0;
@@ -188,13 +201,13 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
    byItem.set(x.id,(byItem.get(x.id)||0)+n*x.capitalPerUnit);
    byCity.set(x.city,(byCity.get(x.city)||0)+n*x.capitalPerUnit);
    byTier.set(tierOf(x),(byTier.get(tierOf(x))||0)+n*x.capitalPerUnit);
+   byLane.set(laneOf(x),(byLane.get(laneOf(x))||0)+n*x.capitalPerUnit);
    return n;
   };
   if(smart){
    // Phase one: recorrer combinaciones T/encantamiento con margen y actividad.
    const seedOrder=opts.diversityLanes?(()=>{
-    const lanes=new Map();for(const x of ordered){const match=String(x.id).match(/^T([1-8])_.*?(?:@([1-4]))?$/);
-     const key=match?`${match[1]}.${match[2]||0}`:'?';const group=lanes.get(key)||[];group.push(x);lanes.set(key,group);}
+    const lanes=new Map();for(const x of ordered){const key=laneOf(x);const group=lanes.get(key)||[];group.push(x);lanes.set(key,group);}
     const groups=[...lanes.values()].sort((a,b)=>val(b[0])-val(a[0]));const pool=[];
     let index=0;while(index<ordered.length){let added=0;for(const group of groups)if(group[index]){pool.push(group[index]);added++;}if(!added)break;index++;}
     return pool;
@@ -239,7 +252,7 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
   const score=rows.reduce((a,x)=>a+x.qty*val(x),0);
   const profit=rows.reduce((a,x)=>a+x.totalProfit,0);
   const itemCount=new Set(rows.map(x=>x.id)).size;
-  const variantCount=new Set(rows.map(x=>{const m=String(x.id).match(/^T([1-8])_.*?(?:@([1-4]))?$/);return m?m[1]+'.'+(m[2]||0):'?' })).size;
+  const variantCount=new Set(rows.map(x=>{const p=variantParts(x.id);return p?p.tier+'.'+p.enchant:'?' })).size;
   // Reward having several profitable, truly distinct items but avoid driving
   // profit below zero or manufacturing unprofitable filler stock.
   const metric=score*(smart?(1+.04*Math.min(24,itemCount)+Math.min(.30,Number(opts.diversityWeight||0)*Math.max(0,variantCount-1))):1)+(opts.bulkMode&&opts.useAll?(spent/Math.max(1,budgetValue))*Math.max(1,score)*.20:0);

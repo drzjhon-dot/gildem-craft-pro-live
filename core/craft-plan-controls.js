@@ -1,4 +1,4 @@
-// v9.9.0-top.4: configuraciones duras y exploración balanceada.
+// v9.9.0-top.5: configuraciones duras y exploración balanceada.
 // Ningún plan puede escapar de las opciones de tier, enchant, objeto ni capital.
 const finite=x=>Number.isFinite(Number(x))?Number(x):NaN;
 export const MIN_CRAFT_BUDGET=1_000;
