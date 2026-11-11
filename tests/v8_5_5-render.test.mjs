@@ -30,6 +30,7 @@ function run(current=fake,report=null){
    currentPlan:()=>current,resultsSummary,budgetGroups,shoppingWithCeilings,preflightOverview,shoppingListText,marketReferenceSnapshot,evidenceForPlan,stagedMaterialNeeds,observedRotation,groupProduction,groupLogistics,materialUsage,saturationSummary,PLAN_STYLES,DEFAULT_STYLE,marketNeedsRanking,sellHoursByCity,bestSellHours,parseFestivities,observedWeeklyActivity,
    itemName:id=>id,itemTier:()=>5,itemEnch:()=>0,
    itemCell:id=>`<span class="item-cell"><img src="https://render.albiononline.com/v1/item/${id}.png">${id}</span>`,
+   copyableItemCell:id=>`<span class="gcp-copyable-name"><span class="item-cell"><img src="https://render.albiononline.com/v1/item/${id}.png">${id}</span><button data-copy-item-name="${id}">Copiar</button></span>`,
    moneyCell:n=>`<span>${n}</span>`,preflightResult:report=>`<aside>${report.ok?'OK':'REVISAR'}</aside>`,
    short:n=>String(Math.round(n)),fmt:n=>String(n),h:esc,
    BRANCHES:[{key:'axes',test:id=>id.includes('AXE')}],isAggregateBranch:()=>false,categoryForBranch:()=> 'weapons',

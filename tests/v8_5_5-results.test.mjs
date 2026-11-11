@@ -35,7 +35,7 @@ test('integración: tab, iconos oficiales y acciones principales',async()=>{
  assert(app.includes("state.resultSource='crafting';changePage('resultados')"));
  assert(app.includes("state.resultSource='autocraft';changePage('resultados')"));
  assert(app.includes("currentPlan(){return (state.page==='autocraft'"));
- assert(app.includes('itemCell(m.id)'));
+ assert(app.includes('copyableItemCell(m.id)')); // Ahora incluye copia de nombres sin tocar cálculos
  assert(app.includes('data-action="preflight"'));
  assert(app.includes('data-action="results-copy"'));
  assert(css.includes('.gcp-result-grid'));
