@@ -3,6 +3,7 @@
 // No result from this module guarantees fill, profit, or sale time.
 import {routeProfitAtQuantity} from './depth.js';
 import {evaluateListingSpread} from './market-intelligence.js';
+import {hasListingEvidence} from './shared-market-activity.js';
 
 const valid=x=>Number.isFinite(Number(x))?Number(x):0;
 export function evaluateCraftViability(route,{budget=Infinity,mode='royal',minROI=null,capFraction=.10}={}){
@@ -30,14 +31,18 @@ export function evaluateCraftViability(route,{budget=Infinity,mode='royal',minRO
    // Una orden de venta espera a la puja del NPC. No existe capacidad BM
    // de compra instantánea que represente absorción de nuestro anuncio.
    // Preferimos un historial observado con >= 3 días; si no, no comprar.
-   if(!(days>=3&&frequency>=1)&&personal<3)reasons.push('BM: actividad histórica insuficiente para anunciar y esperar');
+   if(route.marketEvidenceSource==='Top Mercado · AODP West'){
+    if(!hasListingEvidence(route,{minDays14:4,minDays7:2,minWeekly:5}))reasons.push('BM: falta actividad AODP Top Mercado suficiente en 7 y 14 días');
+   }else if(!(days>=3&&frequency>=1)&&personal<3)reasons.push('BM: actividad histórica insuficiente para anunciar y esperar');
    if(route.referenceSide!=='buy_price_max')reasons.push('BM: precio de referencia no corresponde a la puja del NPC');
   }
  }else{
   if(route.mode==='instant'){
    if(!route.depthVerified||!(valid(route.marketCapacity)>0))reasons.push('venta inmediata sin compras verificadas');
   }else if(listed){
-   if(!(days>= (strict ? 5 : 3)&&frequency >= (strict ? 2 : 1))&&personal<3)reasons.push('actividad Royal insuficiente: precio publicado no demuestra venta');
+   if(route.marketEvidenceSource==='Top Mercado · AODP West'){
+    if(!hasListingEvidence(route,{minDays14:strict?5:4,minDays7:2,minWeekly:5}))reasons.push('Royal: falta actividad AODP Top Mercado suficiente en 7 y 14 días');
+   }else if(!(days>= (strict ? 5 : 3)&&frequency >= (strict ? 2 : 1))&&personal<3)reasons.push('actividad Royal insuficiente: precio publicado no demuestra venta');
    const ahead=valid(route.competition?.unitsAhead);
    if(route.competition?.known&&ahead>Math.max(20,frequency*3)&&personal<3)reasons.push('demasiadas órdenes Royal por delante');
    if(!route.competition?.known&&capital>Math.min(350_000,Number.isFinite(budget)?budget*.06:350_000)&&personal<3)reasons.push('artículo costoso sin competencia Royal comprobada');

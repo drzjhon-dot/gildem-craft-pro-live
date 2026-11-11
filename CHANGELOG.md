@@ -232,3 +232,6 @@ Logo solo en esquina superior izquierda y tests de branding actualizados para Ne
 
 ## v9.9.5
 - Presupuesto manual, variantes exactas, comprobación final y portafolios más diversificados.
+
+## v9.9.6
+- Unified Top Mercado/Black Craft/Royal Craft history evidence and fail-closed patient fallback.

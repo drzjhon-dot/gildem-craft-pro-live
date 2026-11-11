@@ -1,7 +1,7 @@
 {
   "name": "gildem-craft-pro",
   "private": true,
-  "version": "9.9.5",
+  "version": "9.9.6",
   "type": "module",
   "description": "Planificador Royal + Mercado Negro con selector manual de ramas y filtros compactos, escáner de oportunidades y refinamiento independiente.",
   "scripts": {

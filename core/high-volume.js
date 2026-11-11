@@ -4,6 +4,14 @@ const finite=(v)=>(v===null||v===undefined||v==='')?null:Number.isFinite(Number(
 export const MIN_WEEKLY_ACTIVITY=50;
 export function observedWeeklyActivity(route){
  if(!route)return null;
+ // Top Mercado mide TODAS las calidades. El volumen semanal utilizable por
+ // crafting es el menor entre la capacidad 14d y la reciente 7d, NO la suma
+ // bruta de los listings de cinco calidades.
+ if(route.marketEvidenceSource==='Top Mercado · AODP West'){
+  const last=finite(route.marketRecentAddressableDaily),avg=finite(route.demandDaily);
+  if(last===null||avg===null||last<=0||avg<=0)return null;
+  return {units:Math.min(last,avg)*7,source:'Top Mercado AODP West · volumen atendible estimado (7/14 días)',provisional:true};
+ }
  // Un ranking externo fechado y confirmado West es una estimación manual,
  // nunca una orden ejecutada. El dato se conserva separado del precio AODP.
  if(route.externalDemand&&finite(route.demandDaily)!==null)

@@ -88,7 +88,8 @@ test('la necesidad solo reordena con suavidad (±12 %) y el ranking muestra lo m
 });
 test('la app consulta calidades 2-3, ya no muestra el panel «Qué pide el mercado» y precachea el módulo',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- assert(app.includes('qualityDemandLookup(candidates,force)'));
+ assert(app.includes('historyCraftMarket(marketHistoryIds,prefs.region,force'));
+ assert(app.includes('sharedMarketActivity(historyRows)'));
  assert(!app.includes('Qué pide el mercado ahora'));
  assert(app.includes('applyBmReversion(x)'));
  const data=readFileSync(new URL('../core/data.js',import.meta.url),'utf8');

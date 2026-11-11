@@ -80,10 +80,10 @@ test('recuperación visible, precache de todos los módulos y versión sin estad
  const netlify=readFileSync(new URL('../netlify.toml',import.meta.url),'utf8');
  assert.match(html,/id="gildem-boot"/);
  assert.match(html,/data-boot-repair/);
- assert.match(html,/app\.js\?v=9\.9\.5/);
+ assert.match(html,/app\.js\?v=9\.9\.6/);
  assert.match(app,/data-action="retry-catalog"/);
  assert.match(app,/if\(action==='retry-catalog'\)syncCatalog\(true\)/);
- assert.match(sw,/gildem-craft-pro-v9\.9\.5/);
+ assert.match(sw,/gildem-craft-pro-v9\.9\.6/);
  for(const match of app.matchAll(/from ['"]\.\/(core\/[^'"]+)['"]/g))assert(sw.includes("'./"+match[1]+"'"),match[1]+' no está en la caché');
  assert.match(netlify,/for = "\/app\.js"/);
 });

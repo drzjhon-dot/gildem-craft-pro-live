@@ -12,7 +12,7 @@ import {materialPurchaseCities} from './core/material-cities.js';
 import {REFINERY_CHOICES,refinementScanIds,refiningPriceIds,createRefiningCandidates} from './core/refining-opportunities.js';
 import {itemStem,itemMatches,familyChoices} from './core/item-selection.js';
 import {blackMarketEligible,specialType} from './core/special-recipes.js';
-import {prices,history,historyTopMarket,historyQuality,historyHourly,festivities,orderbook,pricesQuality,clearCache,cachedCount,HOUR} from './core/data.js';
+import {prices,history,historyTopMarket,historyCraftMarket,historyQuality,historyHourly,festivities,orderbook,pricesQuality,clearCache,cachedCount,HOUR} from './core/data.js';
 import {historyMetrics,confidenceOf,scenarioProfit,qualityWeightedSale,allocateSmartPortfolio,focusPerSilver} from './core/optimizer.js';
 import {createPortfolioFromPlan,summarizePortfolio,recordSale,setLotCost,overallDashboard} from './core/ledger.js';
 import {addAlertFromRoute,evaluateAlert} from './core/alerts.js';
@@ -32,6 +32,7 @@ import {volumeTrend} from './core/market-volume.js';
 import {chosenDemandIds,demandHistoryIndex,discoverDemand,demandExplanation,listingCapacity} from './core/demand-first.js';
 import {PLAN_STYLES,DEFAULT_STYLE,resolveStyle,impactCapacity,saturationSummary,FAST_ROTATION,rotationStyleProfile} from './core/market-impact.js';
 import {addressableDemand,qualityVolumeIndex,applyBmReversion} from './core/market-mechanics.js';
+import {sharedMarketActivity,hasListingEvidence} from './core/shared-market-activity.js';
 import {aggregateTopMarket,rankTopMarket,topMarketCatalogIds,branchForItem,TOP_SORTS} from './core/top-market.js';
 import {sellHoursByCity,bestSellHours,parseFestivities} from './core/sell-hours.js';
 import {calcBatch,calcPriceIds,quoteIndex,variantId,availableTiers,availableEnchants} from './core/craft-calc.js';
@@ -60,43 +61,44 @@ prefs.region=REGION; // Corrige preferencias antiguas que apuntaban a Europa/Asi
 const state={resultSource:'crafting',autoPlan:null,autoRunning:false,autoInfo:null,levelPlan:null,levelRunning:false,preflight:null,page:'crafting',id:'T4_BAG',market:null,trade:null,plan:null,refine:null,enchant:null,transmute:null,catalogReady:false,loading:true,lastFetch:0,lastWarning:null,query:'',fullCatalog:false};
 function save(){prefs.region=REGION;try{localStorage.setItem('gildem-prefs',JSON.stringify(prefs));}catch{}}
 function importedMarketVolume(){try{const data=JSON.parse(localStorage.getItem(MARKET_SNAPSHOT_KEY)||'null');return validMarketSnapshot(data,{region:prefs.region})?data:null;}catch{return null;}}
-function demandEvidence(candidates,historyRows,ids,cities,qualityVolumes=null){
+function demandEvidence(candidates,historyRows,ids,cities){
  let spikes=0;
- const byMarket=discoverDemand(ids,historyRows,cities).byMarket,snapshot=importedMarketVolume();
+ const shared=sharedMarketActivity(historyRows);
+ const snapshot=importedMarketVolume();
  for(const x of candidates){
-  const market=byMarket.get(x.id+'|'+x.city);
+  const market=shared.byMarket.get(x.id+'|'+x.city);
   x.activity=market?.activity||historyMetrics([],14);
   x.activity7=market?.activity7||historyMetrics([],7);
   x.activity30=market?.activity30||historyMetrics([],30);
-  const imported=externalDaily(snapshot,x.id,x.city,{region:prefs.region});
-  const aodp=market?.daily??null;
-  // A user-pasted report may cover more history than AODP's sampled feed.
-  // Source, date and provisional status remain visible. NEVER import its prices.
-  if(imported&&imported.daily>(aodp??0)){
-   x.demandDaily=imported.daily;x.demandSource=imported.source+' · importación manual';x.externalDemand=true;
-  }else{
-   // v8.9.0 · Las calidades 2 y 3 amplían lo que el mercado absorbe de un lote.
-   const adj=addressableDemand(aodp,qualityVolumes?.get(x.id+'|'+x.city)||null);
-   x.demandDaily=adj.daily;x.qualityFactor=adj.factor;x.qualityDemand=adj.byQuality;
-   x.demandSource=market?.verified?(adj.factor>1?'AODP · historial West (calidades 1-3)':'AODP · historial del servidor'):'Sin historial de mercado';x.externalDemand=false;
-  }
-  // Fama de crafteo estimada por fabricación (Premium incluido si está activo).
+  x.marketObservedDaily=market?.marketObservedDaily??null;
+  x.marketObserved7Daily=market?.marketObserved7Daily??null;
+  x.marketRecentAddressableDaily=market?.recentDaily??null;
+  // Una importación manual no reemplaza el ranking oficial para calcular lotes.
+  // La actividad de Top Mercado (calidades 1–5) es la referencia común;
+  // la demanda atendible se limita por la presencia de calidad Normal.
+  x.demandDaily=market?.daily??null;
+  x.demandSource=market?.verified?'Top Mercado · AODP West · 14 días UTC · calidades 1–5; límite por calidad Normal':'Sin evidencia AODP West suficiente';
+  x.qualityFactor=1;
+  x.qualityDemand=market?.qualitySupply||null;
+  x.externalDemand=false;
+  x.marketEvidenceSource='Top Mercado · AODP West';
+  x.marketEvidenceWindow=market?.windowStart&&market?.windowEnd?`${market.windowStart} / ${market.windowEnd}`:null;
+  x.marketEvidenceValid=!!market?.verified;
   const fame=craftingFameFromRecipe(x.id,recipes[x.id],{premium:prefs.premium});
   x.craftFame=fame?.value||0;x.craftFameEstimated=!!fame?.estimated;
-  // El lote BM se valora a la mediana pagada, no al pico de la puja actual.
   if(applyBmReversion(x))spikes++;
  }
- return {importedRows:snapshot?.rows.length||0,observedAt:snapshot?.observedAt||null,bmSpikes:spikes};
+ return {importedRows:snapshot?.rows.length||0,observedAt:snapshot?.observedAt||null,bmSpikes:spikes,shared};
 }
-// Historial de calidades 2-3 solo para las rutas con margen (máx. 135 objetos, 3 consultas).
+// Conserva para herramientas legadas la consulta por calidades 2-3, pero los
+// planes NO la suman sobre el historial de Top Mercado (ya contiene 1–5).
 async function qualityDemandLookup(candidates,force){
- const best=new Map();
- for(const c of candidates||[]){const p=Number(c.profit)||0;if(!best.has(c.id)||p>best.get(c.id))best.set(c.id,p);}
- const ids=[...best].sort((a,b)=>b[1]-a[1]).slice(0,135).map(x=>x[0]);
- const cities=[...new Set((candidates||[]).map(c=>c.city).filter(Boolean))];
+ const ids=[...new Set((candidates||[]).map(x=>x.id))].slice(0,135);
+ const cities=[...new Set((candidates||[]).map(x=>x.city))];
  if(!ids.length||!cities.length)return new Map();
  try{const res=await historyQuality(ids,prefs.region,force,cities);return qualityVolumeIndex(res.rows);}catch{return new Map();}
 }
+
 function saveExternalMarketVolume(){
  const field=val('market-volume-paste','').trim(),source=val('market-volume-source','hub');
  const date=val('market-volume-date','');
@@ -771,13 +773,15 @@ async function runAutoScan(force=false){
   // Inspect selected items even without any profitable quote. Otherwise a zero-plan
   // screen would offer no clue whether the chosen item sells in other cities.
   const marketHistoryIds=chosenDemandIds([...new Set([...ids,...scanRefining.map(x=>x.id)])],900);
-  let warning=p.warning||'';const histLookup=new Map();let historyVerified=false;
-  if(marketHistoryIds.length){status('Consultando actividad histórica por ciudad, incluso para objetos sin profit…');try{
-   const hist=await history(marketHistoryIds,prefs.region,force);warning=[warning,hist.warning].filter(Boolean).join(' · ');
-   historyVerified=!!hist.rows?.length&&!hist.warning;
-   for(const [key,series] of demandHistoryIndex(hist.rows))histLookup.set(key,series);
-  }catch(e){warning=[warning,'Historial incompleto: '+e.message].filter(Boolean).join(' · ');}}
-  const demandImport=demandEvidence(candidates,histLookup,marketHistoryIds,saleCities,await qualityDemandLookup(candidates,force));
+  let warning=p.warning||'';let histRows=[],historyVerified=false;
+  if(marketHistoryIds.length){status('Consultando el MISMO historial de Top Mercado: 14 días UTC, calidades 1–5…');try{
+   const hist=await historyCraftMarket(marketHistoryIds,prefs.region,force,saleCities,14);
+   warning=[warning,hist.warning].filter(Boolean).join(' · ');
+   historyVerified=!!hist.rows?.length&&!hist.partial&&!hist.stale;
+   histRows=hist.rows;
+  }catch(e){warning=[warning,'Historial Top Mercado no disponible: '+e.message].filter(Boolean).join(' · ');}}
+  const demandImport=demandEvidence(candidates,histRows,marketHistoryIds,saleCities);
+  const histLookup=demandImport.shared.coverageSeries;
   const marketCoverage=coverageByMarket(ids,priceMap,{cities:saleCities,market:'royal',maxAge:prefs.maxAge,history:histLookup.size?histLookup:null});
   marketCoverage.historySample=marketHistoryIds.length;marketCoverage.historyUniverse=ids.length;
   marketCoverage.historyObserved=new Set([...histLookup].filter(([,data])=>data.length).map(([key])=>key.split('|')[0])).size;
@@ -1010,10 +1014,12 @@ async function allocateCraftWithPatientFallback({candidates,viable,market,budget
  // En «Más fama» el fallback no relaja la viabilidad: las rutas moderadas
  // deben superar precio fresco, demanda, competencia y beneficio bajo estrés.
  const viableByRoute=new Map(viable.accepted.map(x=>[x.id+'|'+x.city+'|'+x.craftCity+'|'+x.mode,x]));
- const patientSource=fameFirst?volume.accepted.map(x=>{
-  const safe=viableByRoute.get(x.id+'|'+x.city+'|'+x.craftCity+'|'+x.mode);
-  return safe?{...x,...safe,weeklyObserved:x.weeklyObserved,weeklySource:x.weeklySource}:null;
- }).filter(Boolean):volume.accepted;
+ // Antes la rama no-fama usaba rutas SIN filtro de viabilidad: podía
+  // recomendar Mangual T4.0 o Íncubo T6.0 'sin observaciones'.
+  const patientSource=volume.accepted.map(x=>{
+   const safe=viableByRoute.get(x.id+'|'+x.city+'|'+x.craftCity+'|'+x.mode);
+   return safe?{...x,...safe,weeklyObserved:x.weeklyObserved,weeklySource:x.weeklySource}:null;
+  }).filter(Boolean);
  const patient=selectPatientRoutes(patientSource,{budget,limit:600,horizonDays,observedShare:capFraction});
  const selected=selectCraftSaleRoutes(patient.accepted,market);
  const cities=market==='royal'?chooseCraftingCities(selected,{maxCities:maxCraftCities,budget}):{routes:selected,cities:[],removed:0};
@@ -1216,7 +1222,7 @@ function resultsPage(){
  main.innerHTML=`<section class="gcp-results">
    <header class="gcp-result-hero"><div><span class="gcp-hero-overline">${h(branch)}, servidor América (West)</span><h2>Resultados del plan</h2><p>${h(current.branch||'Plan de crafting')} · ${sum.routeCount} rutas · ${fmt(sum.units)} unidades · Mercado ${h(current.market==='black'?'Negro':'Royal')}</p></div><span class="gcp-result-crest" aria-hidden="true">✦</span></header>
    ${patienceNotice}
-   <div class="gcp-smart-summary"><strong>◈ Crafting de volumen</strong> ${current.rotationGuard?`· <span class="pill green" title="La actividad observada no certifica ventas ejecutadas">Rotación rápida: límites por estilo (Prudente 5%, Equilibrado 8%, Agresivo 11%); mayor diversidad para fama</span>`:''} · ${fmt(current.smartPortfolio?.differentItems||new Set(rows.map(r=>r.id)).size)} objetos · ${current.fill?.percent?.toFixed(1)??(sum.budgetUsed.toFixed(1))}% del presupuesto asignado · ${short(current.fill?.remaining??Math.max(0,current.budget-b.totalCost))} sin invertir · Sin reserva fija · Actividad mayor de ${current.minWeekly??50}/semana · Tope por objeto ${Math.round((current.exposureFraction??.12)*100)}%.${(()=>{const sat=saturationSummary(rows);return sat?` Estilo ${h(PLAN_STYLES[current.style||DEFAULT_STYLE].label)}: cuota media del mercado ${(sat.avgShare*100).toFixed(1)}% (máx. ${(sat.maxShare*100).toFixed(1)}%) · saturación estimada -${short(sat.loss)} de beneficio.`:'';})()}${gameEventsLine()}${totalFame?` Fama de crafteo estimada: ${short(totalFame)}${sum.profit>0?` (${short(sum.profit/totalFame*1000)} de silver por cada 1.000 de fama)`:''}.`:''}<small>${current.fees?`Comisiones aplicadas: impuesto ${current.fees.tax} % + ${current.fees.setup} % por publicar orden (igual en Royal y Mercado Negro). `:''}${h(current.fill?.explanation||'Los topes protegen contra saturación.')} Actividad observada no significa ventas ejecutadas. ${current.smartPortfolio?.pendingMarkets||0} mercados con inventario pendiente registrado.</small></div>
+   <div class="gcp-smart-summary"><strong>◈ Crafting de volumen</strong> ${current.rotationGuard?`· <span class="pill green" title="La actividad observada no certifica ventas ejecutadas">Rotación rápida: límites por estilo (Prudente 5%, Equilibrado 8%, Agresivo 11%); mayor diversidad para fama</span>`:''} · ${fmt(current.smartPortfolio?.differentItems||new Set(rows.map(r=>r.id)).size)} objetos · ${current.fill?.percent?.toFixed(1)??(sum.budgetUsed.toFixed(1))}% del presupuesto asignado · ${short(current.fill?.remaining??Math.max(0,current.budget-b.totalCost))} sin invertir · Sin reserva fija · Actividad mayor de ${current.minWeekly??50}/semana · Tope por objeto ${Math.round((current.exposureFraction??.12)*100)}%.${(()=>{const sat=saturationSummary(rows);return sat?` Estilo ${h(PLAN_STYLES[current.style||DEFAULT_STYLE].label)}: cuota media del mercado ${(sat.avgShare*100).toFixed(1)}% (máx. ${(sat.maxShare*100).toFixed(1)}%) · saturación estimada -${short(sat.loss)} de beneficio.`:'';})()}${gameEventsLine()}${totalFame?` Fama de crafteo estimada: ${short(totalFame)}${sum.profit>0?` (${short(sum.profit/totalFame*1000)} de silver por cada 1.000 de fama)`:''}.`:''}<small>${current.fees?`Comisiones aplicadas: impuesto ${current.fees.tax} % + ${current.fees.setup} % por publicar orden (igual en Royal y Mercado Negro). `:''}${h(current.fill?.explanation||'Los topes protegen contra saturación.')} Actividad compartida con Top Mercado (calidades 1–5); el volumen atendible para crafteo se reduce según la calidad Normal. No son ventas ejecutadas. ${current.smartPortfolio?.pendingMarkets||0} mercados con inventario pendiente registrado.</small></div>
    <div class="gcp-summaryline"><span class="gcp-tag ${sum.confidence===null?'neutral':sum.confidence>=75?'good':sum.confidence>=45?'caution':'risk'}">Confianza: ${h(confidenceText)}</span><span class="gcp-tag ${sum.activityDays===null?'neutral':sum.activityDays>=10?'good':'caution'}">Actividad observada: ${h(activityText)}</span><span class="gcp-tag ${audit.status==='verified'?'good':audit.status==='partial'?'caution':audit.status==='warning'?'risk':'neutral'}">${h(audit.title)}</span><span class="gcp-age">${h(ageText)}</span></div>
    ${(availableBlack&&availableRoyal)?`<div class="gcp-result-sources"><span>Ver resultados de:</span><button class="btn sm ${state.resultSource==='crafting'?'gold':'ghost'}" data-action="results-source" data-source="crafting">Black Craft</button><button class="btn sm ${state.resultSource==='autocraft'?'gold':'ghost'}" data-action="results-source" data-source="autocraft">Royal Craft</button></div>`:''}
    <div class="gcp-kpi-grid">${cards}</div>
@@ -1506,7 +1512,7 @@ function renderTopResults(){
 function craftResult(p){const b=p.plan, journalTotals=new Map();
   const patientBadge=p.planStrategy==='patient'?'<div class="notice neutral gcp-patient-notice"><strong>Plan de venta lenta y capital paciente.</strong> Las cantidades son pequeñas y pueden tardar varios días o semanas en venderse. Beneficio calculado con precios observados, no cobrado. '+(p.supplyPending?'Los materiales no están disponibles en cantidad verificable al precio indicado; el plan necesita compras por etapas.':'Comprueba los precios y la competencia antes de ejecutar.')+'</div>':'';
  for(const r of b.rows){if(r.journal?.prices){const key=r.journal.empty;const old=journalTotals.get(key)||{...r.journal,qty:0};old.qty+=r.qty*r.journal.ratio;journalTotals.set(key,old);}}
- const detailedListRows=b.rows.map((r,index)=>`<tr><td>${copyableItemCell(r.id,'',r.recipeKind==='refining'?'Refinamiento':r.personalLearning?.qtySold>=3?`${r.personalLearning.qtySold} vendidas por ti · ${r.personalLearning.averageDays.toFixed(1)} días medios`:r.id)}</td><td><strong>T${itemTier(r.id)}.${itemEnch(r.id)}</strong></td><td class="main-city">${r.recipeKind==='refining'?'<span class="pill green">Refinar</span> ':''}${h(r.craftCity)}</td><td>${r.city==='Black Market'?'<span class="pill amber">Mercado Negro</span>':'<span class="pill green">Royal</span>'}</td><td>${h(r.city==='Black Market'?'Caerleon · Mercado Negro':r.city)}</td><td>${r.mode==='instant'?'Inmediata':'Orden de venta'}</td><td><input class="qty-input" type="number" data-plan-qty="${index}" min="0" max="${Number.isFinite(r.maxCrafts)?r.maxCrafts:999999}" step="1" value="${r.qty}" aria-label="Fabricaciones de ${h(itemName(r.id))}"></td><td><strong>${fmt(r.qty*(r.craftAmount||1))}</strong></td><td>${r.returnRate.toFixed(1)}%</td><td>${moneyCell(r.sell)}</td><td>${moneyCell(r.profit,r.profit>=0?'positive':'negative')}</td><td>${moneyCell(r.totalProfit,'positive')}</td><td>${r.activity?.observations?fmt(r.activity.activeDays)+' / 14 días · '+short(r.activity.observedDaily)+'/día observado':'Sin observaciones'}</td><td>${r.mode==='instant'?(r.depthVerified?`<span class="pill green">${h(r.bookCoverage||'Libro observado')}</span>`:`<span class="pill amber">${r.city==='Black Market'?'1 provisional':'Profundidad no verificada'}</span>`):'<span class="pill amber">Venta no garantizada</span>'}</td><td><span class="pill ${r.confidence?.tone||'red'}" title="${h((r.confidence?.reasons||[]).join(' · '))}">${h(r.confidence?.label||'Baja')} (${r.confidence?.score||0})</span></td><td>${moneyCell(r.stressProfit,r.stressProfit>=0?'positive':'negative')}</td><td>${r.focusPerUnit?fmt(r.focusPerUnit):'—'}</td><td>${moneyCell(breakEvenPrice(r))}</td><td>${r.competition?.known?`${fmt(r.competition.unitsAhead)} unidades delante · ${h(r.competition.risk)}`:'Sin datos de competencia'}</td></tr>`).join('');
+ const detailedListRows=b.rows.map((r,index)=>`<tr><td>${copyableItemCell(r.id,'',r.recipeKind==='refining'?'Refinamiento':r.personalLearning?.qtySold>=3?`${r.personalLearning.qtySold} vendidas por ti · ${r.personalLearning.averageDays.toFixed(1)} días medios`:r.id)}</td><td><strong>T${itemTier(r.id)}.${itemEnch(r.id)}</strong></td><td class="main-city">${r.recipeKind==='refining'?'<span class="pill green">Refinar</span> ':''}${h(r.craftCity)}</td><td>${r.city==='Black Market'?'<span class="pill amber">Mercado Negro</span>':'<span class="pill green">Royal</span>'}</td><td>${h(r.city==='Black Market'?'Caerleon · Mercado Negro':r.city)}</td><td>${r.mode==='instant'?'Inmediata':'Orden de venta'}</td><td><input class="qty-input" type="number" data-plan-qty="${index}" min="0" max="${Number.isFinite(r.maxCrafts)?r.maxCrafts:999999}" step="1" value="${r.qty}" aria-label="Fabricaciones de ${h(itemName(r.id))}"></td><td><strong>${fmt(r.qty*(r.craftAmount||1))}</strong></td><td>${r.returnRate.toFixed(1)}%</td><td>${moneyCell(r.sell)}</td><td>${moneyCell(r.profit,r.profit>=0?'positive':'negative')}</td><td>${moneyCell(r.totalProfit,'positive')}</td><td>${r.activity?.observations?fmt(r.activity.activeDays)+' / 14 días · '+short(r.activity.observedDaily)+'/día (Top, 1–5) · 7d: '+(r.activity7?.observations?short(r.activity7.observedDaily):'sin dato'):'Sin observaciones AODP Top'}</td><td>${r.mode==='instant'?(r.depthVerified?`<span class="pill green">${h(r.bookCoverage||'Libro observado')}</span>`:`<span class="pill amber">${r.city==='Black Market'?'1 provisional':'Profundidad no verificada'}</span>`):'<span class="pill amber">Venta no garantizada</span>'}</td><td><span class="pill ${r.confidence?.tone||'red'}" title="${h((r.confidence?.reasons||[]).join(' · '))}">${h(r.confidence?.label||'Baja')} (${r.confidence?.score||0})</span></td><td>${moneyCell(r.stressProfit,r.stressProfit>=0?'positive':'negative')}</td><td>${r.focusPerUnit?fmt(r.focusPerUnit):'—'}</td><td>${moneyCell(breakEvenPrice(r))}</td><td>${r.competition?.known?`${fmt(r.competition.unitsAhead)} unidades delante · ${h(r.competition.risk)}`:'Sin datos de competencia'}</td></tr>`).join('');
  const groupedProduction=p.autoMeta?groupProduction(b.rows):[];
  const autoProductionRows=groupedProduction.map(g=>`<tr>
  <td>${copyableItemCell(g.id,'',g.kind==='refining'?'Refinamiento':'')}</td>
@@ -1723,16 +1729,20 @@ async function runCraft(force=false){
   // Así un objeto .0 de alta rotación puede evaluarse para venta POR ORDEN,
   // sin convertir precios históricos en compra inmediata garantizada.
   let warning=response.warning||null;
-  let lookup=new Map(),historyVerified=false;
+  let histRows=[],historyVerified=false;
   const marketHistoryIds=chosenDemandIds(ids,900);
+  const saleMarkets=input.market==='black'?['Black Market']:input.market==='mixed'?['Black Market',...CITIES]:CITIES;
   if(marketHistoryIds.length){
-   setBusy('craft-results','Consultando precios y actividad de 14 días en América…');
-   try{const hist=await history(marketHistoryIds,prefs.region,force);
+   setBusy('craft-results','Consultando el historial de Top Mercado: 14 días UTC, calidades 1–5…');
+   try{const hist=await historyCraftMarket(marketHistoryIds,prefs.region,force,saleMarkets,14);
     if(hist.warning)warning=[warning,hist.warning].filter(Boolean).join(' · ');
-    historyVerified=!!hist.rows?.length&&!hist.warning;
-    lookup=demandHistoryIndex(hist.rows);
-   }catch(e){warning=[warning,'Sin historial West: '+e.message].filter(Boolean).join(' · ');}
+    historyVerified=!!hist.rows?.length&&!hist.partial&&!hist.stale;
+    histRows=hist.rows;
+   }catch(e){warning=[warning,'Sin historial Top Mercado West: '+e.message].filter(Boolean).join(' · ');}
   }
+  // Solo calidad Normal para el precio objetivo BM; la actividad compartida
+  // con Top Mercado se agrega aparte y comprende las cinco calidades.
+  const historyPriceLookup=demandHistoryIndex(histRows);
   const candidates=[];let noFocusValues=0,noQualityQuotes=0;
   const salesExperience=learnFromSales(loadPortfolios());
   const profile=loadFocusProfile();
@@ -1784,7 +1794,7 @@ async function runCraft(force=false){
     // Precio de venta por orden BM, separado del bid instantáneo observado.
     // El historial sólo puede generar un ESCENARIO CONDICIONADO, no una orden garantizada.
     if(saleCity==='Black Market'&&mode==='listed'&&input.qualityMode==='normal'){
-     const histPrice=historicalBmListingTarget(lookup.get(id+'|Black Market')||[],sale);
+     const histPrice=historicalBmListingTarget(historyPriceLookup.get(id+'|Black Market')||[],sale);
      const routeTransit=(city==='Caerleon'?0:input.transport*outputAmount);
      const quality=chooseBmListingPrice(sale,histPrice,{cost:costData.total+routeTransit,units:outputAmount,
       taxPercent:input.bmTax,setupPercent:input.listingFee,stressSaleDrop:input.priceStress/100,
@@ -1819,7 +1829,8 @@ async function runCraft(force=false){
    }
    }
   }
-  const demandAudit=demandEvidence(candidates,lookup,marketHistoryIds,input.market==='black'?['Black Market']:CITIES,await qualityDemandLookup(candidates,force));
+  const demandAudit=demandEvidence(candidates,histRows,marketHistoryIds,saleMarkets);
+  const lookup=demandAudit.shared.coverageSeries;
   if(demandAudit.bmSpikes)warning=[warning,`${demandAudit.bmSpikes} rutas del Mercado Negro tenían la puja por encima de su media de 14 días: el lote se valoró a la media, no al pico.`].filter(Boolean).join(' · ');
   const marketCoverage=coverageByMarket(ids,map,{cities:input.market==='black'?['Black Market']:CITIES,market:input.market,maxAge:prefs.maxAge,history:lookup.size?lookup:null});
   marketCoverage.historySample=marketHistoryIds.length;marketCoverage.historyUniverse=ids.length;

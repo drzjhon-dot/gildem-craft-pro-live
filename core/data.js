@@ -71,6 +71,10 @@ export const history=(ids,region='west',force=false)=>api('history',ids,region,{
 export const historyTopMarket=(ids,region='west',force=false,cities=['Black Market'],days=7)=>
  api('history',ids,region,{locations:cities.join(','),qualities:'1,2,3,4,5','time-scale':'24',...completeUtcHistoryRange(days)},force);
 // v8.9.0 · Volumen de las calidades 2 y 3 (cada calidad es un mercado aparte).
+// Los planes utilizan EXACTAMENTE el mismo historial que Top Mercado:
+// calidad 1-5, días completos y parámetro de West idéntico.
+export const historyCraftMarket=(ids,region='west',force=false,cities=['Black Market'],days=14)=>
+ historyTopMarket(ids,region,force,cities,days);
 export const historyHourly=(ids,region='west',force=false)=>api('history',ids,region,{locations:'Bridgewatch,Fort Sterling,Lymhurst,Martlock,Thetford,Caerleon,Brecilien,Black Market',qualities:'1','time-scale':'1'},force);
 // Eventos confirmados del juego (festivities). 404 = sin eventos confirmados.
 export async function festivities(region='west',force=false){

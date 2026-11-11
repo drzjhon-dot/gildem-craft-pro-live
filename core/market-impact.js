@@ -62,6 +62,13 @@ export function effectiveDaily(route){
   :a?.observations>0?finite(a.observedDaily)
   :route.activity30?.observations>0?finite(route.activity30.observedDaily):null;
  if(base===null)return null;
+ // La cifra visible en Top Mercado incluye las calidades 1-5, pero el craft
+ // solo atiende una porción de ellas. Limitar también con los 7 días recientes
+ // de calidad Normal evita aumentar lotes usando únicamente otras calidades.
+ if(route.marketEvidenceSource==='Top Mercado · AODP West'){
+  const recent=route.marketRecentAddressableDaily;
+  return recent==null?0:Math.min(base,finite(recent));
+ }
  if(!route.externalDemand&&route.activity7?.observations>0){
   // activity7 es solo calidad Normal: se escala igual que la demanda atendible.
   const recent=finite(route.activity7.observedDaily)*Math.max(1,finite(route.qualityFactor)||1);

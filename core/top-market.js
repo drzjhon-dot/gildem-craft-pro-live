@@ -3,6 +3,7 @@
 // el historial público de AODP, siempre en el servidor West y conectada a los
 // planes de crafteo. Son observaciones del mercado, no ventas garantizadas.
 import {BRANCHES} from './branches.js';
+import {toEpoch} from './optimizer.js';
 const n=x=>Number.isFinite(Number(x))?Math.max(0,Number(x)):0;
 const DAY=86400000;
 
@@ -27,7 +28,7 @@ export function aggregateTopMarket(rows=[],{days=7,now=Date.now()}={}){
   const key=id+'|'+city;
   const entry=bucket.get(key)||{id,city,units:0,silver:0,observations:0,activeDays:new Set(),qualities:new Set()};
   for(const point of row.data){
-   const at=utcTimestamp(point?.timestamp);
+   const at=toEpoch(point?.timestamp);
    if(!Number.isFinite(at)||at<start||at>=end)continue;
    const count=n(point.item_count),price=n(point.avg_price);
    if(!(count>0&&price>0))continue;

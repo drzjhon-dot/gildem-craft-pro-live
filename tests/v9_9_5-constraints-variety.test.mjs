@@ -63,6 +63,6 @@ test('ambos formularios tienen presupuesto manual, validación final y filtros g
  for(const marker of ['qc-budget-custom','data-qc-custom-budget','validCraftBudget(budget)',"qcSync('auto')","qcSync('craft')", "qcChosen('craft','tier')","qcChosen('auto','tier')",'validateCraftPlanSelections(plan','filterSummary:', 'budget:input.budget,allowedIds:ids'])assert(app.includes(marker),marker);
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
- assert(html.includes('v9.9.5'));
+ assert(html.includes('v9.9.6'));
  assert(sw.includes('core/plan-constraints.js'));
 });

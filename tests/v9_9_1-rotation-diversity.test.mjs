@@ -46,5 +46,5 @@ test('la protección del usuario está disponible en ambas pestañas y no cambia
  assert(app.includes('rotationGuard:craftPrefs.rotationGuard!==false'));
  assert(app.includes('rotationGuard:autoPrefs.rotationGuard!==false'));
  assert(app.includes("data-copy-item-name"));
- assert(html.includes('v9.9.5'));
+ assert(html.includes('v9.9.6'));
 });
