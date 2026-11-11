@@ -50,6 +50,19 @@ export function minUsefulLot(route,capacity){
  const bySilver=f(route.capitalPerUnit)>0?Math.ceil(400000/f(route.capitalPerUnit)):byUnits;
  return Math.max(1,Math.min(cap,byUnits,bySilver));
 }
+// top.7.1: la política de lote final debe coincidir con la del asignador.
+// Antes la última etapa volvía a exigir 3-5 unidades y eliminaba silenciosamente
+// una fabricación T6-T8 de prueba que el modo diversidad ya había aceptado.
+export function filterRowsByFinalLot(rows,{diversityPriority=false}={}){
+ const accepted=[],rejected=[];
+ for(const row of rows||[]){
+  const tier=variantParts(row?.id)?.tier||0;
+  const required=diversityPriority&&tier>=6?1:minUsefulLot(row,row?.maxCrafts);
+  if((Number(row?.qty)||0)>=required)accepted.push(row);
+  else rejected.push({id:row?.id,qty:row?.qty,required});
+ }
+ return {accepted,rejected};
+}
 // v9.1.0 · Fama de crafteo como segundo objetivo. Devuelve cuánto destaca una ruta
 // en fama por silver invertido frente a la mediana del plan (entre 0,25 y 4).
 export function fameFactorFor(routes,weight){

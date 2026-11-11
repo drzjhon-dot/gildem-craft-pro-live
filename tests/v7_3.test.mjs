@@ -8,7 +8,7 @@ import {BRANCHES,BRANCH_CATEGORIES} from '../core/branches.js';
 const png=new Uint8Array([137,80,78,71,13,10,26,10,0,0,0,0,73,72,68,82,0,0,0,1,0,0,0,1]);
 const headers={get:key=>key==='content-type'?'image/png':'0'};
 
-test('v9.9.0-top.7 iconos usan render oficial de Albion y respaldo local',()=>{
+test('v9.9.0-top.7.1 iconos usan render oficial de Albion y respaldo local',()=>{
  const sources=iconSources('T4_BAG',84);
  assert.equal(sources.length,3);
  assert.match(sources[0],/^\.\/\.netlify\/functions\/item-image/);
@@ -33,7 +33,7 @@ test('v7.3 fallback avanza sin cambiar el ID del objeto',()=>{
  assert.equal(first.step,1);
  assert.equal(nextIconSource('T4_BAG',90,2).final,true);
 });
-test('v9.9.0-top.7 proxy admite PNG y valida firmas del renderer oficial',async()=>{
+test('v9.9.0-top.7.1 proxy admite PNG y valida firmas del renderer oficial',async()=>{
  let calls=0;
  const fetched=await resolveIcon('T4_POTION_HEAL',90,async()=>{calls++;return {ok:true,headers,arrayBuffer:async()=>png.buffer};});
  assert.ok(fetched);

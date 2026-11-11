@@ -247,3 +247,6 @@ Logo solo en esquina superior izquierda y tests de branding actualizados para Ne
 
 ## v9.9.0-top.7
 - Diversidad prioritaria T6–T8: nuevos límites auditables y riesgo visible, sin exceder presupuesto.
+
+## v9.9.0-top.7.1
+- El filtro final ya no elimina lotes de una unidad de T6-T8 aceptados por diversidad; identificador de versión visible para auditar Netlify.

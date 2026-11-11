@@ -16,7 +16,7 @@ import {prices,history,historyTopMarket,historyQuality,historyHourly,festivities
 import {historyMetrics,confidenceOf,scenarioProfit,qualityWeightedSale,allocateSmartPortfolio,focusPerSilver} from './core/optimizer.js';
 import {createPortfolioFromPlan,summarizePortfolio,recordSale,setLotCost,overallDashboard} from './core/ledger.js';
 import {addAlertFromRoute,evaluateAlert} from './core/alerts.js';
-import {allocatePortfolioV6,minUsefulLot} from './core/allocator-v6.js';
+import {allocatePortfolioV6,filterRowsByFinalLot} from './core/allocator-v6.js';
 import {pendingUnitsByMarket,investmentBudget,portfolioDiversityStats,materialDepthAssessment,stagedMaterialNeeds,observedRotation,validateIntelligentEdits} from './core/intelligent-portfolio.js';
 import {MIN_WEEKLY_ACTIVITY,observedWeeklyActivity,bulkMarketCandidates,bulkItemExposureFraction,portfolioFillSummary} from './core/high-volume.js';
 import {selectPatientRoutes} from './core/adaptive-planner.js';
@@ -982,8 +982,9 @@ async function allocateCraftWithPatientFallback({candidates,viable,market,budget
  // solo recorta con un tope real por ventana; lo demás se marca como compra por etapas.
  const polish=async(allocated)=>{
   const checked=await guardMaterialPurchases(allocated.plan,region,force,{patient:true,horizonDays,preserveTiers:diversityPriority});
-  const useful=checked.plan.rows.filter(r=>r.qty>=minUsefulLot(r,r.maxCrafts));
-  const dropped=checked.plan.rows.length-useful.length;
+  const lotReview=filterRowsByFinalLot(checked.plan.rows,{diversityPriority});
+  const useful=lotReview.accepted;
+  const dropped=lotReview.rejected.length;
   if(dropped){checked.plan=fitPlan(useful,checked.plan.capital,checked.plan.focusLimit,{preserveTiers:diversityPriority});
    checked.warning=[checked.warning,`${dropped} rutas del Mercado Negro retiradas: solo se podía abastecer un lote demasiado pequeño para compensar el viaje.`].filter(Boolean).join(' · ');}
   return checked;

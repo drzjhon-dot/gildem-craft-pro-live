@@ -71,6 +71,6 @@ test('materiales: la compra se reparte en la ventana de venta y un material sin 
 });
 test('la app ofrece «Objetivo del plan», calcula fama por ruta y ya no recorta fabricación por compras',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- for(const t of ["mk('fame','Objetivo del plan'",'Silver y fama','fameWeight,','x.craftFame=fame?.value||0','Fama de crafteo estimada','const strictChecked=await polish(strict);','minUsefulLot(r,r.maxCrafts)'])assert(app.includes(t),t);
+ for(const t of ["mk('fame','Objetivo del plan'",'Silver y fama','fameWeight,','x.craftFame=fame?.value||0','Fama de crafteo estimada','const strictChecked=await polish(strict);','filterRowsByFinalLot(checked.plan.rows,{diversityPriority})'])assert(app.includes(t),t);
  assert(!app.includes('await guardMaterialPurchases(strict.plan,region,force);'));
 });
