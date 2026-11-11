@@ -18,7 +18,7 @@ import {createPortfolioFromPlan,summarizePortfolio,recordSale,setLotCost,overall
 import {addAlertFromRoute,evaluateAlert} from './core/alerts.js';
 import {allocatePortfolioV6,minUsefulLot} from './core/allocator-v6.js';
 import {pendingUnitsByMarket,investmentBudget,portfolioDiversityStats,materialDepthAssessment,stagedMaterialNeeds,observedRotation,validateIntelligentEdits} from './core/intelligent-portfolio.js';
-import {MIN_WEEKLY_ACTIVITY,observedWeeklyActivity,bulkMarketCandidates,bulkItemExposureFraction,portfolioFillSummary} from './core/high-volume.js';
+import {MIN_WEEKLY_ACTIVITY,observedWeeklyActivity,bulkMarketCandidates,bulkItemExposureFraction,portfolioFillSummary,fameSaleEvidence} from './core/high-volume.js';
 import {selectPatientRoutes} from './core/adaptive-planner.js';
 import {historicalBmListingTarget,chooseBmListingPrice} from './core/bm-listing-prices.js';
 import {normalizeSellBook,listingPressure} from './core/competition.js';
@@ -30,7 +30,7 @@ import {limitRowsByMaterialVolume,limitRowsByMaterialBook} from './core/procurem
 import {coverageByMarket,diagnoseScan,marketResearchIds,marketAuditIds} from './core/market-discovery.js';
 import {volumeTrend} from './core/market-volume.js';
 import {chosenDemandIds,demandHistoryIndex,discoverDemand,demandExplanation,listingCapacity} from './core/demand-first.js';
-import {PLAN_STYLES,DEFAULT_STYLE,resolveStyle,impactCapacity,saturationSummary,FAST_ROTATION} from './core/market-impact.js';
+import {PLAN_STYLES,DEFAULT_STYLE,resolveStyle,impactCapacity,saturationSummary,FAST_ROTATION,rotationStyleProfile} from './core/market-impact.js';
 import {addressableDemand,qualityVolumeIndex,applyBmReversion} from './core/market-mechanics.js';
 import {aggregateTopMarket,rankTopMarket,branchForItem,TOP_SORTS} from './core/top-market.js';
 import {sellHoursByCity,bestSellHours,parseFestivities} from './core/sell-hours.js';
@@ -343,7 +343,7 @@ function qcVariantIncluded(prefix,id,branchKey){
  const naturallyUnenchanted=['potions','mounts','foods','kits','siege','gathering'].includes(cat);
  return tiers.includes(tier)&&(enchants.includes(enchant)||(naturallyUnenchanted&&enchant===0));
 }
-function qcControls(prefix){const p=qcSelectedSettings(prefix);
+function qcControls(prefix){const p=qcSelectedSettings(prefix),profile=rotationStyleProfile(p.style);
  const mk=(key,title,entries,selected,multiple=false)=>`<section class="qc-field"><h4>${h(title)}</h4>${qcChoices(prefix,key,entries,selected,{multiple})}</section>`;
  return `<div class="qc-config">
  <div class="qc-title"><h3>Configuración del plan</h3><span class="qc-automatic">Cálculos automáticos</span></div>
@@ -355,10 +355,10 @@ function qcControls(prefix){const p=qcSelectedSettings(prefix);
  <section class="qc-field"><h4>Focus</h4><label class="qc-toggle"><input type="checkbox" id="${prefix}-qc-focus" data-qc-toggle="${prefix}" ${p.focus?'checked':''}><span>Usar Focus</span></label><small>Requiere consumo de Focus verificado en Ajustes.</small></section>
  ${mk('budget','Presupuesto de silver',QC_BUDGETS.map(x=>[x,(x/1e6)+'M']),p.budget)}
  ${mk('horizon','Días de planificación (ventas no garantizadas)',QC_HORIZON.map(x=>[x,x+' días']),p.horizon)}
- <section class="qc-field qc-full"><h4>Protección de mercados</h4><label class="qc-toggle"><input type="checkbox" id="${prefix}-qc-rotation" data-qc-toggle="${prefix}" ${p.rotationGuard?'checked':''}><span>Rotación rápida y más variedad (recomendado)</span></label><small>Ordenes de venta: lotes calculados con un máximo de ${FAST_ROTATION.days} días de actividad observada, cuota del ${Math.round(FAST_ROTATION.share*100)}% y ${Math.round(FAST_ROTATION.maxItemFraction*100)}% del presupuesto por objeto. Órdenes BM inmediatas verificadas: manda el libro real. Puede dejar silver sin invertir. No garantiza el plazo de venta.</small></section>
+ <section class="qc-field qc-full"><h4>Protección de mercados</h4><label class="qc-toggle"><input type="checkbox" id="${prefix}-qc-rotation" data-qc-toggle="${prefix}" ${p.rotationGuard?'checked':''}><span>Rotación rápida y más variedad (recomendado)</span></label><small>Órdenes de venta: máximo ${FAST_ROTATION.days} días de actividad observada. Con ${h(PLAN_STYLES[p.style].label)}: cuota del ${Math.round(profile.share*100)}% y tope inicial del ${Math.round(profile.maxItemFraction*100)}% del capital por objeto (puede ser menor en «Más fama»). BM inmediato: manda el libro verificado. No se garantizan ventas.</small></section>
  ${mk('style','Estilo del plan',Object.entries(PLAN_STYLES).map(([k,v])=>[Number(k),v.label]),p.style)}
  ${mk('fame','Objetivo del plan',[[0,'Más silver'],[1,'Silver y fama'],[2,'Más fama']],p.fame)}
- <section class="qc-field"><small>${['Solo cuenta el profit.','A igual profit, prioriza lo que más fama de crafteo da por silver invertido.','Prioriza la fama de crafteo entre los objetos rentables.'][p.fame]} Nunca fabrica más de lo que el mercado absorbe ni acepta rutas con pérdida.</small></section>
+ <section class="qc-field"><small>${['Prioriza profit neto, liquidez y capital eficiente.','Equilibra profit con fama de crafteo, repartiendo capital entre rutas rentables.','Busca más recetas rentables de la rama: admite actividad moderada solo con historial reciente comprobable y prioriza fama por silver.'][p.fame]} El capital sin oportunidades verificables queda libre. La actividad observada no equivale a ventas aseguradas.</small></section>
  <section class="qc-field qc-full"><small>${h(PLAN_STYLES[p.style].hint)} El plan estima cuánto bajaría el precio con TUS propias ventas y descuenta ese efecto del beneficio. Es una estimación, no ventas garantizadas.</small></section>
  <section class="qc-field"><h4>Uso del presupuesto</h4><label class="qc-toggle"><input type="checkbox" id="${prefix}-qc-invest" data-qc-toggle="${prefix}" ${p.invest?'checked':''}><span>Usar todo lo posible</span></label><small>Solo oportunidades con margen calculable.</small></section>
  <section class="qc-field"><h4>Crafting de volumen</h4><small>La inversión no se fuerza si la rotación rápida limita cantidades. Sin reserva automática. Solo rutas con más de ${MIN_WEEKLY_ACTIVITY} unidades de actividad semanal observada, profit positivo y escenario conservador positivo. Diversificación y compras por etapas.</small></section>
@@ -950,7 +950,7 @@ async function guardMaterialPurchases(plan,region,force,{patient=false,horizonDa
 // No hay inventario ficticio, ni venta asegurada, ni profit sin cotización.
 async function allocateCraftWithPatientFallback({candidates,viable,market,budget,goal='balanced',invest='all',focusLimit=null,
  capFraction=.10,region,force,maxCraftCities='all',minConfidence=0,horizonDays=14,style=DEFAULT_STYLE,fameGoal=0,rotationGuard=false}={}){
- const fameWeight=[0,.5,1][Number(fameGoal)]||0;
+ const fameWeight=[0,.5,1][Number(fameGoal)]??0;
  // v8.8.0 · El estilo fija el tope de cuota y el modelo de saturación.
  capFraction=resolveStyle(style).maxShare;
  // No 15% reserve: when "Usar todo" is selected, allocate against the FULL budget.
@@ -961,7 +961,14 @@ async function allocateCraftWithPatientFallback({candidates,viable,market,budget
  const pending=pendingUnitsByMarket(loadPortfolios());
  // Never count a high-profit but near-dead enchanted item as a bulk candidate.
  // AODP counts are observed listing activity, not certified player purchases.
- const volume=bulkMarketCandidates(candidates,{minWeekly:MIN_WEEKLY_ACTIVITY});
+ const fameFirst=Number(fameGoal)===2;
+ // Al buscar más fama se permiten rutas con 35–50 uds/semana ÚNICAMENTE si
+ // muestran movimiento en al menos cinco días, observaciones en la última
+ // semana y profit conservador positivo. Nunca se infieren ventas garantizadas.
+ const minWeekly=fameFirst?35:MIN_WEEKLY_ACTIVITY;
+ const screened=bulkMarketCandidates(candidates,{minWeekly});
+ const volume={...screened,accepted:screened.accepted.filter(x=>
+  x.weeklyObserved>MIN_WEEKLY_ACTIVITY || (fameFirst&&fameSaleEvidence(x)))};
  const viableIds=new Set(volume.accepted.map(x=>x.id+'|'+x.city+'|'+x.craftCity+'|'+x.mode));
  const strictRoutes=selectCraftSaleRoutes(viable.accepted.filter(x=>viableIds.has(x.id+'|'+x.city+'|'+x.craftCity+'|'+x.mode)),market);
  const cityStrict=market==='royal'?chooseCraftingCities(strictRoutes,{maxCities:maxCraftCities,budget}):{routes:strictRoutes,cities:[],removed:0};
@@ -969,7 +976,7 @@ async function allocateCraftWithPatientFallback({candidates,viable,market,budget
   const itemFraction=bulkItemExposureFraction(routes);
   const allocation=allocatePortfolioV6(routes,investment.spendable,{
    goal,useAll:invest==='all',capFraction,unknownCap:0,horizonDays,intelligent:true,bulkMode:true,saturation:style,fameWeight,
-   maxPerItemFraction:itemFraction,maxVariants:65,targetDifferentItems:28,pendingByMarket:pending,rotationGuard,
+   maxPerItemFraction:itemFraction,maxVariants:65,targetDifferentItems:Number(fameGoal)===2?36:Number(fameGoal)===1?22:12,pendingByMarket:pending,rotationGuard,
    focusLimit,minimumConfidence:patient?0:minConfidence});
   return {allocation,plan:fitPlan(allocation.rows,investment.spendable,focusLimit),itemFraction};
  };
@@ -986,7 +993,14 @@ async function allocateCraftWithPatientFallback({candidates,viable,market,budget
  };
  const strictChecked=await polish(strict);
  const safePlan=strictChecked.plan;
- const patient=selectPatientRoutes(volume.accepted,{budget,limit:600,horizonDays,observedShare:capFraction});
+ // En «Más fama» el fallback no relaja la viabilidad: las rutas moderadas
+ // deben superar precio fresco, demanda, competencia y beneficio bajo estrés.
+ const viableByRoute=new Map(viable.accepted.map(x=>[x.id+'|'+x.city+'|'+x.craftCity+'|'+x.mode,x]));
+ const patientSource=fameFirst?volume.accepted.map(x=>{
+  const safe=viableByRoute.get(x.id+'|'+x.city+'|'+x.craftCity+'|'+x.mode);
+  return safe?{...x,...safe,weeklyObserved:x.weeklyObserved,weeklySource:x.weeklySource}:null;
+ }).filter(Boolean):volume.accepted;
+ const patient=selectPatientRoutes(patientSource,{budget,limit:600,horizonDays,observedShare:capFraction});
  const selected=selectCraftSaleRoutes(patient.accepted,market);
  const cities=market==='royal'?chooseCraftingCities(selected,{maxCities:maxCraftCities,budget}):{routes:selected,cities:[],removed:0};
  let proposed=allocate(cities.routes,{patient:true});
@@ -1004,8 +1018,10 @@ async function allocateCraftWithPatientFallback({candidates,viable,market,budget
  // larger feasible staged portfolio. Staged plans are explicitly CONDITIONAL.
  const safeFunds=safePlan.totalCost||0,patientFunds=patientPlan.totalCost||0;
  const safeItems=new Set(safePlan.rows.map(r=>r.id)).size,patientItems=new Set(patientPlan.rows.map(r=>r.id)).size;
+ const fameInPlan=p=>(p.rows||[]).reduce((sum,r)=>sum+(Number(r.craftFame)||0)*r.qty,0);
  const preferPatient=patientPlan.rows.length&&patientPlan.totalProfit>0&&
   (!safePlan.rows.length||
+   (fameFirst&&fameInPlan(patientPlan)>fameInPlan(safePlan)*1.08&&patientItems>=safeItems)||
    (patientFunds>safeFunds*1.15&&patientItems>=Math.max(1,safeItems-2))||
    (patientFunds>=safeFunds*.95&&patientItems>safeItems));
  const plan=preferPatient?patientPlan:safePlan;
@@ -1017,7 +1033,7 @@ async function allocateCraftWithPatientFallback({candidates,viable,market,budget
   strategy:plan.rows.length?(preferPatient?'patient':'verified'):'empty',
   patient,method:allocation.allocation.method,investment,pending,
   bulkEligible:volume.accepted.length,bulkExcluded:volume.rejected.length,
-  minWeekly:MIN_WEEKLY_ACTIVITY,exposureFraction:allocation.itemFraction,fill:summary};
+  minWeekly,exposureFraction:allocation.itemFraction,fill:summary};
 }
 // Gildem Craft Pro v8.5.5 · Resultados. Iconos reales: itemimg() del render oficial.
 function sellHoursHtml(rows){
@@ -1186,7 +1202,7 @@ function resultsPage(){
  main.innerHTML=`<section class="gcp-results">
    <header class="gcp-result-hero"><div><span class="gcp-hero-overline">${h(branch)}, servidor América (West)</span><h2>Resultados del plan</h2><p>${h(current.branch||'Plan de crafting')} · ${sum.routeCount} rutas · ${fmt(sum.units)} unidades · Mercado ${h(current.market==='black'?'Negro':'Royal')}</p></div><span class="gcp-result-crest" aria-hidden="true">✦</span></header>
    ${patienceNotice}
-   <div class="gcp-smart-summary"><strong>◈ Crafting de volumen</strong> ${current.rotationGuard?`· <span class="pill green" title="La actividad observada no certifica ventas ejecutadas">Rotación rápida: máx. 7 días de actividad, 8% por ruta y 18% de capital por objeto</span>`:''} · ${fmt(current.smartPortfolio?.differentItems||new Set(rows.map(r=>r.id)).size)} objetos · ${current.fill?.percent?.toFixed(1)??(sum.budgetUsed.toFixed(1))}% del presupuesto asignado · ${short(current.fill?.remaining??Math.max(0,current.budget-b.totalCost))} sin invertir · Sin reserva fija · Actividad mayor de ${current.minWeekly??50}/semana · Tope por objeto ${Math.round((current.exposureFraction??.12)*100)}%.${(()=>{const sat=saturationSummary(rows);return sat?` Estilo ${h(PLAN_STYLES[current.style||DEFAULT_STYLE].label)}: cuota media del mercado ${(sat.avgShare*100).toFixed(1)}% (máx. ${(sat.maxShare*100).toFixed(1)}%) · saturación estimada -${short(sat.loss)} de beneficio.`:'';})()}${gameEventsLine()}${totalFame?` Fama de crafteo estimada: ${short(totalFame)}${sum.profit>0?` (${short(sum.profit/totalFame*1000)} de silver por cada 1.000 de fama)`:''}.`:''}<small>${current.fees?`Comisiones aplicadas: impuesto ${current.fees.tax} % + ${current.fees.setup} % por publicar orden (igual en Royal y Mercado Negro). `:''}${h(current.fill?.explanation||'Los topes protegen contra saturación.')} Actividad observada no significa ventas ejecutadas. ${current.smartPortfolio?.pendingMarkets||0} mercados con inventario pendiente registrado.</small></div>
+   <div class="gcp-smart-summary"><strong>◈ Crafting de volumen</strong> ${current.rotationGuard?`· <span class="pill green" title="La actividad observada no certifica ventas ejecutadas">Rotación rápida: límites por estilo (Prudente 5%, Equilibrado 8%, Agresivo 11%); mayor diversidad para fama</span>`:''} · ${fmt(current.smartPortfolio?.differentItems||new Set(rows.map(r=>r.id)).size)} objetos · ${current.fill?.percent?.toFixed(1)??(sum.budgetUsed.toFixed(1))}% del presupuesto asignado · ${short(current.fill?.remaining??Math.max(0,current.budget-b.totalCost))} sin invertir · Sin reserva fija · Actividad mayor de ${current.minWeekly??50}/semana · Tope por objeto ${Math.round((current.exposureFraction??.12)*100)}%.${(()=>{const sat=saturationSummary(rows);return sat?` Estilo ${h(PLAN_STYLES[current.style||DEFAULT_STYLE].label)}: cuota media del mercado ${(sat.avgShare*100).toFixed(1)}% (máx. ${(sat.maxShare*100).toFixed(1)}%) · saturación estimada -${short(sat.loss)} de beneficio.`:'';})()}${gameEventsLine()}${totalFame?` Fama de crafteo estimada: ${short(totalFame)}${sum.profit>0?` (${short(sum.profit/totalFame*1000)} de silver por cada 1.000 de fama)`:''}.`:''}<small>${current.fees?`Comisiones aplicadas: impuesto ${current.fees.tax} % + ${current.fees.setup} % por publicar orden (igual en Royal y Mercado Negro). `:''}${h(current.fill?.explanation||'Los topes protegen contra saturación.')} Actividad observada no significa ventas ejecutadas. ${current.smartPortfolio?.pendingMarkets||0} mercados con inventario pendiente registrado.</small></div>
    <div class="gcp-summaryline"><span class="gcp-tag ${sum.confidence===null?'neutral':sum.confidence>=75?'good':sum.confidence>=45?'caution':'risk'}">Confianza: ${h(confidenceText)}</span><span class="gcp-tag ${sum.activityDays===null?'neutral':sum.activityDays>=10?'good':'caution'}">Actividad observada: ${h(activityText)}</span><span class="gcp-tag ${audit.status==='verified'?'good':audit.status==='partial'?'caution':audit.status==='warning'?'risk':'neutral'}">${h(audit.title)}</span><span class="gcp-age">${h(ageText)}</span></div>
    ${(availableBlack&&availableRoyal)?`<div class="gcp-result-sources"><span>Ver resultados de:</span><button class="btn sm ${state.resultSource==='crafting'?'gold':'ghost'}" data-action="results-source" data-source="crafting">Black Craft</button><button class="btn sm ${state.resultSource==='autocraft'?'gold':'ghost'}" data-action="results-source" data-source="autocraft">Royal Craft</button></div>`:''}
    <div class="gcp-kpi-grid">${cards}</div>

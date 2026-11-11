@@ -5,7 +5,7 @@ import vm from 'node:vm';
 const read=x=>readFileSync(new URL('../'+x,import.meta.url),'utf8');
 const source=read('app.js');
 
-test('v9.9.1: seis pestañas usan miniaturas SVG locales que se precachean',()=>{
+test('v9.9.2: seis pestañas usan miniaturas SVG locales que se precachean',()=>{
  const html=read('index.html'),sw=read('sw.js');
  for(const [nav,image] of Object.entries({crafting:'black-craft',autocraft:'royal-craft',topmercado:'top-market',craftcal:'craft-cal',resultados:'results',ajustes:'settings'})){
   const path=`assets/tabs/${image}.svg`;
@@ -15,18 +15,18 @@ test('v9.9.1: seis pestañas usan miniaturas SVG locales que se precachean',()=>
   assert(sw.includes(`'./${path}'`),path);
   const svg=read(path);assert(svg.includes('<svg ')&&svg.includes('</svg>'));
  }
- assert(sw.includes('gildem-craft-pro-v9.9.1'));
- assert(html.includes('app.js?v=9.9.1'));
+ assert(sw.includes('gildem-craft-pro-v9.9.2'));
+ assert(html.includes('app.js?v=9.9.2'));
 });
 
-test('v9.9.1: botones al lado de objetos, materiales y diarios sin cambiar la compra',()=>{
+test('v9.9.2: botones al lado de objetos, materiales y diarios sin cambiar la compra',()=>{
  for(const needle of ['copyableItemCell(m.id)','copyableItemCell(j.empty,j.name+\' T\'+j.tier)','copyableItemCell(id)','data-copy-item-name','data-label="A comprar"','data-plan-group','resultsCopyShopping(firstOnly=false)'])assert(source.includes(needle),needle);
  assert(source.includes("const copyButton=e.target.closest('[data-copy-item-name]')"));
  assert(source.includes('e.stopPropagation();void copySelectedItemName(copyButton);return;'));
  assert(!source.includes('function itemCell(id,label=\'\',sub=\'\',copy='),'No hay que modificar el renderizador base');
 });
 
-test('v9.9.1: copia el nombre mostrado con acentos y escapa los atributos HTML',async()=>{
+test('v9.9.2: copia el nombre mostrado con acentos y escapa los atributos HTML',async()=>{
  const start=source.indexOf('function copyableItemCell(id,label=');
  const end=source.indexOf('\nasync function copySelectedItemName',start);
  const secondEnd=source.indexOf('\n}',end)+2;

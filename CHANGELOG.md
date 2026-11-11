@@ -219,3 +219,6 @@ Logo solo en esquina superior izquierda y tests de branding actualizados para Ne
 
 ## v9.9.1
 - Protección opcional de rotación rápida y más variedad, activa por defecto en Black/Royal. Respeta margen, capacidades, inventario y datos faltantes.
+
+## v9.9.2
+- Objetivos y estilos vuelven a influir realmente en lotes, prioridad y diversidad bajo rotación rápida.

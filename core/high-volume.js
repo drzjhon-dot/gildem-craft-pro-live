@@ -51,3 +51,13 @@ export function portfolioFillSummary(plan,budget,{minWeekly=MIN_WEEKLY_ACTIVITY,
  return {budget:capital,used,remaining,percent,eligible,minWeekly,
   explanation:remaining<=Math.max(1,capital*.01)?'Presupuesto prácticamente asignado':'El capital no asignado se conserva porque las oportunidades verificables, los topes de saturación o las cantidades enteras no permiten invertirlo de forma prudente.'};
 }
+
+// Para «Más fama» ampliar el abanico SOLO con rotación moderada verificable.
+// Los objetos sin demanda reciente o sin margen conservador siguen fuera.
+export function fameSaleEvidence(route){
+ const a=route?.activity,a7=route?.activity7;
+ return !route?.externalDemand && Number(a?.activeDays)>=5 &&
+  Number(a7?.observations)>0 && Number(a7?.count)>0 &&
+  Number(route?.stressProfit)>0 && Number(route?.profit)>0 &&
+  Number.isFinite(route?.ageHours) && route.ageHours<=24;
+}

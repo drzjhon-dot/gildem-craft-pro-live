@@ -22,13 +22,24 @@ export const DEFAULT_STYLE=2;
 // En rutas instantáneas con libro de compra confirmado, el libro ya limita
 // las unidades realmente visibles: no se aplica este techo histórico adicional.
 export const FAST_ROTATION={days:7,share:.08,maxItemFraction:.18};
+// Los tres estilos comparten las mismas comprobaciones de liquidez, pero NO
+// el mismo tamaño de lote. Solo cambia la exposición permitida, no la demanda.
+export const ROTATION_STYLE_PROFILES={
+ 1:{share:.05,maxItemFraction:.12},
+ 2:{share:.08,maxItemFraction:.18},
+ 3:{share:.11,maxItemFraction:.22}
+};
+export function rotationStyleProfile(style=DEFAULT_STYLE){
+ const id=Number(style?.id==='prudent'?1:style?.id==='aggressive'?3:style?.id==='balanced'?2:style);
+ return ROTATION_STYLE_PROFILES[id]||ROTATION_STYLE_PROFILES[DEFAULT_STYLE];
+}
 export function rotationCapacity(route,{days=FAST_ROTATION.days,share=FAST_ROTATION.share}={}){
  if(!route)return 0;
  if(route.mode==='instant'&&route.depthVerified&&route.orderLevels?.length)return Infinity;
  const d=effectiveDaily(route);
  if(d===null||d<=0)return 0;
  const window=Math.min(FAST_ROTATION.days,Math.max(1,finite(days)||FAST_ROTATION.days));
- const rate=Math.min(FAST_ROTATION.share,Math.max(.005,finite(share)));
+ const rate=Math.min(.11,Math.max(.005,finite(share)));
  const amount=Math.max(1,finite(route.craftAmount)||1);
  // Poca cobertura o actividad importada manualmente: menos stock, sin
  // interpretar la actividad como ventas confirmadas.

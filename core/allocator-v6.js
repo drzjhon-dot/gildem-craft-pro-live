@@ -5,7 +5,7 @@ import {routeProfitAtQuantity} from './depth.js';
 import {prudentListingCapacity,liquidityWeight} from './market-volume.js';
 import {listingCapacity} from './demand-first.js';
 import {allocateSmartPortfolio} from './optimizer.js';
-import {resolveStyle,impactCapacity,horizonVolumeUnits,rotationCapacity,FAST_ROTATION} from './market-impact.js';
+import {resolveStyle,impactCapacity,horizonVolumeUnits,rotationCapacity,FAST_ROTATION,rotationStyleProfile,DEFAULT_STYLE} from './market-impact.js';
 import {needWeight} from './market-mechanics.js';
 import {pendingAdjustedCapacity,portfolioDiversityStats} from './intelligent-portfolio.js';
 const f=(x,d=0)=>Number.isFinite(Number(x))?Number(x):d;
@@ -77,6 +77,7 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  if(!(budgetValue>0)||focusLimit<0)return empty;
  const sat=opts.saturation!=null&&opts.saturation!==false?resolveStyle(opts.saturation):null;
  const fameWeight=Math.max(0,Math.min(1,f(opts.fameWeight)));
+ const rotationStyle=rotationStyleProfile(sat||DEFAULT_STYLE);
  const fameOf=fameFactorFor(candidates,fameWeight);
  const val=x=>value(x,goal)*fameOf(x);
  const valid=(candidates||[]).filter(x=>x?.id&&x?.city&&f(x.profit)>0&&f(x.capitalPerUnit)>0&&f(x.cost)>0&&f(x.confidence?.score)>=minConfidence);
@@ -99,7 +100,7 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
     base=Math.min(base,impactCapacity(x,{horizonDays,style}));
    }
   }
-  if(rotationGuard)base=Math.min(base,rotationCapacity(x,{days:horizonDays}));
+  if(rotationGuard)base=Math.min(base,rotationCapacity(x,{days:horizonDays,share:rotationStyle.share}));
   const capacity=pendingAdjustedCapacity(x,base,pending);
   return {...x,saturation:saturation||x.saturation||null,intelligentCapacity:capacity,minLot:minUsefulLot(x,capacity),pendingUnits:pending.get(x.id+'|'+x.city)||0};
  }).filter(x=>x.intelligentCapacity>0);
@@ -109,7 +110,17 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  // objeto ya no es un porcentaje plano del presupuesto: cada ruta recibe una cuota
  // del capital según cuánto capital puede absorber su mercado (capacidad x coste).
  const demandWeighted=opts.bulkMode===true&&opts.demandWeighted!==false;
- const capitalAbsorbed=x=>x.intelligentCapacity*x.capitalPerUnit*fameOf(x);
+ // La versión anterior ponderaba solo capacidad y demanda: podía devolver
+ // cantidades IDÉNTICAS para los tres estilos incluso con precios distintos.
+ // Ahora Prudente distribuye según actividad y Agresivo concentra (siempre
+ // dentro del techo de rotación) hacia las oportunidades mejor puntuadas.
+ const priorities=all.map(x=>value(x,goal)).filter(v=>v>0).sort((a,b)=>a-b);
+ const medianPriority=priorities[Math.floor(priorities.length/2)]||1;
+ const priorityPower=rotationGuard?(sat?.id==='aggressive'?1.8:sat?.id==='balanced'?.7:0):0;
+ const capitalAbsorbed=x=>{
+  const relative=Math.max(.35,Math.min(2.8,value(x,goal)/medianPriority));
+  return x.intelligentCapacity*x.capitalPerUnit*fameOf(x)*Math.pow(relative,priorityPower);
+ };
  const totalAbsorbed=all.reduce((a,x)=>a+capitalAbsorbed(x),0)||1;
  const routeShare=new Map(all.map(x=>[x,capitalAbsorbed(x)/totalAbsorbed]));
  // Con presupuesto escaso no caben todos: una ruta cuya parte proporcional no llega a
@@ -136,7 +147,8 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  for(const x of all)itemShare.set(x.id,(itemShare.get(x.id)||0)+routeShare.get(x));
  // No elevar exposición al 60% para gastar todo: diversidad ANTES que
  // inversión forzada. Las cantidades siguen sujetas a demanda y beneficio.
- const itemFractionFor=id=>rotationGuard?Math.min(FAST_ROTATION.maxItemFraction,itemFraction):
+ const goalExposure= fameWeight>=.75?.12 : fameWeight>=.25?.16 : Infinity;
+ const itemFractionFor=id=>rotationGuard?Math.min(rotationStyle.maxItemFraction,itemFraction,goalExposure):
   demandWeighted?Math.max(itemFraction,Math.min(.60,(itemShare.get(id)||0)*1.5)):itemFraction;
  const destinations=new Set(all.map(x=>x.city));
  const tiers=new Set(all.map(x=>String(x.id).match(/^T([4-8])_/)?.[1]).filter(Boolean));
@@ -147,7 +159,10 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  // arbitrary 72% destination ceiling can leave silver idle with no market basis.
  const tierLimit=smart&&!opts.bulkMode&&tiers.size>1?budgetValue*.60:Infinity;
  // Likewise, never force 15% cash idle just because most viable items share T4.
- const desiredItems=Math.min(maxVariants,Math.max(8,Math.floor(f(opts.targetDifferentItems,12))));
+ // Silver: profundidad en las rutas fuertes; fama: mayor abanico de recetas
+ // rentables. No se fuerza un mínimo de objetos si no existen rutas verificadas.
+ const objectiveTarget=fameWeight>=.75?34:fameWeight>=.25?22:12;
+ const desiredItems=Math.min(maxVariants,Math.max(1,Math.floor(f(opts.targetDifferentItems,12)),objectiveTarget));
  const orders=[
   all,
   [...all].sort((a,b)=>b.profit/b.capitalPerUnit-a.profit/a.capitalPerUnit),
