@@ -5,7 +5,7 @@ import {routeProfitAtQuantity} from './depth.js';
 import {prudentListingCapacity,liquidityWeight} from './market-volume.js';
 import {listingCapacity} from './demand-first.js';
 import {allocateSmartPortfolio} from './optimizer.js';
-import {resolveStyle,impactCapacity,horizonVolumeUnits} from './market-impact.js';
+import {resolveStyle,impactCapacity,horizonVolumeUnits,rotationCapacity,FAST_ROTATION} from './market-impact.js';
 import {needWeight} from './market-mechanics.js';
 import {pendingAdjustedCapacity,portfolioDiversityStats} from './intelligent-portfolio.js';
 const f=(x,d=0)=>Number.isFinite(Number(x))?Number(x):d;
@@ -66,6 +66,7 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  const capFraction=opts.capFraction??.06,unknownCap=opts.unknownCap??1,goal=opts.goal||'balanced',horizonDays=opts.horizonDays??14;
  const minConfidence=opts.minimumConfidence||0;
  const smart=opts.intelligent===true;
+ const rotationGuard=opts.rotationGuard===true;
  // "Usar todo" allows spending available funds, never the removal of exposure caps.
  const itemFraction=smart?Math.min(.50,Math.max(.05,f(opts.maxPerItemFraction,.12))):
    Math.min(1,Math.max(0,f(opts.maxPerItemFraction,.30)));
@@ -98,6 +99,7 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
     base=Math.min(base,impactCapacity(x,{horizonDays,style}));
    }
   }
+  if(rotationGuard)base=Math.min(base,rotationCapacity(x,{days:horizonDays}));
   const capacity=pendingAdjustedCapacity(x,base,pending);
   return {...x,saturation:saturation||x.saturation||null,intelligentCapacity:capacity,minLot:minUsefulLot(x,capacity),pendingUnits:pending.get(x.id+'|'+x.city)||0};
  }).filter(x=>x.intelligentCapacity>0);
@@ -113,7 +115,7 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  // Con presupuesto escaso no caben todos: una ruta cuya parte proporcional no llega a
  // su lote mínimo útil sale del reparto y su capital pasa a las demás. Se repite
  // hasta que todas las que quedan reciben un lote real. Siempre queda al menos una.
- if(demandWeighted){
+ if(demandWeighted&&!rotationGuard){
   let pool=[...all];
   for(let round=0;round<all.length;round++){
    const sum=pool.reduce((a,x)=>a+capitalAbsorbed(x),0)||1;
@@ -132,7 +134,10 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  }
  const itemShare=new Map();
  for(const x of all)itemShare.set(x.id,(itemShare.get(x.id)||0)+routeShare.get(x));
- const itemFractionFor=id=>demandWeighted?Math.max(itemFraction,Math.min(.60,(itemShare.get(id)||0)*1.5)):itemFraction;
+ // No elevar exposición al 60% para gastar todo: diversidad ANTES que
+ // inversión forzada. Las cantidades siguen sujetas a demanda y beneficio.
+ const itemFractionFor=id=>rotationGuard?Math.min(FAST_ROTATION.maxItemFraction,itemFraction):
+  demandWeighted?Math.max(itemFraction,Math.min(.60,(itemShare.get(id)||0)*1.5)):itemFraction;
  const destinations=new Set(all.map(x=>x.city));
  const tiers=new Set(all.map(x=>String(x.id).match(/^T([4-8])_/)?.[1]).filter(Boolean));
  // A single selected Royal city or the sole BM market must not be arbitrarily
@@ -220,7 +225,8 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
   const itemCount=new Set(rows.map(x=>x.id)).size;
   // Reward having several profitable, truly distinct items but avoid driving
   // profit below zero or manufacturing unprofitable filler stock.
-  const metric=score*(smart?(1+.04*Math.min(24,itemCount)):1)+(opts.bulkMode&&opts.useAll?(spent/Math.max(1,budgetValue))*Math.max(1,score)*.35:0);
+  const metric=score*(smart?(1+(rotationGuard?.12:.04)*Math.min(24,itemCount)):1)
+   +(opts.bulkMode&&opts.useAll&&!rotationGuard?(spent/Math.max(1,budgetValue))*Math.max(1,score)*.35:0);
   if(!best||metric>best.metric+1e-8||(Math.abs(metric-best.metric)<1e-8&&profit>best.profit))
    best={rows,metric,profit};
  }
@@ -230,6 +236,6 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  return {rows,capital:budgetValue,totalCost,totalNetCost:rows.reduce((a,x)=>a+x.qty*x.cost,0),
   totalProfit:best.profit,focusUsed:rows.reduce((a,x)=>a+x.qty*f(x.focusPerUnit),0),
   remaining:Math.max(0,budgetValue-totalCost),diversity:stats,totalFame:rows.reduce((a,x)=>a+f(x.fameTotal),0),fameWeight,
-  method:opts.bulkMode?'Producción de volumen: actividad semanal superior a 50; reinversión del presupuesto sin reserva; topes dinámicos, mercado e inventario pendiente':smart?'Cartera inteligente: objetos distintos primero; topes por artículo, tier, destino e inventario pendiente':
+  method:rotationGuard?'Rotación rápida: máximo 7 días de actividad observable, 8% de cuota por ruta y 18% del presupuesto por objeto; diversificación y stock pendiente':opts.bulkMode?'Producción de volumen: actividad semanal superior a 50; reinversión del presupuesto sin reserva; topes dinámicos, mercado e inventario pendiente':smart?'Cartera inteligente: objetos distintos primero; topes por artículo, tier, destino e inventario pendiente':
    'asignación conjunta multi-inicio; resultado aproximado'};
 }

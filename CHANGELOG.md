@@ -216,3 +216,6 @@ Logo solo en esquina superior izquierda y tests de branding actualizados para Ne
 
 ## v9.8.5
 - Botón de copiar movido junto al final del nombre en materiales, diarios y listas de resultados.
+
+## v9.9.1
+- Protección opcional de rotación rápida y más variedad, activa por defecto en Black/Royal. Respeta margen, capacidades, inventario y datos faltantes.

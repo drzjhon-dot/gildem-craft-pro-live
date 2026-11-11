@@ -17,6 +17,26 @@ export const PLAN_STYLES={
     hint:'Lotes grandes en objetos de margen alto; más impacto en el precio.'}
 };
 export const DEFAULT_STYLE=2;
+// v9.9.1 · Rotación rápida: limitar el stock inicial sin afirmar ventas futuras.
+// AODP mide actividad OBSERVADA, no órdenes necesariamente ejecutadas.
+// En rutas instantáneas con libro de compra confirmado, el libro ya limita
+// las unidades realmente visibles: no se aplica este techo histórico adicional.
+export const FAST_ROTATION={days:7,share:.08,maxItemFraction:.18};
+export function rotationCapacity(route,{days=FAST_ROTATION.days,share=FAST_ROTATION.share}={}){
+ if(!route)return 0;
+ if(route.mode==='instant'&&route.depthVerified&&route.orderLevels?.length)return Infinity;
+ const d=effectiveDaily(route);
+ if(d===null||d<=0)return 0;
+ const window=Math.min(FAST_ROTATION.days,Math.max(1,finite(days)||FAST_ROTATION.days));
+ const rate=Math.min(FAST_ROTATION.share,Math.max(.005,finite(share)));
+ const amount=Math.max(1,finite(route.craftAmount)||1);
+ // Poca cobertura o actividad importada manualmente: menos stock, sin
+ // interpretar la actividad como ventas confirmadas.
+ const coverage=route.externalDemand?.5:
+  route.activity?.observations>0?Math.max(.5,Math.min(1,finite(route.activity.activeDays)/7)): .5;
+ return Math.max(0,Math.floor(d*window*rate*coverage/amount));
+}
+
 export function resolveStyle(value){
  if(value&&typeof value==='object'&&Number.isFinite(Number(value.k)))return {...PLAN_STYLES[DEFAULT_STYLE],...value};
  return PLAN_STYLES[Number(value)]||PLAN_STYLES[DEFAULT_STYLE];
