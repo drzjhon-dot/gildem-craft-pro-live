@@ -41,9 +41,10 @@ test('branchForItem: rama concreta, nunca una agregada, con su mercado',()=>{
  assert(potion.key.startsWith('potion_')&&potion.key!=='potion_all');assert.equal(potion.market,'royal');
  assert.equal(branchForItem('T4_SOMETHING_UNKNOWN'),null);
 });
-test('la app tiene la página Top mercado cableada a los planes',()=>{
+test('la app tiene la página Top mercado cableada a la calculadora',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- for(const t of ["if(state.page==='topmercado')topMarketPage();","data-top-plan","chooseBranch(topBranch)","autoPrefs.branchKeys=[topBranch]","recipesForBranch(recipes,input.branch","aggregateTopMarket(res.rows","rankTopMarket(snap.entries"])assert(app.includes(t),t);
+ for(const t of ["if(state.page==='topmercado')topMarketPage();","data-top-cal","calcAddItem(topCal.dataset.topCal,1)","Agregar a Cal.","aggregateTopMarket(res.rows","rankTopMarket(snap.entries"])assert(app.includes(t),t);
+ assert(!app.includes('data-top-plan'),'el botón Planificar fue sustituido');
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  assert(html.includes('data-nav="topmercado"'));
  assert(readFileSync(new URL('../sw.js',import.meta.url),'utf8').includes('./core/top-market.js'));

@@ -34,6 +34,7 @@ import {PLAN_STYLES,DEFAULT_STYLE,resolveStyle,impactCapacity,saturationSummary}
 import {addressableDemand,qualityVolumeIndex,applyBmReversion} from './core/market-mechanics.js';
 import {aggregateTopMarket,rankTopMarket,branchForItem,TOP_SORTS} from './core/top-market.js';
 import {sellHoursByCity,bestSellHours,parseFestivities} from './core/sell-hours.js';
+import {calcBatch,calcPriceIds,quoteIndex} from './core/craft-calc.js';
 import {evidenceForPlan} from './core/market-proof.js';
 import {MARKET_SNAPSHOT_KEY,parseMarketRanking,validMarketSnapshot,externalDaily,conflictingServerLabel} from './core/external-demand.js';
 import {MARKET_REFERENCES,marketReferenceSnapshot} from './core/market-references.js';
@@ -137,7 +138,7 @@ function showToast(msg,isError=false){const e=$('#toast');e.textContent=msg;e.cl
 function setBusy(id,text='Consultando datos del mercado…'){const e=control(id);if(e)e.innerHTML=`<div class="loading"><span class="spinner"></span><span>${h(text)}</span></div>`;}
 function updateStatus(info){if(!info)return;state.lastFetch=info.fetchedAt||Date.now();state.lastWarning=info.warning||null;$('#sidebar-status').textContent=info.warning?'Caché de respaldo':info.cached?'Caché de 1 hora':'Consulta completada';$('#api-indicator').textContent=info.warning?'Datos en caché':info.cached?'Caché válida':'AODP consultado';}
 function changePage(page){if(page==='levelcraft')page='crafting';if(page!==state.page)state.preflight=null;state.page=page;document.body.dataset.page=page;document.body.classList.toggle('gcp-results-active',page==='resultados');document.querySelectorAll('[data-nav]').forEach(el=>el.classList.toggle('active',el.dataset.nav===page));$('#page-title').textContent=page==='inicio'?'Tu centro económico':navNames[page];$('#breadcrumb').textContent=navNames[page];document.querySelector('.sidebar').classList.remove('open');render();window.scrollTo({top:0,behavior:'smooth'});}
-function render(){if(state.page==='topmercado')topMarketPage();if(state.page==='resultados')resultsPage();if(state.page==='inicio')home();if(state.page==='cartera')portfolioPage();if(state.page==='autocraft')autoPage();if(state.page==='focuslab')focusPage();if(state.page==='alertas')alertsPage();if(state.page==='precios')marketPage();if(state.page==='comercio'||state.page==='negro')tradePage();if(state.page==='crafting')craftPage();if(state.page==='refino')refinePage();if(state.page==='encantar')enchantPage();if(state.page==='transmutar')transmutePage();if(state.page==='ajustes')settingsPage();}
+function render(){if(state.page==='craftcal')calcPage();if(state.page==='topmercado')topMarketPage();if(state.page==='resultados')resultsPage();if(state.page==='inicio')home();if(state.page==='cartera')portfolioPage();if(state.page==='autocraft')autoPage();if(state.page==='focuslab')focusPage();if(state.page==='alertas')alertsPage();if(state.page==='precios')marketPage();if(state.page==='comercio'||state.page==='negro')tradePage();if(state.page==='crafting')craftPage();if(state.page==='refino')refinePage();if(state.page==='encantar')enchantPage();if(state.page==='transmutar')transmutePage();if(state.page==='ajustes')settingsPage();}
 function home(){
  const count=Object.keys(recipes).length, catalog=Object.keys(names).length, real=overallDashboard(loadPortfolios());
  main.innerHTML=`<div class="page-grid">
@@ -1195,6 +1196,108 @@ async function resultsCopyShopping(firstOnly=false){const p=currentPlan();if(!p)
 // siempre en América (West) y con salto directo a crear el plan de la rama.
 const topPrefs=(()=>{try{const stored=JSON.parse(localStorage.getItem('gildem-top-market')||'{}');return typeof stored==='object'&&stored?stored:{};}catch{return {};}})();
 function saveTopPrefs(input){Object.assign(topPrefs,input);try{localStorage.setItem('gildem-top-market',JSON.stringify(topPrefs));}catch{}}
+// ── v9.4.0 · Craft Cal. — calculadora de crafteo por lotes ───────────────────
+const calcPrefs=(()=>{try{const v=JSON.parse(localStorage.getItem('gildem-craft-cal')||'{}');return {items:Array.isArray(v.items)?v.items.filter(x=>x&&x.id).slice(0,30):[],focus:v.focus===true};}catch{return {items:[],focus:false};}})();
+function saveCalcPrefs(){try{localStorage.setItem('gildem-craft-cal',JSON.stringify(calcPrefs));}catch{}}
+function calcAddItem(id,qty=1){
+ if(!id)return;
+ const existing=calcPrefs.items.find(x=>x.id===id);
+ if(existing)existing.qty=Math.min(99999,(Number(existing.qty)||0)+qty);
+ else{if(calcPrefs.items.length>=30){showToast('Máximo 30 objetos en la calculadora.');return;}calcPrefs.items.push({id,qty});}
+ saveCalcPrefs();
+ if(state.page==='craftcal')void runCraftCalc(false);
+}
+function calcPage(){
+ main.innerHTML=`<div class="page-grid"><div class="col-12"><section class="panel gcp-craft-cal">
+  <div class="section-head"><h2>Craft Cal.</h2><p class="explain">Calculadora de crafteo por lotes con las mismas reglas que el motor: retorno con bono de ciudad${calcPrefs.focus?' y Focus':''}, comisiones de Ajustes y precios solo de AODP (West). Observaciones del mercado, no ventas garantizadas.</p></div>
+  <div class="gcp-cal-controls">
+   <div class="gcp-cal-search"><input id="cal-search" type="search" placeholder="Busca un objeto por nombre (ej. botas de soldado)…" autocomplete="off"><div id="cal-search-results"></div></div>
+   <label class="gcp-cal-focus"><input id="cal-focus" type="checkbox" ${calcPrefs.focus?'checked':''}> Usar Focus (59 % de bono de retorno)</label>
+   <div class="gcp-top-actions"><button class="btn gold" data-cal-run="normal">Recalcular</button><button class="btn ghost sm" data-cal-run="force" title="Ignora la caché de 1 hora">Precios frescos</button><button class="btn ghost sm" data-cal-clear>Vaciar</button></div>
+  </div>
+  <div id="cal-results">${calcPrefs.items.length?'':'<p class="muted">Añade objetos desde el buscador o con «Agregar a Cal.» en Top mercado.</p>'}</div>
+ </section></div></div>`;
+ const box=control('cal-search');
+ if(box)box.addEventListener('input',()=>{
+  const list=control('cal-search-results');if(!list)return;
+  const term=box.value.trim();
+  if(term.length<2){list.innerHTML='';return;}
+  const found=findItems(term,80).filter(x=>recipes[x.id]?.materials?.length).slice(0,8);
+  list.innerHTML=found.length?found.map(x=>`<button type="button" class="gcp-cal-hit" data-cal-add="${h(x.id)}">${itemimg(x.id,26)}<span>${h(x.name)}</span><small>T${itemTier(x.id)}.${itemEnch(x.id)}</small></button>`).join(''):'<p class="muted tiny">Sin recetas que coincidan.</p>';
+ });
+ const focus=control('cal-focus');
+ if(focus)focus.addEventListener('change',()=>{calcPrefs.focus=focus.checked;saveCalcPrefs();void runCraftCalc(false);});
+ if(calcPrefs.items.length)void runCraftCalc(false);
+}
+async function runCraftCalc(force=false){
+ const out=control('cal-results');if(!out)return;
+ if(!calcPrefs.items.length){out.innerHTML='<p class="muted">Añade objetos desde el buscador o con «Agregar a Cal.» en Top mercado.</p>';return;}
+ setBusy('cal-results','Consultando precios del servidor…');
+ try{
+  await loadCatalog();
+  try{await loadSpecialCatalog(()=>{});registerPotionFamilies(recipes,names);registerMountFamilies(recipes,names);}catch{}
+  const ids=calcPriceIds(calcPrefs.items,recipes,journalFor);
+  if(!ids.length)throw new Error('Ninguno de los objetos añadidos tiene receta cargada.');
+  const res=await prices(ids,prefs.region,force);
+  updateStatus(res);
+  const result=calcBatch(calcPrefs.items,{recipes,quotes:quoteIndex(res.rows,{maxAgeHours:prefs.maxAge}),journalLookup:journalFor,
+   premium:prefs.premium,focus:calcPrefs.focus,tax:prefs.tax,setup:prefs.setup,stationFee:prefs.station,maxAgeHours:prefs.maxAge});
+  state.craftCalc={result,fetchedAt:res.fetchedAt||Date.now(),warning:res.warning||null};
+  renderCraftCalc();
+ }catch(e){out.innerHTML=`<p class="notice">No se pudo calcular: ${h(e.message)}</p>`;}
+}
+function renderCraftCalc(){
+ const out=control('cal-results'),snap=state.craftCalc;if(!out||!snap)return;
+ const {rows,materials,journals,totals}=snap.result;
+ const chip=id=>`<span class="gcp-tier gcp-tier-${itemEnch(id)}">T${itemTier(id)}.${itemEnch(id)}</span>`;
+ const cityChip=city=>city?`<span class="gx-city gx-city-${String(city).toLowerCase().replace(/[^a-z]/g,'')}">${h(city==='Black Market'?'Mercado Negro':city)}</span>`:'<span class="muted">—</span>';
+ const money=(v,signed=true)=>v==null?'<span class="muted" title="Sin cotización reciente en AODP">s/d</span>':moneyCell(v,signed?resultClass(v):'');
+ const body=rows.map(r=>r.ok?`<div class="gx-row gx-cal-row">
+   <div class="gx-item"><span class="gx-count">×${fmt(r.qty)}</span>${itemCell(r.id,String(itemName(r.id)).replace(/ · T?\d\.\d$/,''))}${chip(r.id)}</div>
+   <div class="gx-cell gx-cell-qty" data-label="Cantidad"><input class="qty-input" type="number" min="0" max="99999" step="1" value="${r.qty}" data-cal-qty="${h(r.id)}" aria-label="Cantidad de ${h(itemName(r.id))}"></div>
+   <div class="gx-cell gx-cell-city" data-label="Fabricar en">${cityChip(r.craftCity)}<small>retorno ${r.returnRate.toFixed(1)} %</small></div>
+   <div class="gx-cell gx-cell-num" data-label="Coste del lote">${moneyCell(r.totalCost)}<small>${short(r.unitCost)}/u.</small></div>
+   <div class="gx-cell gx-cell-num" data-label="Profit Mercado Negro">${money(r.profitBM)}${r.bmBid?`<small>puja ${short(r.bmBid)}</small>`:''}</div>
+   <div class="gx-cell gx-cell-num" data-label="Profit Royal">${money(r.profitRoyal)}${r.royalCity?`<small>${h(r.royalCity)} · ${short(r.royalAsk)}</small>`:''}</div>
+   <div class="gx-cell gx-cell-num" data-label="Fama">${r.fameTotal?`<span class="gx-fame">${short(r.fameTotal)}${r.fameEstimated?' ≈':''}</span>`:'<span class="muted">—</span>'}</div>
+   <div class="gx-cell gx-cell-plan"><button class="btn sm ghost" data-cal-remove="${h(r.id)}" title="Quitar">✕</button></div>
+  </div>`:`<div class="gx-row gx-cal-row"><div class="gx-item">${itemCell(r.id)}</div><p class="gx-note gcp-pending-text">${h(r.reason)}</p><div class="gx-cell gx-cell-plan"><button class="btn sm ghost" data-cal-remove="${h(r.id)}">✕</button></div></div>`).join('');
+ const mats=materials.map(m=>`<div class="gx-row gx-cal-mat-row">
+   <div class="gx-item gx-material">${itemCell(m.id)}</div>
+   <div class="gx-cell gx-cell-for" data-label="Para">${m.usedBy.slice(0,8).map(id=>`<span class="gx-for" title="${h(itemName(id))}">${itemCell(id)}</span>`).join('')}${m.usedBy.length>8?`<span class="gx-for-more">+${m.usedBy.length-8}</span>`:''}</div>
+   <div class="gx-cell gx-cell-city" data-label="Comprar en">${cityChip(m.city)}</div>
+   <div class="gx-cell gx-cell-num" data-label="A comprar"><strong>${fmt(m.gross)}</strong>${m.spare?`<small class="gx-spare">sobran ${fmt(m.spare)}</small>`:''}</div>
+   <div class="gx-cell gx-cell-num" data-label="Precio unidad">${moneyCell(m.unitPrice)}</div>
+   <div class="gx-cell gx-cell-num gx-cell-total" data-label="Total">${moneyCell(m.grossCost)}</div>
+  </div>`).join('');
+ const journalRows=journals.map(j=>`<div class="gx-row gx-cal-mat-row">
+   <div class="gx-item gx-material">${itemCell(j.empty,j.name+' T'+j.tier)}<span class="gx-noreturn">Diario${j.exact?'':' ≈'}</span></div>
+   <div class="gx-cell gx-cell-for" data-label="Para">${j.usedBy.slice(0,8).map(id=>`<span class="gx-for" title="${h(itemName(id))}">${itemCell(id)}</span>`).join('')}</div>
+   <div class="gx-cell gx-cell-city" data-label="Comprar en">${cityChip(j.buyCity)}</div>
+   <div class="gx-cell gx-cell-num" data-label="A comprar"><strong>${fmt(j.count)}</strong><small>${j.needed.toFixed(1)} se llenan</small></div>
+   <div class="gx-cell gx-cell-num" data-label="Precio unidad">${j.unitPrice?moneyCell(j.unitPrice):'<span class="muted">s/d</span>'}</div>
+   <div class="gx-cell gx-cell-num gx-cell-total" data-label="Total">${j.totalCost?moneyCell(j.totalCost):'<span class="muted">s/d</span>'}</div>
+  </div>`).join('');
+ const missing=[totals.bmMissing?`${totals.bmMissing} sin puja reciente del Mercado Negro`:'',totals.royalMissing?`${totals.royalMissing} sin orden de venta Royal reciente`:''].filter(Boolean).join(' · ');
+ out.innerHTML=`
+  <div class="gcp-cal-totals">
+   <div class="gcp-kpi"><span class="gcp-kpi-name">Capital de compra</span><span class="gcp-kpi-number">${short(totals.grossCapital+totals.journalCost)}</span><small>${fmt(totals.crafts)} fabricaciones · coste neto tras retornos ${short(totals.netCost)}</small></div>
+   <div class="gcp-kpi"><span class="gcp-kpi-name">Profit Mercado Negro</span><span class="gcp-kpi-number ${resultClass(totals.profitBM??0)}">${totals.profitBM==null?'s/d':short(totals.profitBM)}</span><small>vendiendo a la puja actual (impuesto ${prefs.tax} %)</small></div>
+   <div class="gcp-kpi"><span class="gcp-kpi-name">Profit Royal</span><span class="gcp-kpi-number ${resultClass(totals.profitRoyal??0)}">${totals.profitRoyal==null?'s/d':short(totals.profitRoyal)}</span><small>mejor ciudad por objeto (impuesto ${prefs.tax} % + ${prefs.setup} %)</small></div>
+   <div class="gcp-kpi"><span class="gcp-kpi-name">Fama de crafteo</span><span class="gcp-kpi-number">${short(totals.fame)}</span><small>con tipo de cuenta de Ajustes</small></div>
+  </div>
+  ${missing?`<p class="explain">${h(missing)}: esas filas muestran «s/d» en vez de inventar un precio.</p>`:''}
+  <div class="gx-list"><div class="gx-head gx-cal-row"><span>Objeto</span><span>Cantidad</span><span>Fabricar en</span><span>Coste</span><span>Profit M. Negro</span><span>Profit Royal</span><span>Fama</span><span></span></div>${body}</div>
+  <h3 class="subheading gcp-cal-sub">Materiales necesarios</h3>
+  <div class="gx-list"><div class="gx-head gx-cal-mat-row"><span>Material</span><span>Para</span><span>Comprar en</span><span>A comprar</span><span>Precio unidad</span><span>Total</span></div>${mats||'<p class="muted">Sin materiales (revisa las recetas).</p>'}${journalRows}</div>
+  <p class="gcp-panel-caption">Materiales al precio de venta más barato observado entre ciudades Royal; el retorno asume la ciudad con bono de cada receta. Profit del Mercado Negro a la puja actual (venta inmediata) y Royal a la mejor orden de venta observada.${snap.warning?' '+h(snap.warning):''}</p>`;
+ out.querySelectorAll('[data-cal-qty]').forEach(input=>input.addEventListener('change',()=>{
+  const id=input.dataset.calQty,qty=Math.max(0,Math.floor(Number(input.value)||0));
+  if(!qty)calcPrefs.items=calcPrefs.items.filter(x=>x.id!==id);
+  else{const it=calcPrefs.items.find(x=>x.id===id);if(it)it.qty=qty;}
+  saveCalcPrefs();void runCraftCalc(false);
+ }));
+}
 const TOP_CATEGORIES=[['weapons','Armas'],['armor','Armaduras'],['offhands','Manos secundarias'],['accessories','Bolsas y capas'],['gathering','Recolección'],['kits','Kits de rastreo'],['potions','Pociones'],['foods','Comidas'],['mounts','Monturas'],['siege','Asedio']];
 const TOP_MAX_BRANCHES=6;
 function topSelectedBranches(){
@@ -1282,11 +1385,11 @@ function renderTopResults(){
    <div class="gx-cell gx-cell-num" data-label="Unidades/día"><strong>${fmt(Math.round(r.dailyAmount))}</strong><small>${r.activeDays} de ${r.days} días activos</small></div>
    <div class="gx-cell gx-cell-num" data-label="Silver/día"><span class="number">${short(r.dailySilver)}</span></div>
    <div class="gx-cell gx-cell-num" data-label="Precio unidad">${moneyCell(r.unitPrice)}</div>
-   <div class="gx-cell gx-cell-plan">${b?`<button class="btn sm ghost" data-top-plan data-top-branch="${h(b.key)}" data-top-market="${h(b.market)}" title="${h(b.label)}">Planificar</button>`:''}</div>
+   <div class="gx-cell gx-cell-plan"><button class="btn sm ghost" data-top-cal="${h(r.id)}" title="Añade este objeto a la calculadora de craft">Agregar a Cal.</button></div>
   </div>`;}).join('');
  out.innerHTML=`<div class="gx-list gcp-top-list">
   <div class="gx-head gx-top-row"><span>#</span><span>Objeto</span><span>Mercado</span><span>Unidades/día</span><span>Silver/día</span><span>Precio unidad</span><span></span></div>${body}</div>
-  <p class="gcp-panel-caption">${snap.ids} variantes consultadas · ventana de ${input.days===1?'1 día':input.days+' días'} · calidad Normal.${snap.warning?' '+h(snap.warning):''} «Planificar» lleva la rama al creador de planes.</p>`;
+  <p class="gcp-panel-caption">${snap.ids} variantes consultadas · ventana de ${input.days===1?'1 día':input.days+' días'} · calidad Normal.${snap.warning?' '+h(snap.warning):''} «Agregar a Cal.» añade el objeto a la calculadora de craft.</p>`;
 }
 function craftResult(p){const b=p.plan, journalTotals=new Map();
   const patientBadge=p.planStrategy==='patient'?'<div class="notice neutral gcp-patient-notice"><strong>Plan de venta lenta y capital paciente.</strong> Las cantidades son pequeñas y pueden tardar varios días o semanas en venderse. Beneficio calculado con precios observados, no cobrado. '+(p.supplyPending?'Los materiales no están disponibles en cantidad verificable al precio indicado; el plan necesita compras por etapas.':'Comprueba los precios y la competencia antes de ejecutar.')+'</div>':'';
@@ -2105,13 +2208,14 @@ document.addEventListener('click',e=>{
  const royalGroup=e.target.closest('[data-auto-group]');if(royalGroup){qcChooseAutoGroup(royalGroup.dataset.autoGroup);return;}
  const group=e.target.closest('[data-branch-group]');if(group){changeBranchGroup(group.dataset.branchGroup);return;}
  const family=e.target.closest('[data-level-family]');if(family){levelPrefs.stem=family.dataset.levelFamily;state.levelPlan=null;saveLevel();levelFamilyChoices();const r=control('level-results');if(r)r.innerHTML=empty('Listo para calcular','Seleccionaste '+family.dataset.levelFamily+'. Configura tu spec y presupuesto.');return;}
- const topPlan=e.target.closest('[data-top-plan]');
- if(topPlan){
-  const {topBranch,topMarket}=topPlan.dataset;
-  if(topMarket==='royal'){autoPrefs.branchMode='selected';autoPrefs.branchKeys=[topBranch];autoPrefs.market='royal';saveAutoSelections();changePage('autocraft');}
-  else{saveCraftPrefs({branch:topBranch});changePage('crafting');chooseBranch(topBranch);}
-  showToast('Rama elegida desde el top del mercado. Revisa presupuesto y crea el plan.');return;
- }
+ const topCal=e.target.closest('[data-top-cal]');
+ if(topCal){calcAddItem(topCal.dataset.topCal,1);showToast(itemName(topCal.dataset.topCal)+' añadido a Craft Cal.');return;}
+ const calAdd=e.target.closest('[data-cal-add]');
+ if(calAdd){calcAddItem(calAdd.dataset.calAdd,1);const box=control('cal-search');if(box)box.value='';const list=control('cal-search-results');if(list)list.innerHTML='';void runCraftCalc(false);return;}
+ const calRemove=e.target.closest('[data-cal-remove]');
+ if(calRemove){calcPrefs.items=calcPrefs.items.filter(x=>x.id!==calRemove.dataset.calRemove);saveCalcPrefs();void runCraftCalc(false);return;}
+ if(e.target.closest('[data-cal-clear]')){calcPrefs.items=[];saveCalcPrefs();calcPage();return;}
+ const calRun=e.target.closest('[data-cal-run]');if(calRun){void runCraftCalc(calRun.dataset.calRun==='force');return;}
  const topRun=e.target.closest('[data-top-run]');if(topRun){void runTopMarket(topRun.dataset.topRun==='force');return;}
  const ddAll=e.target.closest('[data-dd-all]');if(ddAll){document.querySelectorAll(`[data-top-branch-pick][data-dd-cat="${ddAll.dataset.ddAll}"]`).forEach(x=>{x.checked=true;});topDdSync();return;}
  const ddNone=e.target.closest('[data-dd-none]');if(ddNone){document.querySelectorAll(`[data-top-branch-pick][data-dd-cat="${ddNone.dataset.ddNone}"]`).forEach(x=>{x.checked=false;});topDdSync();return;}

@@ -861,3 +861,30 @@ body[data-page="topmercado"]{--glow:#f07fd0}
 .gcp-dd-global{justify-content:space-between;border-bottom:1px solid var(--line);margin-bottom:4px;padding-bottom:8px}
 .gcp-top-controls .gcp-dd-items label,.gcp-top-controls .gcp-dd-group summary{flex-direction:row;align-items:center}
 .gcp-top-controls .gcp-branch-dd{align-self:flex-end}
+
+/* v9.4.0 · Craft Cal. */
+body[data-page="craftcal"]{--glow:#8f7bff}
+.gcp-cal-controls{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:14px 0 18px}
+.gcp-cal-search{position:relative;flex:1;min-width:260px}
+.gcp-cal-search input{width:100%;background:#100c1c;border:1px solid var(--line);color:var(--parch);border-radius:10px;padding:10px 12px}
+#cal-search-results{position:absolute;z-index:40;top:calc(100% + 6px);left:0;right:0;display:grid;gap:2px;background:var(--ink2);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 20px 50px -18px #000;max-height:320px;overflow:auto}
+#cal-search-results:empty{display:none}
+.gcp-cal-hit{display:flex;align-items:center;gap:10px;background:transparent;border:0;color:var(--parch);padding:7px 8px;border-radius:8px;cursor:pointer;text-align:left;font:inherit}
+.gcp-cal-hit:hover{background:#ffffff0d}
+.gcp-cal-hit img{width:26px;height:26px}
+.gcp-cal-hit small{margin-left:auto;color:var(--mist)}
+.gcp-cal-focus{display:flex;align-items:center;gap:8px;font-weight:600;color:var(--parch)}
+.gcp-cal-totals{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:6px 0 16px}
+.gcp-cal-totals .gcp-kpi{display:flex;flex-direction:column;gap:4px;padding:14px;border:1px solid var(--line);background:color-mix(in srgb,var(--ink2) 85%,transparent)}
+.gcp-cal-totals .gcp-kpi-number{font-size:24px;font-weight:750;font-variant-numeric:tabular-nums}
+.gcp-cal-totals small{color:var(--mist)}
+.gcp-cal-sub{margin:20px 0 4px}
+.gx-cal-row{grid-template-columns:minmax(0,2.2fr) 96px minmax(0,1.1fr) minmax(88px,.8fr) minmax(96px,.9fr) minmax(96px,.9fr) minmax(72px,.6fr) auto}
+.gx-cal-mat-row{grid-template-columns:minmax(0,2fr) minmax(0,1.3fr) minmax(0,1fr) minmax(80px,.6fr) minmax(88px,.7fr) minmax(88px,.7fr)}
+.gx-cal-row.gx-head>span:nth-child(n+4),.gx-cal-mat-row.gx-head>span:nth-child(n+4){text-align:right}
+@media (max-width:900px){
+ .gx-row.gx-cal-row,.gx-row.gx-cal-mat-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+ .gx-row.gx-cal-row .gx-item,.gx-row.gx-cal-mat-row .gx-item{grid-column:1/-1}
+}
+.gx-item>.item-cell{flex:1 1 auto;min-width:0}
+.gx-item>.gcp-tier,.gx-item>.gx-noreturn{flex:none}

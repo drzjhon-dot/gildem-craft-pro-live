@@ -1,3 +1,7 @@
+## v9.4.0 (2026-11-10)
+
+- Nueva pestaña «Craft Cal.»: calculadora de crafteo por lotes con materiales, diarios, Focus y doble profit (Mercado Negro y Royal). «Agregar a Cal.» desde Top mercado. Ver `RELEASE_NOTES_9_4_0.md`.
+
 ## v9.3.0 (2026-11-10)
 
 - Mejores horas para vender por mercado (historial por horas de AODP), aviso de eventos del juego y desplegable de ramas por categorías en Top mercado (hasta 6 ramas). Ver `RELEASE_NOTES_9_3_0.md`.
