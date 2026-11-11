@@ -1291,9 +1291,9 @@ function renderCraftCalc(){
    <div class="gx-item gx-material">${itemCell(m.id)}</div>
    <div class="gx-cell gx-cell-for" data-label="Para">${m.usedBy.slice(0,8).map(id=>`<span class="gx-for" title="${h(itemName(id))}">${itemCell(id)}</span>`).join('')}${m.usedBy.length>8?`<span class="gx-for-more">+${m.usedBy.length-8}</span>`:''}</div>
    <div class="gx-cell gx-cell-city" data-label="Comprar en">${cityChip(m.city)}</div>
-   <div class="gx-cell gx-cell-num" data-label="A comprar"><strong>${fmt(m.gross)}</strong>${m.spare?`<small class="gx-spare">sobran ${fmt(m.spare)}</small>`:''}</div>
+   <div class="gx-cell gx-cell-num" data-label="A comprar"><strong>${fmt(m.buy)}</strong>${m.reused?`<small class="gx-spare" title="La receta usa ${fmt(m.gross)} brutos; la estación te devuelve ${fmt(m.reused)} que reutilizas">reutilizas ${fmt(m.reused)}</small>`:''}</div>
    <div class="gx-cell gx-cell-num" data-label="Precio unidad"><span class="gcp-cal-price ${m.manual?'manual':m.missing?'missing':''}"><input class="qty-input price" type="number" min="0" step="1" value="${m.unitPrice||''}" data-cal-buy="${h(m.id)}" aria-label="Precio de ${h(itemName(m.id))}">${m.manual?`<button class="gcp-cal-reset" data-cal-reset="buy:${h(m.id)}" title="Volver al precio de AODP">↺</button>`:''}</span>${m.manual?'<small>manual</small>':m.missing?'<small class="gcp-pending-text">sin cotización: escríbelo</small>':m.stale?'<small title="Más vieja que tu ventana de Ajustes">antigua</small>':''}</div>
-   <div class="gx-cell gx-cell-num gx-cell-total" data-label="Total">${moneyCell(m.grossCost)}</div>
+   <div class="gx-cell gx-cell-num gx-cell-total" data-label="Total">${moneyCell(m.buyCost)}</div>
   </div>`).join('');
  const journalRows=journals.map(j=>`<div class="gx-row gx-cal-mat-row">
    <div class="gx-item gx-material">${itemCell(j.empty,j.name+' T'+j.tier)}<span class="gx-noreturn">Diario${j.exact?'':' ≈'}</span></div>
@@ -1306,7 +1306,7 @@ function renderCraftCalc(){
  const missing=[totals.incomplete?`${totals.incomplete} objetos con materiales sin cotización: escribe esos precios en Materiales y el profit aparecerá`:'',totals.bmMissing-totals.incomplete>0?`${totals.bmMissing-totals.incomplete} sin puja del Mercado Negro (escríbela en la fila)`:'',totals.royalMissing-totals.incomplete>0?`${totals.royalMissing-totals.incomplete} sin orden de venta Royal (escríbela en la fila)`:'',totals.oldestAgeHours>Number(prefs.maxAge)?`la cotización más antigua usada tiene ${Math.round(totals.oldestAgeHours)} h`:''].filter(Boolean).join(' · ');
  out.innerHTML=`
   <div class="gcp-cal-totals">
-   <div class="gcp-kpi"><span class="gcp-kpi-name">Capital de compra</span><span class="gcp-kpi-number">${short(totals.grossCapital+totals.journalCost)}</span><small>${fmt(totals.crafts)} fabricaciones · coste neto tras retornos ${short(totals.netCost)}</small></div>
+   <div class="gcp-kpi"><span class="gcp-kpi-name">Capital de compra</span><span class="gcp-kpi-number">${short(totals.buyCapital+totals.journalCost)}</span><small>${fmt(totals.crafts)} fabricaciones · reutilizando retornos (sin reutilizar: ${short(totals.grossCapital+totals.journalCost)})</small></div>
    <div class="gcp-kpi"><span class="gcp-kpi-name">Profit Mercado Negro</span><span class="gcp-kpi-number ${resultClass(totals.profitBM??0)}">${totals.profitBM==null?'s/d':short(totals.profitBM)}</span><small>vendiendo a la puja actual (impuesto ${prefs.tax} %)</small></div>
    <div class="gcp-kpi"><span class="gcp-kpi-name">Profit Royal</span><span class="gcp-kpi-number ${resultClass(totals.profitRoyal??0)}">${totals.profitRoyal==null?'s/d':short(totals.profitRoyal)}</span><small>mejor ciudad por objeto (impuesto ${prefs.tax} % + ${prefs.setup} %)</small></div>
    <div class="gcp-kpi"><span class="gcp-kpi-name">Fama de crafteo</span><span class="gcp-kpi-number">${short(totals.fame)}</span><small>con tipo de cuenta de Ajustes</small></div>
@@ -1315,7 +1315,7 @@ function renderCraftCalc(){
   <div class="gx-list"><div class="gx-head gx-cal-row"><span>Objeto</span><span>Cantidad</span><span>Fabricar en</span><span>Coste</span><span>Profit M. Negro</span><span>Profit Royal</span><span>Fama</span><span></span></div>${body}</div>
   <h3 class="subheading gcp-cal-sub">Materiales necesarios</h3>
   <div class="gx-list"><div class="gx-head gx-cal-mat-row"><span>Material</span><span>Para</span><span>Comprar en</span><span>A comprar</span><span>Precio unidad</span><span>Total</span></div>${mats||'<p class="muted">Sin materiales (revisa las recetas).</p>'}${journalRows}</div>
-  <p class="gcp-panel-caption">Materiales a la última cotización más barata observada entre ciudades Royal (aunque sea antigua, se indica); cualquier precio es editable y queda marcado como manual (↺ vuelve a AODP). El retorno asume la ciudad con bono de cada receta. Profit del Mercado Negro a la puja actual (venta inmediata) y Royal a la mejor orden de venta observada.${snap.warning?' '+h(snap.warning):''}</p>`;
+  <p class="gcp-panel-caption">«A comprar» ya descuenta el retorno (los recursos devueltos se reutilizan al craftear); ten a mano algo más para las primeras fabricaciones, porque el retorno llega mientras crafteas. Materiales a la última cotización más barata observada entre ciudades Royal (aunque sea antigua, se indica); cualquier precio es editable y queda marcado como manual (↺ vuelve a AODP). Profit del Mercado Negro a la puja actual (venta inmediata) y Royal a la mejor orden de venta observada.${snap.warning?' '+h(snap.warning):''}</p>`;
  out.querySelectorAll('[data-cal-buy],[data-cal-sell-bm],[data-cal-sell-royal]').forEach(input=>input.addEventListener('change',()=>{
   const value=Math.max(0,Math.floor(Number(input.value)||0));
   const id=input.dataset.calBuy||input.dataset.calSellBm||input.dataset.calSellRoyal;

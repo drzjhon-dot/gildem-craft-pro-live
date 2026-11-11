@@ -41,15 +41,15 @@ test('el Focus sube el retorno y baja el coste',()=>{
 test('materiales y diarios agregados: brutos con «sobran», totales y a quién sirven',()=>{
  const out=calcBatch([{id:'T5_SHOES_PLATE_SET1',qty:10},{id:'T4_SHOES_PLATE_SET1',qty:5}],opts);
  const t5=out.materials.find(m=>m.id==='T5_METALBAR');
- assert.equal(t5.gross,80);assert(t5.spare>0&&t5.city==='Thetford');
+ assert.equal(t5.gross,80);assert(t5.buy<t5.gross&&t5.reused===t5.gross-t5.buy&&t5.city==='Thetford');
  assert.deepEqual(t5.usedBy,['T5_SHOES_PLATE_SET1']);
  const j5=out.journals.find(j=>j.empty==='T5_JOURNAL_WARRIOR_EMPTY');
  assert(j5&&j5.count>=1&&j5.unitPrice===2500&&j5.totalCost===j5.count*2500);
  assert.equal(out.totals.crafts,15);
- assert(out.totals.grossCapital>=t5.grossCost);
+ assert(out.totals.buyCapital<=out.totals.grossCapital);
  assert(out.totals.profitBM!==null&&out.totals.royalMissing===0&&out.totals.bmMissing===1,'el T4 no tiene puja BM');
 });
-test('v9.7.0 · sin cotización no se inventa nada, pero la fila SÍ calcula: material sin precio entra a 0, se señala y el profit queda pendiente',()=>{
+test('v9.8.0 · sin cotización no se inventa nada, pero la fila SÍ calcula: material sin precio entra a 0, se señala y el profit queda pendiente',()=>{
  const out=calcBatch([{id:'T9_NO_EXISTE',qty:3},{id:'T5_SHOES_PLATE_SET1@1',qty:2}],opts);
  assert.equal(out.rows[0].ok,false,'sin receta sigue siendo fila inválida');
  const row=out.rows[1];
@@ -67,7 +67,7 @@ test('v9.7.0 · sin cotización no se inventa nada, pero la fila SÍ calcula: ma
  assert.equal(fixed.rows[0].incomplete,false);
  assert(fixed.rows[0].profitBM!==undefined);
 });
-test('v9.7.0 · una cotización vieja ya no desaparece: se usa marcada como antigua, con su edad',()=>{
+test('v9.8.0 · una cotización vieja ya no desaparece: se usa marcada como antigua, con su edad',()=>{
  const stale=[price('T5_METALBAR','Thetford',3600)].map(x=>({...x,sell_price_min_date:new Date(now-30*3600000).toISOString()}));
  const q24=quoteIndex(stale,{maxAgeHours:24,now}).get('T5_METALBAR');
  assert.equal(q24.ask.size,1);
@@ -82,7 +82,7 @@ test('v9.7.0 · una cotización vieja ya no desaparece: se usa marcada como anti
  const used=batch.materials.find(m=>m.id==='T5_METALBAR');
  assert.equal(used.city,'Lymhurst','prefiere la cotización fresca sobre la antigua más barata');
 });
-test('v9.7.0 · variantes: tiers y encantamientos disponibles según recetas, con fusión de ids',()=>{
+test('v9.8.0 · variantes: tiers y encantamientos disponibles según recetas, con fusión de ids',()=>{
  const rec={T4_SHOES_PLATE_SET1:{materials:[{id:'T4_METALBAR',count:8}]},T5_SHOES_PLATE_SET1:{materials:[{id:'T5_METALBAR',count:8}]},'T5_SHOES_PLATE_SET1@1':{materials:[{id:'T5_METALBAR_LEVEL1@1',count:8}]}};
  assert.deepEqual(availableTiers(rec,'T4_SHOES_PLATE_SET1'),[4,5]);
  assert.deepEqual(availableEnchants(rec,'T5_SHOES_PLATE_SET1',5),[0,1]);
@@ -122,7 +122,7 @@ test('la interfaz permite editar precios y volver a AODP',()=>{
  for(const t of ['data-cal-buy','data-cal-sell-bm','data-cal-sell-royal','data-cal-reset','overrides:{buy:calcPrefs.buy'])assert(app.includes(t),t);
 });
 
-test('v9.7.0 · fuera de ciudad de bono: sin el 15 % de especialidad, el retorno baja y el coste sube',()=>{
+test('v9.8.0 · fuera de ciudad de bono: sin el 15 % de especialidad, el retorno baja y el coste sube',()=>{
  const inBonus=calcBatch([{id:'T5_SHOES_PLATE_SET1',qty:4}],opts).rows[0];
  const outBonus=calcBatch([{id:'T5_SHOES_PLATE_SET1',qty:4,noBonus:true}],opts).rows[0];
  assert(Math.abs(inBonus.returnRate-24.812)<.1,'con bono ~24,8 %');
@@ -135,7 +135,7 @@ test('v9.7.0 · fuera de ciudad de bono: sin el 15 % de especialidad, el retorno
  assert(app.includes('data-cal-nobonus')&&app.includes('Fuera de ciudad de bono'));
 });
 
-test('v9.7.0 · bono diario de producción: +10/+20 % suben el retorno dentro y fuera de la ciudad de bono',()=>{
+test('v9.8.0 · bono diario de producción: +10/+20 % suben el retorno dentro y fuera de la ciudad de bono',()=>{
  const rate=(o={})=>calcBatch([{id:'T5_SHOES_PLATE_SET1',qty:1,...o}],{...opts,...o}).rows[0].returnRate;
  assert(Math.abs(rate({dailyBonus:10})-30.07)<.1,'con bono de ciudad y día +10 ≈ 30,1 %');
  assert(Math.abs(rate({dailyBonus:20})-34.64)<.1,'con bono de ciudad y día +20 ≈ 34,6 %');
@@ -143,4 +143,21 @@ test('v9.7.0 · bono diario de producción: +10/+20 % suben el retorno dentro y 
  assert(rate({dailyBonus:20})>rate({dailyBonus:10})&&rate({dailyBonus:10})>rate());
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  for(const x of ['cal-daily','Bono diario','dailyBonus:calcPrefs.dailyBonus'])assert(app.includes(x),x);
+});
+
+test('v9.8.0 · el retorno SÍ cambia cuánto comprar: más bono, menos recursos; el bruto de la receta no cambia',()=>{
+ const buyOf=o=>{const m=calcBatch([{id:'T5_SHOES_PLATE_SET1',qty:10,...o}],{...opts,...o}).materials.find(x=>x.id==='T5_METALBAR');return m;};
+ const base=buyOf({});            // bono de ciudad 24,8 %
+ const noBonus=buyOf({noBonus:true}); // 15,3 %
+ const daily=buyOf({dailyBonus:20});  // 34,6 %
+ const focused=buyOf({focus:true});   // 47,9 %
+ assert.equal(base.gross,80);assert.equal(noBonus.gross,80);assert.equal(daily.gross,80);
+ assert.equal(base.buy,Math.ceil(80*(1-.24812)));
+ assert(noBonus.buy>base.buy&&daily.buy<base.buy&&focused.buy<daily.buy,
+  `${noBonus.buy} > ${base.buy} > ${daily.buy} > ${focused.buy}`);
+ assert.equal(base.reused,base.gross-base.buy);
+ assert.equal(base.buyCost,base.buy*base.unitPrice);
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert(app.includes('reutilizas ${fmt(m.reused)}'));
+ assert(app.includes('totals.buyCapital+totals.journalCost'));
 });

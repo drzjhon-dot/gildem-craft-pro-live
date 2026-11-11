@@ -133,9 +133,14 @@ export function calcBatch(items=[],{recipes={},quotes=new Map(),journalLookup=()
    journals.set(journal.empty,e);
   }
  }
- const materialList=[...materials.values()].map(m=>({...m,usedBy:[...m.usedBy].sort(),
-  gross:Math.ceil(m.gross),spare:Math.max(0,Math.ceil(m.gross)-Math.ceil(m.used)),
-  grossCost:Math.ceil(m.gross)*m.unitPrice,netCost:m.used*m.unitPrice}));
+ // v9.8.0 · «A comprar» tiene en cuenta el retorno: los recursos devueltos por la
+ // estación se reutilizan mientras crafteas, así que se compra el consumo neto.
+ // El bruto de la receta queda como referencia (es lo que pasa por tus manos).
+ const materialList=[...materials.values()].map(m=>{
+  const gross=Math.ceil(m.gross),buy=Math.min(gross,Math.ceil(m.used-1e-9));
+  return {...m,usedBy:[...m.usedBy].sort(),gross,buy,reused:Math.max(0,gross-buy),
+   spare:Math.max(0,gross-buy),buyCost:buy*m.unitPrice,grossCost:gross*m.unitPrice,netCost:m.used*m.unitPrice};
+ });
  const journalList=[...journals.values()].map(j=>{
   const price=buyPrice(j.empty);
   const count=Math.ceil(j.needed-1e-9);
@@ -146,6 +151,7 @@ export function calcBatch(items=[],{recipes={},quotes=new Map(),journalLookup=()
  const totals={
   crafts:ok.reduce((a,r)=>a+r.qty,0),
   netCost:ok.reduce((a,r)=>a+r.totalCost,0),
+  buyCapital:materialList.reduce((a,m)=>a+m.buyCost,0),
   grossCapital:materialList.reduce((a,m)=>a+m.grossCost,0),
   journalCost:journalList.reduce((a,j)=>a+(j.totalCost||0),0),
   profitBM:ok.some(r=>r.profitBM!=null)?ok.reduce((a,r)=>a+(r.profitBM??0),0):null,

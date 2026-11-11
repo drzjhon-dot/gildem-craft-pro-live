@@ -1,3 +1,7 @@
+## v9.8.0 (2026-11-10)
+
+- Craft Cal.: «A comprar» descuenta el retorno (el bono de ciudad, el diario y el Focus ahora cambian cuánto comprar); «reutilizas N» y capital de compra neto. Ver `RELEASE_NOTES_9_8_0.md`.
+
 ## v9.7.0 (2026-11-10)
 
 - Craft Cal.: selector de bono diario de producción (+10/+20 %) combinado con bono de ciudad, «fuera de bono» y Focus. Ver `RELEASE_NOTES_9_7_0.md`.
