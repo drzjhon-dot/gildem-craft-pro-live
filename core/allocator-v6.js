@@ -36,6 +36,24 @@ function value(x,goal){
  return p*trust*slippage*risk*personal*turnover;
 }
 export function routePriority(route,goal='balanced'){return value(route,goal);}
+// Explorar tiers y encantamientos intercalados, sin introducir nuevas rutas:
+// todas pasan los mismos filtros de margen y actividad antes de distribuir capital.
+export function diversifiedRouteOrder(routes=[],{by='tier',priority=x=>f(x.profit)/Math.max(1,f(x.capitalPerUnit))}={}) {
+ const groups=new Map();
+ for(const route of routes){
+  const tier=Number(String(route.id||'').match(/^T([1-8])_/)?.[1]||0);
+  const ench=Number(String(route.id||'').split('@')[1]||0);
+  const k=by==='enchant'?ench+'|'+tier:tier+'|'+ench;
+  if(!groups.has(k))groups.set(k,[]);
+  groups.get(k).push(route);
+ }
+ const lanes=[...groups.values()].map(rows=>rows.sort((a,b)=>priority(b)-priority(a)));
+ lanes.sort((a,b)=>priority(b[0])-priority(a[0]));
+ const result=[];let at=0;
+ while(result.length<routes.length){let any=false;for(const lane of lanes){if(lane[at]){result.push(lane[at]);any=true;}}if(!any)break;at++;}
+ return result;
+}
+
 // v9.1.0 · Lote mínimo útil. En el Mercado Negro un lote de 1 no compensa el viaje
 // a Caerleon: o la ruta recibe una parte real de lo que su mercado absorbe, o no
 // entra en el plan. En Royal se permite 1 unidad (se publica y se espera).
@@ -167,7 +185,9 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
   all,
   [...all].sort((a,b)=>b.profit/b.capitalPerUnit-a.profit/a.capitalPerUnit),
   [...all].sort((a,b)=>b.profit-a.profit),
-  [...all].sort((a,b)=>f(b.demandDaily,b.activity?.observedDaily)-f(a.demandDaily,a.activity?.observedDaily))
+  [...all].sort((a,b)=>f(b.demandDaily,b.activity?.observedDaily)-f(a.demandDaily,a.activity?.observedDaily)),
+  diversifiedRouteOrder(all,{by:'tier',priority:val}),
+  diversifiedRouteOrder(all,{by:'enchant',priority:val})
  ];
  if(fameWeight>0)orders.push([...all].sort((a,b)=>f(b.craftFame)/b.capitalPerUnit-f(a.craftFame)/a.capitalPerUnit));
  let best=null;
@@ -240,7 +260,10 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
   const itemCount=new Set(rows.map(x=>x.id)).size;
   // Reward having several profitable, truly distinct items but avoid driving
   // profit below zero or manufacturing unprofitable filler stock.
-  const metric=score*(smart?(1+(rotationGuard?.12:.04)*Math.min(24,itemCount)):1)
+  const selectedTiers=new Set(rows.map(x=>String(x.id).match(/^T([1-8])_/)?.[1]).filter(Boolean)).size;
+  const selectedEnchantments=new Set(rows.map(x=>Number(String(x.id).split('@')[1]||0))).size;
+  const breadthReward=fameWeight>0?1+Math.min(.10,(selectedTiers-1)*.012+(selectedEnchantments-1)*.008)*fameWeight:1;
+  const metric=score*(smart?(1+(rotationGuard?.12:.04)*Math.min(24,itemCount)):1)*breadthReward
    +(opts.bulkMode&&opts.useAll&&!rotationGuard?(spent/Math.max(1,budgetValue))*Math.max(1,score)*.35:0);
   if(!best||metric>best.metric+1e-8||(Math.abs(metric-best.metric)<1e-8&&profit>best.profit))
    best={rows,metric,profit};

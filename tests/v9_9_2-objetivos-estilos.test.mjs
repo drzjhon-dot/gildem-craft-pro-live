@@ -69,5 +69,5 @@ test('Black Craft y Royal Craft conectan ambos selectores al plan y no cambian r
   'const fameFirst=Number(fameGoal)===2','fameSaleEvidence(x)','rotationGuard:craftPrefs.rotationGuard!==false',
   'rotationGuard:autoPrefs.rotationGuard!==false','style:craftPrefs.style,fameGoal:craftPrefs.fameGoal',
   'style:autoPrefs.style,fameGoal:autoPrefs.fameGoal'])assert(app.includes(marker),marker);
- assert(html.includes('v9.9.3'));
+ assert(html.includes('v9.9.5'));
 });

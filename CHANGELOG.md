@@ -225,3 +225,10 @@ Logo solo en esquina superior izquierda y tests de branding actualizados para Ne
 
 ## v9.9.3 · Top Mercado
 - Historial de todas las calidades, días UTC completos y catálogo de objetos más amplio; sin cambio a planificación.
+
+## v9.9.4
+- AODP West REST: fechas UTC completas en Top Mercado, manejo de límites 429, fuente y frescura explícitas.
+- NATS West opcional: worker persistente de observación de órdenes sin duplicar las ventas ni alterar los cálculos.
+
+## v9.9.5
+- Presupuesto manual, variantes exactas, comprobación final y portafolios más diversificados.

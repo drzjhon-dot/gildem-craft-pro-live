@@ -1,3 +1,7 @@
+> **Actualización v9.9.5:** Black Craft y Royal Craft ahora admiten presupuesto exacto, filtros estrictos de tiers/encantamientos, validación final del plan y mayor diversidad entre variantes rentables con rotación observada. Consulta [RELEASE_NOTES_9_9_5.md](RELEASE_NOTES_9_9_5.md).
+
+> **Actualización v9.9.4:** AODP Developer integrado: fechas UTC completas para Top Mercado, protección frente a 429 y feed NATS West opcional con proceso dedicado. Detalles y configuración segura en [INTEGRACION_AODP_DEVELOPER.md](INTEGRACION_AODP_DEVELOPER.md). El sitio Netlify funciona sin NATS mediante la API REST oficial.
+
 # Gildem Craft Pro v8.6.9
 
 **Actualización:** ya no se emiten listas ficticias de una unidad como «plan de investigación». Black Craft consulta el historial West antes de decidir rentabilidad y admite escenarios de venta por orden BM calculados a partir de medianas históricas de al menos cuatro días con actividad, alto volumen y cotizaciones recientes. Los escenarios históricos se identifican como **CONDICIONADOS**: nunca se debe comprar ni fabricar sin confirmar el precio objetivo dentro del juego. La disponibilidad de materiales sigue siendo verificable por etapas.

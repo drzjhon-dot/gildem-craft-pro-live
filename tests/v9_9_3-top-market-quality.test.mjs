@@ -45,7 +45,7 @@ test('Top Mercado usa historia de calidades 1-5 sin cambiar historia del motor d
  assert(data.includes("qualities:'1,2,3,4,5'"));
  assert(data.includes("export const history=(ids,region='west',force=false)=>api('history',ids,region"));
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- assert(app.includes('historyTopMarket(ids,prefs.region,force,input.cities)'));
+ assert(app.includes('historyTopMarket(ids,prefs.region,force,input.cities,input.days)'));
  assert(app.includes('topMarketCatalogIds(recipes,names,input.branches'));
- assert(app.includes('no son ventas garantizadas'));
+ assert(app.includes('no garantizan demanda ejecutable'));
 });

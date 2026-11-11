@@ -27,8 +27,8 @@ test('v9.9.2: nuevo logo y accesos de copiar preservados',()=>{
  assert(sw.includes("'./assets/branding/gildem-sidebar-logo.webp'"),'El logo nuevo debe estar precargado');
  assert(existsSync(new URL('../assets/branding/gildem-sidebar-logo.webp',import.meta.url)), 'Debe existir el logo nuevo');
  assert(html.includes('data-page="crafting"'));
- assert(sw.includes('gildem-craft-pro-v9.9.3'));
- assert(html.includes('app.js?v=9.9.3'));
+ assert(sw.includes('gildem-craft-pro-v9.9.5'));
+ assert(html.includes('app.js?v=9.9.5'));
  assert(css.includes('.gcp-copy-name'));
  assert(read('app.js').toString().includes("copyableItemCell(m.id)"));
 });
