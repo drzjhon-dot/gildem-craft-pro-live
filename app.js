@@ -12,7 +12,7 @@ import {materialPurchaseCities} from './core/material-cities.js';
 import {REFINERY_CHOICES,refinementScanIds,refiningPriceIds,createRefiningCandidates} from './core/refining-opportunities.js';
 import {itemStem,itemMatches,familyChoices} from './core/item-selection.js';
 import {blackMarketEligible,specialType} from './core/special-recipes.js';
-import {prices,history,historyQuality,historyHourly,festivities,orderbook,pricesQuality,clearCache,cachedCount,HOUR} from './core/data.js';
+import {prices,history,historyTopMarket,historyQuality,historyHourly,festivities,orderbook,pricesQuality,clearCache,cachedCount,HOUR} from './core/data.js';
 import {historyMetrics,confidenceOf,scenarioProfit,qualityWeightedSale,allocateSmartPortfolio,focusPerSilver} from './core/optimizer.js';
 import {createPortfolioFromPlan,summarizePortfolio,recordSale,setLotCost,overallDashboard} from './core/ledger.js';
 import {addAlertFromRoute,evaluateAlert} from './core/alerts.js';
@@ -32,7 +32,7 @@ import {volumeTrend} from './core/market-volume.js';
 import {chosenDemandIds,demandHistoryIndex,discoverDemand,demandExplanation,listingCapacity} from './core/demand-first.js';
 import {PLAN_STYLES,DEFAULT_STYLE,resolveStyle,impactCapacity,saturationSummary,FAST_ROTATION,rotationStyleProfile} from './core/market-impact.js';
 import {addressableDemand,qualityVolumeIndex,applyBmReversion} from './core/market-mechanics.js';
-import {aggregateTopMarket,rankTopMarket,branchForItem,TOP_SORTS} from './core/top-market.js';
+import {aggregateTopMarket,rankTopMarket,topMarketCatalogIds,branchForItem,TOP_SORTS} from './core/top-market.js';
 import {sellHoursByCity,bestSellHours,parseFestivities} from './core/sell-hours.js';
 import {calcBatch,calcPriceIds,quoteIndex,variantId,availableTiers,availableEnchants} from './core/craft-calc.js';
 import {evidenceForPlan} from './core/market-proof.js';
@@ -1408,7 +1408,7 @@ function topMarketPage(){
    <div class="gcp-dd-items">${items.map(b=>`<label><input type="checkbox" data-top-branch-pick data-dd-cat="${h(cat)}" value="${h(b.key)}" ${selected.has(b.key)?'checked':''}> ${h(b.label)}</label>`).join('')}</div></details>`;
  }).join('');
  main.innerHTML=`<div class="page-grid"><div class="col-12"><section class="panel gcp-top-market">
-  <div class="section-head"><h2>Top del mercado</h2><p class="explain">Lo más vendido según el historial público del servidor América · West (AODP), el mismo que usan las webs de «top selling», sin cambiar de servidor a mano. Promedios de la ventana elegida: observaciones del mercado, no ventas garantizadas.</p></div>
+  <div class="section-head"><h2>Top del mercado</h2><p class="explain">Actividad del historial público AODP América · West. Suma calidades 1–5 y promedia días UTC completos. Las cifras pueden diferir del EMV de otras webs: no son ventas garantizadas ni demanda confirmada para fabricar lotes.</p></div>
   <div class="gcp-top-controls">
    <details class="gcp-branch-dd" id="top-branch-dd"><summary>Ramas · <span id="top-branch-count">${selected.size}</span> de ${TOP_MAX_BRANCHES} máx.</summary>
     <div class="gcp-dd-panel"><div class="gcp-dd-tools gcp-dd-global"><button type="button" class="btn sm ghost" data-dd-clear>Borrar selección</button><small>Hasta ${TOP_MAX_BRANCHES} ramas por consulta.</small></div>${groups}</div>
@@ -1418,7 +1418,7 @@ function topMarketPage(){
    <fieldset class="gcp-top-cities"><legend>Mercados</legend>${ALL_CITIES.map(c=>`<label><input type="checkbox" data-top-city value="${h(c)}" ${cities.includes(c)?'checked':''}> ${h(c==='Black Market'?'Mercado Negro':c)}</label>`).join('')}</fieldset>
    <div class="gcp-top-actions"><button class="btn gold" data-top-run="normal">Consultar top</button><button class="btn ghost sm" data-top-run="force" title="Ignora la caché de 1 hora">Forzar datos frescos</button></div>
   </div>
-  <div id="top-results">${state.topMarket?'':'<p class="muted">Elige una o varias ramas y consulta. La primera consulta tarda unos segundos; después queda en caché una hora.</p>'}</div>
+  <div id="top-results">${state.topMarket?'':'<p class="muted">Elige una o varias ramas y consulta. La consulta cubre todas las calidades y puede tardar; los datos consultados quedan en caché una hora.</p>'}</div>
  </section></div></div>`;
  if(state.topMarket)renderTopResults();
 }
@@ -1448,13 +1448,17 @@ async function runTopMarket(force=false){
  try{
   await loadCatalog();
   try{await loadSpecialCatalog(()=>{});registerPotionFamilies(recipes,names);registerMountFamilies(recipes,names);}catch{}
-  const perBranch=Math.max(40,Math.floor(240/input.branches.length));
-  const ids=[...new Set(input.branches.flatMap(key=>recipesForBranch(recipes,key,4,8,4,perBranch,'auto')))].slice(0,240);
+  const topLimit=input.cities.length>3?180:input.cities.length>1?300:450;
+  const universe=topMarketCatalogIds(recipes,names,input.branches,{limit:topLimit});
+  const ids=universe.ids;
   if(!ids.length)throw new Error('Las ramas elegidas no tienen recetas cargadas todavía. Vuelve a intentarlo en unos segundos.');
-  const res=await history(ids,prefs.region,force);
+  const res=await historyTopMarket(ids,prefs.region,force,input.cities);
   updateStatus(res);
   const entries=aggregateTopMarket(res.rows,{days:input.days});
-  state.topMarket={input,entries,warning:res.warning||null,fetchedAt:res.fetchedAt||Date.now(),ids:ids.length};
+  state.topMarket={input,entries,warning:res.warning||null,partial:res.partial||universe.truncated,
+   fetchedAt:res.fetchedAt||Date.now(),ids:ids.length,universeCount:universe.available,
+   variantsObserved:new Set(entries.map(e=>e.id)).size,
+   source:'AODP West · historial 24 h · calidades 1–5 · días UTC completos'};
   renderTopResults();
  }catch(e){out.innerHTML=`<p class="notice">No se pudo consultar el top: ${h(e.message)}</p>`;}
 }
@@ -1462,7 +1466,7 @@ function renderTopResults(){
  const out=control('top-results'),snap=state.topMarket;if(!out||!snap)return;
  const input=topMarketInputs().cities?{...snap.input,...topMarketInputs()}:snap.input;
  const rows=rankTopMarket(snap.entries,{sortBy:input.sortBy,limit:60,cities:input.cities});
- if(!rows.length){out.innerHTML='<p class="notice">Sin movimientos registrados para esa rama en los mercados y la ventana elegidos.</p>';return;}
+ if(!rows.length){out.innerHTML=`<p class="notice">La API no devolvió actividad observada para estas variantes, mercados y fechas. <strong>Esto NO demuestra que no se vendan.</strong> ${snap.warning?h(snap.warning):''} ${snap.partial?'Consulta incompleta: revisa cobertura o reintenta.':''}</p>`;return;}
  const chip=id=>`<span class="gcp-tier gcp-tier-${itemEnch(id)}">T${itemTier(id)}.${itemEnch(id)}</span>`;
  const cityChip=city=>`<span class="gx-city gx-city-${String(city||'').toLowerCase().replace(/[^a-z]/g,'')}">${h(city==='Black Market'?'Mercado Negro':city)}</span>`;
  const body=rows.map((r,i)=>{
@@ -1478,7 +1482,7 @@ function renderTopResults(){
   </div>`;}).join('');
  out.innerHTML=`<div class="gx-list gcp-top-list">
   <div class="gx-head gx-top-row"><span>#</span><span>Objeto</span><span>Mercado</span><span>Unidades/día</span><span>Silver/día</span><span>Precio unidad</span><span></span></div>${body}</div>
-  <p class="gcp-panel-caption">${snap.ids} variantes consultadas · ventana de ${input.days===1?'1 día':input.days+' días'} · calidad Normal.${snap.warning?' '+h(snap.warning):''} «Agregar a Cal.» añade el objeto a la calculadora de craft.</p>`;
+  <p class="gcp-panel-caption">Fuente: ${h(snap.source||'AODP West')} · ${snap.ids} de ${snap.universeCount||snap.ids} variantes conocidas consultadas · ${snap.variantsObserved??'—'} con actividad publicada por AODP · ${input.days} días UTC completos · ventana ${h(rows[0]?.periodStart||'—')} a ${h(rows[0]?.periodEnd||'—')}. ${snap.partial?'<strong>CONSULTA PARCIAL: no interpretar ausencias como cero ventas.</strong> ':''}${snap.warning?h(snap.warning)+' ':''}El historial de AODP y otras webs con datos EMV pueden diferir; son observaciones, no órdenes reservadas. «Agregar a Cal.» añade el objeto a la calculadora de craft.</p>`;
 }
 function craftResult(p){const b=p.plan, journalTotals=new Map();
   const patientBadge=p.planStrategy==='patient'?'<div class="notice neutral gcp-patient-notice"><strong>Plan de venta lenta y capital paciente.</strong> Las cantidades son pequeñas y pueden tardar varios días o semanas en venderse. Beneficio calculado con precios observados, no cobrado. '+(p.supplyPending?'Los materiales no están disponibles en cantidad verificable al precio indicado; el plan necesita compras por etapas.':'Comprueba los precios y la competencia antes de ejecutar.')+'</div>':'';

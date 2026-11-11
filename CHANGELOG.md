@@ -222,3 +222,6 @@ Logo solo en esquina superior izquierda y tests de branding actualizados para Ne
 
 ## v9.9.2
 - Objetivos y estilos vuelven a influir realmente en lotes, prioridad y diversidad bajo rotación rápida.
+
+## v9.9.3 · Top Mercado
+- Historial de todas las calidades, días UTC completos y catálogo de objetos más amplio; sin cambio a planificación.

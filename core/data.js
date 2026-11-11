@@ -58,6 +58,10 @@ async function api(kind,ids,region='west',params={},force=false){requireWest(reg
 }
 export const prices=(ids,region='west',force=false)=>api('prices',ids,region,{locations:'Bridgewatch,Fort Sterling,Lymhurst,Martlock,Thetford,Caerleon,Brecilien,Black Market',qualities:'1'},force);
 export const history=(ids,region='west',force=false)=>api('history',ids,region,{locations:'Bridgewatch,Fort Sterling,Lymhurst,Martlock,Thetford,Caerleon,Brecilien,Black Market',qualities:'1','time-scale':'24'},force);
+// Top Mercado separado de las estimaciones de crafting: consulta TODAS las
+// calidades y solo los mercados elegidos, sin tocar history() ni los motores.
+export const historyTopMarket=(ids,region='west',force=false,cities=['Black Market'])=>
+ api('history',ids,region,{locations:cities.join(','),qualities:'1,2,3,4,5','time-scale':'24'},force);
 // v8.9.0 · Volumen de las calidades 2 y 3 (cada calidad es un mercado aparte).
 export const historyHourly=(ids,region='west',force=false)=>api('history',ids,region,{locations:'Bridgewatch,Fort Sterling,Lymhurst,Martlock,Thetford,Caerleon,Brecilien,Black Market',qualities:'1','time-scale':'1'},force);
 // Eventos confirmados del juego (festivities). 404 = sin eventos confirmados.

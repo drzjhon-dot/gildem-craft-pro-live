@@ -15,11 +15,11 @@ test('agrega por objeto y ciudad: promedio sobre la ventana y precio ponderado p
  const out=aggregateTopMarket(rows,{days:7,now});
  const bag=out.find(x=>x.id==='T4_BAG'&&x.city==='Caerleon');
  assert(bag);
- assert.equal(bag.totalUnits,150,'el punto de hace 10 días queda fuera de la ventana de 7');
- assert(Math.abs(bag.dailyAmount-150/7)<1e-9);
- assert(Math.abs(bag.unitPrice-(100*2000+50*4000)/150)<1e-6,'precio medio ponderado por unidades');
+ assert.equal(bag.totalUnits,50,'el día actual parcial y el punto de hace 10 días quedan fuera');
+ assert(Math.abs(bag.dailyAmount-50/7)<1e-9);
+ assert(Math.abs(bag.unitPrice-4000)<1e-6,'precio medio ponderado por unidades');
  assert(Math.abs(bag.dailySilver-bag.dailyAmount*bag.unitPrice)<1e-6);
- assert.equal(bag.activeDays,2);
+ assert.equal(bag.activeDays,1);
  assert.equal(out.find(x=>x.id==='T5_BAG'),undefined,'sin movimientos dentro de la ventana no aparece');
 });
 test('ranking: ordena por silver, unidades o precio, filtra ciudades y limita',()=>{

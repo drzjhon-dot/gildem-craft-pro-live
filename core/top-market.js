@@ -6,24 +6,35 @@ import {BRANCHES} from './branches.js';
 const n=x=>Number.isFinite(Number(x))?Math.max(0,Number(x)):0;
 const DAY=86400000;
 
-// Agrega el historial diario (time-scale 24) por «objeto|ciudad» dentro de la
-// ventana pedida. El promedio divide por los días de la VENTANA, como hacen las
-// webs de referencia: un objeto que solo se vendió 2 de 7 días promedia bajo.
+// Top de mercado: dias UTC COMPLETOS (no mezcla un día parcialmente abierto).
+// AODP ofrece historial por calidad; las calidades 1..5 son mercados distintos.
+// Deduplicar registros repetidos antes de sumar evita inflar una cantidad por caché.
+function utcTimestamp(value){
+ if(typeof value==='number')return value>1e12?value:value>1e9?value*1000:NaN;
+ if(typeof value!=='string')return NaN;
+ const v=value.trim();
+ if(/^\d{13}$/.test(v))return Number(v);
+ if(/^\d{10}$/.test(v))return Number(v)*1000;
+ return Date.parse(/(?:Z|[+-]\d\d:?\d\d)$/.test(v)?v:v+'Z');
+}
 export function aggregateTopMarket(rows=[],{days=7,now=Date.now()}={}){
  const window=Math.max(1,Math.min(30,Math.floor(n(days))||7));
- const since=now-window*DAY;
- const bucket=new Map();
+ const end=Math.floor(now/DAY)*DAY,start=end-window*DAY;
+ const bucket=new Map(),seen=new Set();
  for(const row of rows||[]){
-  const id=row?.item_id,city=row?.location||row?.city;
-  if(!id||!city||!Array.isArray(row.data))continue;
+  const id=row?.item_id,city=row?.location||row?.city,q=Number(row?.quality??1);
+  if(!id||!city||!Number.isInteger(q)||q<1||q>5||!Array.isArray(row.data))continue;
   const key=id+'|'+city;
-  const entry=bucket.get(key)||{id,city,units:0,silver:0,observations:0,activeDays:new Set()};
+  const entry=bucket.get(key)||{id,city,units:0,silver:0,observations:0,activeDays:new Set(),qualities:new Set()};
   for(const point of row.data){
-   const at=Date.parse(point?.timestamp);
-   if(!Number.isFinite(at)||at<since||at>now+DAY)continue;
+   const at=utcTimestamp(point?.timestamp);
+   if(!Number.isFinite(at)||at<start||at>=end)continue;
    const count=n(point.item_count),price=n(point.avg_price);
-   if(!(count>0))continue;
+   if(!(count>0&&price>0))continue;
+   const signature=[id,city,q,at,count,price].join('|');
+   if(seen.has(signature))continue;seen.add(signature);
    entry.units+=count;entry.silver+=count*price;entry.observations++;
+   entry.qualities.add(q);
    entry.activeDays.add(new Date(at).toISOString().slice(0,10));
   }
   bucket.set(key,entry);
@@ -32,12 +43,40 @@ export function aggregateTopMarket(rows=[],{days=7,now=Date.now()}={}){
  for(const e of bucket.values()){
   if(!(e.units>0))continue;
   out.push({id:e.id,city:e.city,days:window,
-   dailyAmount:e.units/window,
-   dailySilver:e.silver/window,
-   unitPrice:e.silver/e.units,
-   totalUnits:e.units,observations:e.observations,activeDays:Math.min(e.activeDays.size,window)});
+   dailyAmount:e.units/window,dailySilver:e.silver/window,unitPrice:e.silver/e.units,
+   totalUnits:e.units,observations:e.observations,activeDays:e.activeDays.size,
+   qualities:[...e.qualities].sort((a,b)=>a-b),periodStart:new Date(start).toISOString().slice(0,10),periodEnd:new Date(end-DAY).toISOString().slice(0,10)});
  }
  return out;
+}
+
+// El ranking NO es una lista de recetas: también debe consultar IDs conocidos
+// que no tengan materiales descargados. Solo genera IDs desde catálogos reales.
+// La selección reparte cupos por rama y tier, priorizando .0 y .1 sin ocultar
+// un tier entero detrás de cientos de variantes de otro.
+export function topMarketCatalogIds(recipes={},names={},branchKeys=[],{limit=450}={}){
+ const universe=[...new Set([...Object.keys(recipes||{}),...Object.keys(names||{})])];
+ const chosen=branchKeys.map(key=>BRANCHES.find(b=>b.key===key)).filter(Boolean);
+ const lists=chosen.map(b=>{
+  const records=[];
+  for(const id of universe){
+   const m=id.match(/^T([2-8])_([A-Z0-9_]+)(?:@([1-4]))?$/);
+   if(!m)continue;
+   const tier=Number(m[1]);
+   const matches=b.test(id)||(tier===3&&b.test(id.replace(/^T3_/,'T4_')));
+   if(!matches)continue;
+   records.push({id,tier,ench:Number(m[3]||0)});
+  }
+  records.sort((a,b)=>a.ench-b.ench||a.tier-b.tier||a.id.localeCompare(b.id));
+  return records.map(x=>x.id);
+ });
+ const result=[],seen=new Set(),cap=Math.max(1,Math.floor(n(limit))||450);
+ for(let pos=0;result.length<cap&&lists.some(list=>pos<list.length);pos++){
+  for(const list of lists){const id=list[pos];if(!id||seen.has(id))continue;
+   seen.add(id);result.push(id);if(result.length>=cap)break;
+  }
+ }
+ return {ids:result,available:[...new Set(lists.flat())].length,truncated:result.length<[...new Set(lists.flat())].length};
 }
 
 export const TOP_SORTS=Object.freeze({

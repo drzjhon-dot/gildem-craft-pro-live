@@ -15,8 +15,8 @@ test('v9.9.2: seis pestañas usan miniaturas SVG locales que se precachean',()=>
   assert(sw.includes(`'./${path}'`),path);
   const svg=read(path);assert(svg.includes('<svg ')&&svg.includes('</svg>'));
  }
- assert(sw.includes('gildem-craft-pro-v9.9.2'));
- assert(html.includes('app.js?v=9.9.2'));
+ assert(sw.includes('gildem-craft-pro-v9.9.3'));
+ assert(html.includes('app.js?v=9.9.3'));
 });
 
 test('v9.9.2: botones al lado de objetos, materiales y diarios sin cambiar la compra',()=>{
