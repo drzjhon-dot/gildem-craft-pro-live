@@ -1131,3 +1131,8 @@ body.gcp-results-active .workspace{
 .gcp-proposal .btn{margin-top:auto;white-space:normal}
 @media(max-width:1050px){.gcp-proposals{grid-template-columns:1fr}.gcp-proposal-numbers{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:550px){.gcp-proposal-numbers{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* top.7: control de diversidad obligatoria, visible en Black y Royal. */
+.qc-diversity-priority{background:linear-gradient(110deg,rgba(237,182,79,.10),rgba(47,27,70,.25));border-color:rgba(237,182,79,.35)!important}
+.qc-diversity-priority .qc-toggle{font-weight:750;color:#f7d89c}
+.qc-diversity-priority small{line-height:1.6;max-width:950px}

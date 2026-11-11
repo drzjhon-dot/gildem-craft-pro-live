@@ -244,3 +244,6 @@ Logo solo en esquina superior izquierda y tests de branding actualizados para Ne
 
 ## v9.9.0-top.6
 - Consulta histórica unificada con Top Mercado para planes, auditoría por tier y oportunidad de diversificación para T6–T8 viables.
+
+## v9.9.0-top.7
+- Diversidad prioritaria T6–T8: nuevos límites auditables y riesgo visible, sin exceder presupuesto.

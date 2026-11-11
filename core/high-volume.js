@@ -16,15 +16,19 @@ export function observedWeeklyActivity(route){
  if(daily!==null)return {units:daily*7,source:'AODP West · promedio histórico extrapolado a 7 días',provisional:true};
  return null;
 }
-export function bulkMarketCandidates(routes,{minWeekly=MIN_WEEKLY_ACTIVITY,requireStress=true}={}){
+export function bulkMarketCandidates(routes,{minWeekly=MIN_WEEKLY_ACTIVITY,requireStress=true,diversityPriority=false}={}){
  const accepted=[],rejected=[];
  for(const route of routes||[]){
   const signal=observedWeeklyActivity(route);
   const positive=Number(route?.profit)>0&&Number(route?.cost)>0&&Number(route?.capitalPerUnit)>0;
+  const tier=Number(String(route?.id||'').match(/^T([1-8])_/)?.[1]||0);
+  const relaxed=diversityPriority&&tier>=6;
+  const floor=relaxed?(tier===8?2:tier===7?5:12):minWeekly;
+  const hasHistory=!relaxed||route.depthVerified||Number(route?.activity?.activeDays)>=2||Number(route?.activity7?.observations)>=2;
   const stressed=!requireStress||Number(route?.stressProfit)>0;
-  if(positive&&stressed&&signal&&signal.units>minWeekly){
+  if(positive&&stressed&&hasHistory&&signal&&signal.units>floor){
    accepted.push({...route,weeklyObserved:signal.units,weeklySource:signal.source,bulkQualified:true});
-  }else rejected.push({id:route?.id,city:route?.city,reason:!signal?'Sin observaciones semanales':signal.units<=minWeekly?'Actividad semanal insuficiente':!positive?'Sin margen neto positivo':'Margen negativo en escenario conservador'});
+  }else rejected.push({id:route?.id,city:route?.city,reason:!signal?'Sin observaciones semanales':!hasHistory?'Historial demasiado intermitente':signal.units<=floor?'Actividad semanal insuficiente':!positive?'Sin margen neto positivo':'Margen negativo en escenario conservador'});
  }
  return {accepted,rejected,minWeekly};
 }

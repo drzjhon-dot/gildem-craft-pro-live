@@ -38,11 +38,24 @@ export function rebuildPlan(rows,budget,focusLimit=null){
   materials:[...matMap.values()].sort((a,b)=>a.city.localeCompare(b.city)||a.id.localeCompare(b.id)),cities:[...cityMap.values()].sort((a,b)=>b.profit-a.profit),focusUsed:focus,focusLimit,
   extraJournalCapital:roundedReserve,journalSummary:journal,capital};
 }
-export function fitPlan(rows,budget,focusLimit=null){
+export function fitPlan(rows,budget,focusLimit=null,{preserveTiers=false}={}){
  let result=rebuildPlan(rows,budget,focusLimit);if(result.ok)return result;
  const working=rows.map(r=>({...r}));
  for(let i=0;i<15000;i++){
-  const active=working.filter(r=>r.qty>0).sort((a,b)=>(a.profit/(a.capitalPerUnit||1))-(b.profit/(b.capitalPerUnit||1)));
+  const active=working.filter(r=>r.qty>0);
+  if(preserveTiers){
+   const tierCounts=new Map();
+   for(const r of active){const tier=String(r.id||'').match(/^T([1-8])_/)?.[1]||'?';tierCounts.set(tier,(tierCounts.get(tier)||0)+1);}
+   // Quitar antes unidades repetidas y evitar que los diarios completos
+   // borren automáticamente la ÚNICA ruta de un tier alto.
+   active.sort((a,b)=>{
+    const ta=String(a.id||'').match(/^T([1-8])_/)?.[1]||'?';
+    const tb=String(b.id||'').match(/^T([1-8])_/)?.[1]||'?';
+    const pa=(tierCounts.get(ta)>1||a.qty>1)?0:1;
+    const pb=(tierCounts.get(tb)>1||b.qty>1)?0:1;
+    return pa-pb || (a.profit/(a.capitalPerUnit||1))-(b.profit/(b.capitalPerUnit||1));
+   });
+  }else active.sort((a,b)=>(a.profit/(a.capitalPerUnit||1))-(b.profit/(b.capitalPerUnit||1)));
   if(!active.length)break;active[0].qty--;
   result=rebuildPlan(working,budget,focusLimit);if(result.ok)return result;
  }

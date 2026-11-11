@@ -20,8 +20,8 @@ export function proposalMetrics(plan){
   profit:num(plan?.totalProfit),capital:num(plan?.totalCost),stress:rows.reduce((s,r)=>s+num(r.qty)*num(r.stressProfit),0)};
 }
 export function proposalSignature(plan){return (plan?.rows||[]).map(r=>r.id+'|'+r.city+'|'+r.mode+'|'+r.qty).sort().join(';');}
-export function makeCraftProposals(routes,budget,{style=2,horizonDays=14,focusLimit=null,pending=new Map(),useAll=true,primaryPlan=null,primaryGoal=1}={}){
- const allowed=(routes||[]).filter(r=>r&&r.id&&num(r.profit)>0&&num(r.stressProfit)>0&&num(r.capitalPerUnit)>0&&num(r.cost)>0);
+export function makeCraftProposals(routes,budget,{style=2,horizonDays=14,focusLimit=null,pending=new Map(),useAll=true,primaryPlan=null,primaryGoal=1,forceDiversity=false}={}){
+ const allowed=(routes||[]).filter(r=>r&&r.id&&num(r.profit)>0&&(forceDiversity||num(r.stressProfit)>0)&&num(r.capitalPerUnit)>0&&num(r.cost)>0);
  const cap=Math.max(0,num(budget));
  const observedIds=new Set(allowed.map(r=>r.id)).size;
  const baselineCap=bulkItemExposureFraction(allowed);
@@ -34,10 +34,10 @@ export function makeCraftProposals(routes,budget,{style=2,horizonDays=14,focusLi
    unknownCap:0,horizonDays,focusLimit,minimumConfidence:0,intelligent:true,
    bulkMode:true,saturation:style,fameWeight:[0,.5,1][spec.fameGoal],
    maxPerItemFraction:fraction,maxVariants:80,targetDifferentItems:profile.targetDifferentItems,
-   diversityLanes:profile.diversityLanes,diversityWeight:profile.diversityWeight,
+   diversityLanes:profile.diversityLanes,diversityWeight:profile.diversityWeight,forceDiversity,
    pendingByMarket:pending instanceof Map?pending:new Map()
   }):{rows:[]};
-  const plan=fitPlan(estimate.rows||[],cap,focusLimit);
+  const plan=fitPlan(estimate.rows||[],cap,focusLimit,{preserveTiers:forceDiversity});
   return {...spec,plan,metrics:proposalMetrics(plan),duplicateOf:null};
  });
  // La propuesta del objetivo elegido debe coincidir con el plan que acaba de
