@@ -960,3 +960,70 @@ body[data-page="craftcal"]{--glow:#8f7bff}
 .gcp-results .gcp-shopping-item .gcp-copyable-name .item-cell{min-width:0}
 @media(max-width:600px){.gcp-copy-name{width:33px;height:33px;flex-basis:33px}.gcp-copyable-name{gap:4px}}
 @media(prefers-reduced-motion:reduce){.gcp-copy-name{transition:none}}
+
+
+
+/* v9.8.2 · Gildem Albion Lab — identidad visual y fondos temáticos locales.
+   Las escenas son solamente decorativas: NO cambian cálculos ni eventos de UI. */
+body[data-page="crafting"]{--lab-scene:url('./assets/scenes/black-craft.webp');--lab-scene-glow:#eea95d}
+body[data-page="autocraft"]{--lab-scene:url('./assets/scenes/royal-craft.webp');--lab-scene-glow:#e8c078}
+body[data-page="topmercado"]{--lab-scene:url('./assets/scenes/top-market.webp');--lab-scene-glow:#cda45d}
+body[data-page="craftcal"]{--lab-scene:url('./assets/scenes/craft-cal.webp');--lab-scene-glow:#ffad63}
+body[data-page="resultados"]{--lab-scene:url('./assets/scenes/results.webp');--lab-scene-glow:#c6a677}
+body[data-page="ajustes"]{--lab-scene:url('./assets/scenes/settings.webp');--lab-scene-glow:#a7a0e1}
+/* Páginas antiguas alcanzables desde enlaces internos comparten un fondo seguro. */
+body{--lab-scene:url('./assets/scenes/black-craft.webp')}
+.workspace,
+body.gcp-results-active .workspace{
+ background-color:#100b1e;
+ background-image:linear-gradient(90deg,rgba(15,10,27,.37) 0%,rgba(15,10,27,.17) 54%,rgba(15,10,27,.06) 100%),var(--lab-scene);
+ background-size:cover;
+ background-position:center top;
+ background-repeat:no-repeat;
+ background-attachment:fixed;
+}
+/* Conservamos el resplandor animado previo, ahora más discreto sobre el arte. */
+.workspace::before{opacity:.44;filter:blur(48px)}
+#main-content{position:relative;isolation:isolate}
+#main-content::before{
+ content:"";display:block;position:absolute;top:0;left:0;right:0;height:210px;z-index:-1;pointer-events:none;
+ background-image:linear-gradient(90deg,rgba(16,10,26,.90) 0%,rgba(16,10,26,.50) 45%,rgba(16,10,26,.12) 100%),var(--lab-scene);
+ background-size:cover;background-position:center 10%;background-repeat:no-repeat;
+ -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 58%,transparent 100%);
+ mask-image:linear-gradient(to bottom,#000 0%,#000 58%,transparent 100%);
+ opacity:.83;
+}
+#main-content>*{position:relative}
+/* Sombra sobre los formularios: el dibujo nunca compite con cifras o botones. */
+.panel{background:linear-gradient(166deg,rgba(27,19,43,.96),rgba(18,13,34,.94))}
+.gcp-results .gcp-result-panel{background:linear-gradient(160deg,rgba(28,18,45,.96),rgba(17,12,33,.94))}
+/* Firma de marca en el menú, basada en la ilustración original aprobada. */
+.sidebar{isolation:isolate}
+.sidebar::before{
+ content:"";position:absolute;inset:0 0 auto;z-index:-1;height:165px;pointer-events:none;
+ background:linear-gradient(180deg,#100a1b54,#100a1b 100%),url('./assets/scenes/royal-craft.webp') center top/cover no-repeat;
+ opacity:.58;
+}
+.sidebar .brand{gap:8px;padding:2px 2px 26px;align-items:center;min-width:0}
+.sidebar .brand-crest{display:block;flex:0 0 67px;width:67px;height:72px;object-fit:cover;object-position:center;filter:drop-shadow(0 0 12px #c18b5460)}
+.sidebar .brand-copy{min-width:0;flex:1}
+.sidebar .brand strong{font-family:var(--font-display);display:block;font-size:26px;line-height:1;letter-spacing:.02em;color:#ffd38a;text-shadow:0 0 20px #e9b26455}
+.sidebar .brand-lab{display:inline-block;font-family:var(--font-body);font-size:11px;letter-spacing:.13em;font-weight:850;color:#e9bb6a;white-space:nowrap;margin-top:4px}
+.sidebar .brand small{font-size:9.5px;line-height:1.28;letter-spacing:.01em;color:#bfb1cc;margin-top:5px}
+/* Viñetas temáticas también en los botones del menú. */
+.sidebar .nav-item[data-nav="crafting"]{--nav-scene:url('./assets/scenes/black-craft.webp')}
+.sidebar .nav-item[data-nav="autocraft"]{--nav-scene:url('./assets/scenes/royal-craft.webp')}
+.sidebar .nav-item[data-nav="topmercado"]{--nav-scene:url('./assets/scenes/top-market.webp')}
+.sidebar .nav-item[data-nav="craftcal"]{--nav-scene:url('./assets/scenes/craft-cal.webp')}
+.sidebar .nav-item[data-nav="resultados"]{--nav-scene:url('./assets/scenes/results.webp')}
+.sidebar .nav-item[data-nav="ajustes"]{--nav-scene:url('./assets/scenes/settings.webp')}
+.sidebar .nav-item{background-image:linear-gradient(90deg,#171021ee 3%,#171021db 52%,#1710219d 100%),var(--nav-scene);background-position:center center;background-size:cover}
+.sidebar .nav-item.active{background-image:linear-gradient(90deg,#35261fea 0%,#241a32d9 58%,#21162ca3 100%),var(--nav-scene);background-position:center;background-size:cover}
+.sidebar .nav-item:hover{box-shadow:inset 0 0 0 1px #eac57a66,0 0 24px #eac57a17}
+/* El arte se mueve solo como luz ambiental; no provoca interacciones nuevas. */
+@media(max-width:740px){
+ .sidebar .brand{padding-bottom:22px}
+ .workspace,body.gcp-results-active .workspace{background-attachment:scroll;background-position:center top}
+ #main-content::before{height:154px;opacity:.68;background-position:60% top}
+}
+@media(prefers-reduced-motion:reduce){.workspace::before{animation:none}}

@@ -1,5 +1,5 @@
-# Gildem Craft Pro v9.8.0 · Compras netas de retorno
+# Gildem Albion Lab · Craft Pro v9.8.2
 
-La calculadora ya no se rinde por cotizaciones viejas o ausentes (las marca y te deja escribirlas), añade objetos con un desplegable por categorías y cada fila tiene selectores de tier y encantamiento. Detalles en `RELEASE_NOTES_9_5_0.md`.
+**Código completo para GitHub y Netlify.** Extrae el ZIP y sube su contenido al nivel raíz del repositorio, sin añadir carpetas intermedias. Netlify construye `dist/` mediante `npm run build`.
 
-Instalación: copia todos los archivos sobre tu repositorio con GitHub Desktop, Commit to main → Push origin, espera `Published` en Netlify y recarga con Ctrl + Shift + R (debe verse `v9.8.0`).
+Novedades: escudo de marca y seis fondos locales temáticos. Todos los motores permanecen intactos. Consulta `RELEASE_NOTES_9_8_2.md`.

@@ -1,3 +1,6 @@
+## v9.8.2 · 2026-11-11
+- Branding Gildem Albion Lab con escudo y seis fondos ilustrados locales para cada pestaña. Sin cambios en cálculos.
+
 ## v9.8.0 (2026-11-10)
 
 - Craft Cal.: «A comprar» descuenta el retorno (el bono de ciudad, el diario y el Focus ahora cambian cuánto comprar); «reutilizas N» y capital de compra neto. Ver `RELEASE_NOTES_9_8_0.md`.
