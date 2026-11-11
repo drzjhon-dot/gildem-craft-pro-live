@@ -204,5 +204,4 @@
 **Limitación:** las condiciones de mercado y la disponibilidad real de servicios AODP/Netlify solo se verifican al usar el sitio publicado; las pruebas de interfaz se hicieron con datos simulados.
 
 ## v9.8.3
-- Logo lateral superior cambiado al arte enviado por el usuario.
-- Se eliminó el texto adicional de esa esquina para dejar solo el logo.
+Logo solo en esquina superior izquierda y tests de branding actualizados para Netlify. Motor intacto.

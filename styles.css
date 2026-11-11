@@ -1028,12 +1028,7 @@ body.gcp-results-active .workspace{
 }
 @media(prefers-reduced-motion:reduce){.workspace::before{animation:none}}
 
-
-/* v9.8.3 · Sidebar logo-only header requested by user. */
-.sidebar .brand.brand-logo-only{display:block;padding:2px 4px 22px}
-.sidebar .brand-logo-only-img{display:block;width:min(100%, 214px);height:auto;margin:0 auto;filter:drop-shadow(0 10px 24px rgba(0,0,0,.35));border-radius:18px}
-.sidebar .brand-logo-only::after{content:none}
-@media (max-width: 760px){
-  .sidebar .brand.brand-logo-only{padding:6px 4px 16px}
-  .sidebar .brand-logo-only-img{width:min(100%, 190px)}
-}
+/* v9.8.3: Logo oficial completo del usuario. Sin otros textos o insignias en el encabezado lateral. */
+.sidebar .brand.brand-logo-only{display:block;min-width:0;padding:3px 2px 21px;overflow:visible;}
+.sidebar .brand-logo-only-img{display:block;width:100%;max-width:214px;height:auto;aspect-ratio:1/1;object-fit:contain;margin-inline:auto;border:0;border-radius:15px;box-shadow:none;}
+@media(max-width:740px){.sidebar .brand.brand-logo-only{padding:3px 2px 18px;}}

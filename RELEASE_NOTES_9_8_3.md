@@ -1,5 +1,8 @@
-# Release Notes 9.8.3
+# Gildem Albion Lab v9.8.3: logo lateral y corrección del build
 
-- Sidebar superior izquierdo simplificado para mostrar solo el logo aprobado por el usuario.
-- Eliminado el bloque de texto junto al logo en la esquina superior izquierda.
-- Sin cambios en motores, cálculos, recetas, logística ni app.js/core.
+- Se restauró como base la versión estable v9.8.2.
+- La esquina superior izquierda muestra exclusivamente el logo completo proporcionado por el usuario.
+- Se retiró el texto lateral adicional junto al logo.
+- Se actualizó el test visual que exigía incorrectamente la imagen anterior.
+- Se sincronizaron versión, preflight, metadata de health, cache del Service Worker y archivo de logo.
+- Sin cambios en `app.js`, los motores bajo `core/`, ni funciones de mercado, compras, diarios o logística.
