@@ -64,6 +64,6 @@ if(prefetchCatalog){
  }
  await Promise.all(['names_es.json','recipes.json'].map(cacheOne));
 }
-await writeFile(join(OUTPUT,'version.json'),JSON.stringify({app:'Gildem Craft Pro',version:'9.9.0-top.5',build:'github-netlify',api:'west / AODP',publishedAt:new Date().toISOString()},null,2)+'\n');
+await writeFile(join(OUTPUT,'version.json'),JSON.stringify({app:'Gildem Craft Pro',version:'9.9.0-top.6',build:'github-netlify',api:'west / AODP',publishedAt:new Date().toISOString()},null,2)+'\n');
 await writeFile(join(OUTPUT,'core/icon-manifest.js'),`export const LOCALLY_CACHED_ICONS = new Set(${JSON.stringify(stored)});\n`);
 console.log(`Gildem Craft Pro: dist/ preparado. Iconos locales: ${stored.length}. Catálogos estáticos: ${catalogStored.length}. Proxy AODP West para mercado y catálogos de recetas del juego.`);

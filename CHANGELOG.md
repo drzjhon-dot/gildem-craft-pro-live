@@ -241,3 +241,6 @@ Logo solo en esquina superior izquierda y tests de branding actualizados para Ne
 - Búsqueda ampliada con carriles T/encantamiento y cobertura explícita.
 - Comparación de tres propuestas y revalidación antes del envío a Calculadora de Craft.
 - Nuevas simulaciones sintéticas de seguridad, diversificación y coste.
+
+## v9.9.0-top.6
+- Consulta histórica unificada con Top Mercado para planes, auditoría por tier y oportunidad de diversificación para T6–T8 viables.

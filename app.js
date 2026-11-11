@@ -35,6 +35,7 @@ import {exactBudget,validateCraftPlan,portfolioSettings} from './core/craft-plan
 import {makeCraftProposals,proposalMetrics} from './core/portfolio-proposals.js';
 import {addressableDemand,qualityVolumeIndex,applyBmReversion} from './core/market-mechanics.js';
 import {aggregateTopMarket,rankTopMarket,topMarketCatalogIds,branchForItem,TOP_SORTS} from './core/top-market.js';
+import {sharedTopCraftHistory,tierTopAudit} from './core/top-craft-bridge.js';
 import {sellHoursByCity,bestSellHours,parseFestivities} from './core/sell-hours.js';
 import {calcBatch,calcPriceIds,quoteIndex,variantId,availableTiers,availableEnchants} from './core/craft-calc.js';
 import {CALCULATOR_ITEM_LIMIT,prepareCalculatorHandoff} from './core/calculator-handoff.js';
@@ -58,7 +59,7 @@ try{Object.assign(prefs,JSON.parse(localStorage.getItem('gildem-prefs')||'{}'));
 prefs.region=REGION; // Corrige preferencias antiguas que apuntaban a Europa/Asia.
 const state={resultSource:'crafting',autoPlan:null,autoRunning:false,autoInfo:null,levelPlan:null,levelRunning:false,preflight:null,page:'crafting',id:'T4_BAG',market:null,trade:null,plan:null,refine:null,enchant:null,transmute:null,catalogReady:false,loading:true,lastFetch:0,lastWarning:null,query:'',fullCatalog:false};
 function save(){prefs.region=REGION;try{localStorage.setItem('gildem-prefs',JSON.stringify(prefs));}catch{}}
-function demandEvidence(candidates,historyRows,ids,cities,qualityVolumes=null){
+function demandEvidence(candidates,historyRows,ids,cities,qualityVolumes=null,topByMarket=null){
  let spikes=0;
  const byMarket=discoverDemand(ids,historyRows,cities).byMarket;
  for(const x of candidates){
@@ -71,6 +72,7 @@ function demandEvidence(candidates,historyRows,ids,cities,qualityVolumes=null){
   const aodp=market?.daily??null;
   const adj=addressableDemand(aodp,qualityVolumes?.get(x.id+'|'+x.city)||null);
   x.demandDaily=adj.daily;x.qualityFactor=adj.factor;x.qualityDemand=adj.byQuality;
+  x.topMarket=topByMarket?.get(x.id+'|'+x.city)||null;
   x.demandSource=market?.verified?(adj.factor>1?'AODP West · historial calidades 1–3':'AODP West · historial de mercado'):'Sin historial AODP';
   x.externalDemand=false;
   // Fama de crafteo estimada por fabricación (Premium incluido si está activo).
@@ -80,16 +82,6 @@ function demandEvidence(candidates,historyRows,ids,cities,qualityVolumes=null){
   if(applyBmReversion(x))spikes++;
  }
  return {importedRows:0,observedAt:null,bmSpikes:spikes,source:'AODP West'};
-}
-// Historial de calidades 2–5 de las rutas viables (cobertura limitada por API).
-async function qualityDemandLookup(candidates,force){
- const best=new Map();
- for(const c of candidates||[]){const p=Number(c.profit)||0;if(!best.has(c.id)||p>best.get(c.id))best.set(c.id,p);}
- const cities=[...new Set((candidates||[]).map(c=>c.city).filter(Boolean))];
- const limit=cities.length>3?135:240; // limitar carga AODP con numerosas ciudades Royal
- const ids=[...best].sort((a,b)=>b[1]-a[1]).slice(0,limit).map(x=>x[0]);
- if(!ids.length||!cities.length)return new Map();
- try{const res=await historyQuality(ids,prefs.region,force,cities);return qualityVolumeIndex(res.rows);}catch{return new Map();}
 }
 function control(id){return document.getElementById(id);}
 function val(id,def=''){return control(id)?.value??def;}
@@ -753,19 +745,23 @@ async function runAutoScan(force=false){
   // se valoran como actividad no verificada y pueden entrar en el plan paciente.
   // Inspect selected items even without any profitable quote. Otherwise a zero-plan
   // screen would offer no clue whether the chosen item sells in other cities.
-  const marketHistoryIds=chosenDemandIds([...new Set([...ids,...scanRefining.map(x=>x.id)])],900);
-  let warning=p.warning||'';const histLookup=new Map();let historyVerified=false;
+  const marketHistoryUniverse=[...new Set([...ids,...scanRefining.map(x=>x.id)])];
+  const marketHistoryIds=chosenDemandIds(marketHistoryUniverse,deep?320:200);
+  let warning=p.warning||'';const histLookup=new Map();let historyVerified=false;let topAuditEntries=[];let sharedQuality=new Map();let sharedTop=new Map();
+  if(marketHistoryIds.length<marketHistoryUniverse.length)warning=[warning,`Historial Top parcial: ${marketHistoryIds.length}/${marketHistoryUniverse.length} variantes seleccionadas, repartidas entre tiers y encantamientos.`].filter(Boolean).join(' · ');
   if(marketHistoryIds.length){status('Consultando actividad histórica por ciudad, incluso para objetos sin profit…');try{
-   const hist=await history(marketHistoryIds,prefs.region,force);warning=[warning,hist.warning].filter(Boolean).join(' · ');
-   historyVerified=!!hist.rows?.length&&!hist.warning;
-   for(const [key,series] of demandHistoryIndex(hist.rows))histLookup.set(key,series);
+   const topCities=market==='black'?['Black Market']:market==='royal'?saleCities:[...new Set([...saleCities,'Black Market'])];
+   const hist=await historyTopMarket(marketHistoryIds,prefs.region,force,topCities,14);warning=[warning,hist.warning].filter(Boolean).join(' · ');
+   historyVerified=!!hist.rows?.length&&!hist.warning&&!hist.partial;
+   const shared=sharedTopCraftHistory(hist.rows);topAuditEntries=shared.entries;sharedQuality=shared.qualityVolumes;sharedTop=shared.topByMarket;
+   for(const [key,series] of shared.normalHistory)histLookup.set(key,series);
   }catch(e){warning=[warning,'Historial incompleto: '+e.message].filter(Boolean).join(' · ');}}
-  const demandImport=demandEvidence(candidates,histLookup,marketHistoryIds,saleCities,await qualityDemandLookup(candidates,force));
+  const demandImport=demandEvidence(candidates,histLookup,marketHistoryIds,saleCities,sharedQuality,sharedTop);
   const marketCoverage=coverageByMarket(ids,priceMap,{cities:saleCities,market:'royal',maxAge:prefs.maxAge,history:histLookup.size?histLookup:null});
   marketCoverage.historySample=marketHistoryIds.length;marketCoverage.historyUniverse=ids.length;
   marketCoverage.historyObserved=new Set([...histLookup].filter(([,data])=>data.length).map(([key])=>key.split('|')[0])).size;
   marketCoverage.historyPairs=[...histLookup].filter(([,data])=>data.length).length;
-  marketCoverage.historyPartial=!historyVerified;
+  marketCoverage.historyPartial=!historyVerified||marketHistoryIds.length<ids.length;
   const instant=candidates.filter(x=>x.mode==='instant'),instantIds=[...new Set(instant.map(x=>x.id))];
   if(instantIds.length){status('Comprobando órdenes de compra y límites de absorción…');try{
     const places=[...new Set(instant.map(x=>x.city))],bookResult=await orderbook(instantIds,prefs.region,force,places);
@@ -807,8 +803,9 @@ async function runAutoScan(force=false){
   const safety=validateCraftPlan(plan.rows,{tiers:qcSelectedSettings('auto').tiers,enchants:qcSelectedSettings('auto').enchants,
    ids:[...ids,...scanRefining.map(x=>x.id)],budget,totalCost:plan.totalCost,market:'royal',focusLimit:focus?Number(craftPrefs.focusBudget||10000):null});
   if(!safety.ok)throw Error('Plan bloqueado: '+safety.problems.slice(0,3).join(' · '));
+  const topTierReport=tierTopAudit({ids:marketHistoryIds,topEntries:topAuditEntries,routes:candidates,viable:viable.accepted,rejected:viable.rejected,plan:plan.rows,tiers:qcSelectedSettings('auto').tiers,market});
   const proposals=makeCraftProposals(routes,adaptive.investment.spendable,{style:autoPrefs.style,horizonDays:Number(autoPrefs.horizonDays)||14,focusLimit:focus?Number(craftPrefs.focusBudget||10000):null,pending:adaptive.pending,useAll:autoPrefs.invest==='all',primaryPlan:plan,primaryGoal:autoPrefs.fameGoal??1});
-  state.autoPlan={proposals,selectedProposal:autoPrefs.fameGoal??1,allowedIds:[...ids,...scanRefining.map(x=>x.id)],allowedTiers:qcSelectedSettings('auto').tiers,allowedEnchants:qcSelectedSettings('auto').enchants,frozenFocusLimit:focus?Number(craftPrefs.focusBudget||10000):null,fameGoal:autoPrefs.fameGoal??1,style:autoPrefs.style||DEFAULT_STYLE,needCandidates:routes,fees:{tax:prefs.tax,setup:prefs.setup},smartPortfolio:portfolioDiversityStats(plan.rows,{budget, reserve:0,pending:adaptive.pending}),fill:adaptive.fill,bulkEligible:adaptive.bulkEligible,minWeekly:adaptive.minWeekly,exposureFraction:adaptive.exposureFraction,investableBudget:adaptive.investment.spendable,reserveSilver:adaptive.investment.reserve,procurementAudit:purchasing.depthAudit||null,marketReferences:await marketReferencesPromise,plan,planStrategy:adaptive.strategy,supplyPending:!!purchasing.supplyPending,budget,saleCities,branch:craftCats.length?(branchMode==='selected'?branchKeys.length+' ramas elegidas':'Exploración de '+cats.length+' categorías'):'Solo refinamiento Royal',city,daily,focus,refiningMode:craftCats.length?refiningMode:'off',refiningFee,market,invest:autoPrefs.invest||'all',journals:false,cap:.10,unknownCap:2,scanned:pick.scanned,advanced:false,
+  state.autoPlan={topTierAudit:topTierReport,proposals,selectedProposal:autoPrefs.fameGoal??1,allowedIds:[...ids,...scanRefining.map(x=>x.id)],allowedTiers:qcSelectedSettings('auto').tiers,allowedEnchants:qcSelectedSettings('auto').enchants,frozenFocusLimit:focus?Number(craftPrefs.focusBudget||10000):null,fameGoal:autoPrefs.fameGoal??1,style:autoPrefs.style||DEFAULT_STYLE,needCandidates:routes,fees:{tax:prefs.tax,setup:prefs.setup},smartPortfolio:portfolioDiversityStats(plan.rows,{budget, reserve:0,pending:adaptive.pending}),fill:adaptive.fill,bulkEligible:adaptive.bulkEligible,minWeekly:adaptive.minWeekly,exposureFraction:adaptive.exposureFraction,investableBudget:adaptive.investment.spendable,reserveSilver:adaptive.investment.reserve,procurementAudit:purchasing.depthAudit||null,marketReferences:await marketReferencesPromise,plan,planStrategy:adaptive.strategy,supplyPending:!!purchasing.supplyPending,budget,saleCities,branch:craftCats.length?(branchMode==='selected'?branchKeys.length+' ramas elegidas':'Exploración de '+cats.length+' categorías'):'Solo refinamiento Royal',city,daily,focus,refiningMode:craftCats.length?refiningMode:'off',refiningFee,market,invest:autoPrefs.invest||'all',journals:false,cap:.10,unknownCap:2,scanned:pick.scanned,advanced:false,
    warning:[warning,viable.rejected.length?`${viable.rejected.length} rutas descartadas por margen, riesgo, profundidad o liquidez. ${viable.reasons.slice(0,2).map(x=>x.reason).join('; ')}.`:null,supplyNote,cityChoice.removed?`Se omitieron ${cityChoice.removed} rutas para concentrar la fabricación en ${cityChoice.cities.join(', ')}.`:null,wantsRefining&&market==='black'?'Los recursos refinados no se venden en el Mercado Negro: la categoría de refinamiento se omitió por tu filtro de destino.':null,pick.partial?'Exploración por muestra: las recetas fuera del muestreo no fueron analizadas.':null,'Diarios no incluidos en la búsqueda automática hasta que su fama y precios estén verificados. Si el taller o el transporte están en 0, esos gastos no se descontarán.'].filter(Boolean).join(' · '),
    goal,focusBudget:Number(craftPrefs.focusBudget||10000),buyMode:'instant',availableCandidates:routes,bmDepth:instant.some(x=>x.depthVerified),requireBook:autoPrefs.requireBook,qualityMode:'normal',priceStress:input.priceStress,resourceStress:input.resourceStress,matShipping:input.materialShipping,useWallet:false,solverMethod:'optimización diversificada entre ramas (aproximada)',
    marketCoverage,horizonDays:Number(autoPrefs.horizonDays)||14,scanDiagnosis:diagnoseScan({recipes:ids.length,candidates:candidates.length,viable,recommendations:plan.rows.length,missing:result.missing}),
@@ -1486,10 +1483,16 @@ function renderTopResults(){
   <div class="gx-head gx-top-row"><span>#</span><span>Objeto</span><span>Mercado</span><span>Unidades/día</span><span>Silver/día</span><span>Precio unidad</span><span></span></div>${body}</div></div>
   <p class="gcp-panel-caption">Fuente: ${h(snap.source||'AODP West')} · ${snap.ids} de ${snap.universeCount||snap.ids} variantes conocidas consultadas · ${snap.variantsObserved??'—'} con actividad publicada por AODP · ${input.days} días UTC completos · ventana ${h(rows[0]?.periodStart||'—')} a ${h(rows[0]?.periodEnd||'—')}. ${snap.partial?'<strong>CONSULTA PARCIAL: no interpretar ausencias como cero ventas.</strong> ':''}${snap.stale?'<strong>DATOS DE CACHÉ ANTIGUA: verifique antes de invertir.</strong> ':''}${snap.warning?h(snap.warning)+' ':''}El historial de AODP y otras webs con datos EMV pueden diferir; son observaciones, no órdenes reservadas. «Agregar a Calculadora» añade el objeto a la calculadora de craft.</p>`;
 }
+function topTierAuditHtml(p){
+ const rows=p?.topTierAudit||[];
+ if(!rows.length)return '';
+ const body=rows.map(r=>`<tr><td><strong>T${r.tier}</strong></td><td>${fmt(r.observed)}</td><td>${fmt(r.withPrices)}</td><td>${fmt(r.eligible)}</td><td><strong>${fmt(r.picked)}</strong></td><td>${h(r.reason)}</td></tr>`).join('');
+ return `<div class="col-12"><details class="panel gcp-top-tier-audit"><summary>Top Mercado vs plan · Por qué algunos tiers no aparecen</summary><p class="explain">AODP West, 14 días UTC completos, calidades 1–5. Las rutas necesitan además precio reciente, materiales disponibles, margen neto bajo estrés y límite de capital. Tener actividad no implica que sea rentable fabricar. ${p.marketCoverage?.historyPartial?'Cobertura histórica incompleta: los ausentes NO son cero ventas.':''}</p><div class="table-scroll"><table class="data-table"><thead><tr><th>Tier</th><th>Con actividad Top</th><th>Con precio y coste</th><th>Viables</th><th>En plan</th><th>Explicación</th></tr></thead><tbody>${body}</tbody></table></div></details></div>`;
+}
 function craftResult(p){const b=p.plan, journalTotals=new Map();
   const patientBadge=p.planStrategy==='patient'?'<div class="notice neutral gcp-patient-notice"><strong>Plan de venta lenta y capital paciente.</strong> Las cantidades son pequeñas y pueden tardar varios días o semanas en venderse. Beneficio calculado con precios observados, no cobrado. '+(p.supplyPending?'Los materiales no están disponibles en cantidad verificable al precio indicado; el plan necesita compras por etapas.':'Comprueba los precios y la competencia antes de ejecutar.')+'</div>':'';
  for(const r of b.rows){if(r.journal?.prices){const key=r.journal.empty;const old=journalTotals.get(key)||{...r.journal,qty:0};old.qty+=r.qty*r.journal.ratio;journalTotals.set(key,old);}}
- const detailedListRows=b.rows.map((r,index)=>`<tr><td>${copyableItemCell(r.id,'',r.recipeKind==='refining'?'Refinamiento':r.personalLearning?.qtySold>=3?`${r.personalLearning.qtySold} vendidas por ti · ${r.personalLearning.averageDays.toFixed(1)} días medios`:r.id)}</td><td><strong>T${itemTier(r.id)}.${itemEnch(r.id)}</strong></td><td class="main-city">${r.recipeKind==='refining'?'<span class="pill green">Refinar</span> ':''}${h(r.craftCity)}</td><td>${r.city==='Black Market'?'<span class="pill amber">Mercado Negro</span>':'<span class="pill green">Royal</span>'}</td><td>${h(r.city==='Black Market'?'Caerleon · Mercado Negro':r.city)}</td><td>${r.mode==='instant'?'Inmediata':'Orden de venta'}</td><td><input class="qty-input" type="number" data-plan-qty="${index}" min="0" max="${Number.isFinite(r.maxCrafts)?r.maxCrafts:999999}" step="1" value="${r.qty}" aria-label="Fabricaciones de ${h(itemName(r.id))}"></td><td><strong>${fmt(r.qty*(r.craftAmount||1))}</strong></td><td>${r.returnRate.toFixed(1)}%</td><td>${moneyCell(r.sell)}</td><td>${moneyCell(r.profit,r.profit>=0?'positive':'negative')}</td><td>${moneyCell(r.totalProfit,'positive')}</td><td>${r.activity?.observations?fmt(r.activity.activeDays)+' / 14 días · '+short(r.activity.observedDaily)+'/día observado':'Sin observaciones'}</td><td>${r.mode==='instant'?(r.depthVerified?`<span class="pill green">${h(r.bookCoverage||'Libro observado')}</span>`:`<span class="pill amber">${r.city==='Black Market'?'1 provisional':'Profundidad no verificada'}</span>`):'<span class="pill amber">Venta no garantizada</span>'}</td><td><span class="pill ${r.confidence?.tone||'red'}" title="${h((r.confidence?.reasons||[]).join(' · '))}">${h(r.confidence?.label||'Baja')} (${r.confidence?.score||0})</span></td><td>${moneyCell(r.stressProfit,r.stressProfit>=0?'positive':'negative')}</td><td>${r.focusPerUnit?fmt(r.focusPerUnit):'—'}</td><td>${moneyCell(breakEvenPrice(r))}</td><td>${r.competition?.known?`${fmt(r.competition.unitsAhead)} unidades delante · ${h(r.competition.risk)}`:'Sin datos de competencia'}</td></tr>`).join('');
+ const detailedListRows=b.rows.map((r,index)=>`<tr><td>${copyableItemCell(r.id,'',r.recipeKind==='refining'?'Refinamiento':r.personalLearning?.qtySold>=3?`${r.personalLearning.qtySold} vendidas por ti · ${r.personalLearning.averageDays.toFixed(1)} días medios`:r.id)}</td><td><strong>T${itemTier(r.id)}.${itemEnch(r.id)}</strong></td><td class="main-city">${r.recipeKind==='refining'?'<span class="pill green">Refinar</span> ':''}${h(r.craftCity)}</td><td>${r.city==='Black Market'?'<span class="pill amber">Mercado Negro</span>':'<span class="pill green">Royal</span>'}</td><td>${h(r.city==='Black Market'?'Caerleon · Mercado Negro':r.city)}</td><td>${r.mode==='instant'?'Inmediata':'Orden de venta'}</td><td><input class="qty-input" type="number" data-plan-qty="${index}" min="0" max="${Number.isFinite(r.maxCrafts)?r.maxCrafts:999999}" step="1" value="${r.qty}" aria-label="Fabricaciones de ${h(itemName(r.id))}"></td><td><strong>${fmt(r.qty*(r.craftAmount||1))}</strong></td><td>${r.returnRate.toFixed(1)}%</td><td>${moneyCell(r.sell)}</td><td>${moneyCell(r.profit,r.profit>=0?'positive':'negative')}</td><td>${moneyCell(r.totalProfit,'positive')}</td><td>${r.activity?.observations?fmt(r.activity.activeDays)+' / 14 días · '+short(r.activity.observedDaily)+'/día observado':'Sin observaciones'}${r.topMarket?`<small style="display:block" title="AODP calidades 1–5. No son ventas aseguradas ni profundidad de libro.">Top: ${short(r.topMarket.dailyAmount)}/día · 5 calidades</small>`:''}</td><td>${r.mode==='instant'?(r.depthVerified?`<span class="pill green">${h(r.bookCoverage||'Libro observado')}</span>`:`<span class="pill amber">${r.city==='Black Market'?'1 provisional':'Profundidad no verificada'}</span>`):'<span class="pill amber">Venta no garantizada</span>'}</td><td><span class="pill ${r.confidence?.tone||'red'}" title="${h((r.confidence?.reasons||[]).join(' · '))}">${h(r.confidence?.label||'Baja')} (${r.confidence?.score||0})</span></td><td>${moneyCell(r.stressProfit,r.stressProfit>=0?'positive':'negative')}</td><td>${r.focusPerUnit?fmt(r.focusPerUnit):'—'}</td><td>${moneyCell(breakEvenPrice(r))}</td><td>${r.competition?.known?`${fmt(r.competition.unitsAhead)} unidades delante · ${h(r.competition.risk)}`:'Sin datos de competencia'}</td></tr>`).join('');
  const groupedProduction=p.autoMeta?groupProduction(b.rows):[];
  const autoProductionRows=groupedProduction.map(g=>`<tr>
  <td>${copyableItemCell(g.id,'',g.kind==='refining'?'Refinamiento':'')}</td>
@@ -1549,6 +1552,7 @@ function craftResult(p){const b=p.plan, journalTotals=new Map();
  <div class="col-8"><div class="panel"><h3 class="subheading">🧺 Lista de compras para comenzar</h3><div class="table-scroll">${mats?`<table class="data-table"><thead><tr><th>Material</th><th>A comprar (neto)</th><th>Bruto de la receta</th><th>Ciudad de compra</th><th>Precio/u</th><th>Total a comprar</th></tr></thead><tbody>${mats}</tbody></table>`:empty('Sin materiales')}</div><p class="explain">Compra las cantidades <strong>brutas</strong>. El retorno de recursos no ocurre antes de fabricar y se estima para varias fabricaciones; las cantidades netas no son una lista de compra inicial. Si usas diarios, presupuestar diarios enteros puede requerir capital adicional.</p></div></div>
  <div class="col-4"><div class="panel"><h3 class="subheading">Uso del presupuesto y riesgo</h3><div class="progress-track"><div class="progress-fill" style="width:${usedPct}%"></div></div><div class="cost-row"><span>Comprometido</span><strong>${short(b.totalCost)} (${usedPct.toFixed(1)}%)</strong></div><div class="cost-row"><span>Restante</span><strong>${short(b.remaining)}</strong></div><div class="cost-row"><span>Costo neto esperado</span><strong>${short(b.totalNetCost)}</strong></div><div class="cost-row"><span>Diarios vacíos a comprar</span><strong>${short(b.journalSummary?.cost||0)}</strong></div><div class="cost-row"><span>Profit bajo estrés</span><strong>${short(b.rows.reduce((s,r)=>s+r.stressProfit*r.qty,0))}</strong></div><div class="cost-row total"><span>ROI sobre capital bruto</span><strong>${b.totalCost?(100*b.totalProfit/b.totalCost).toFixed(1)+'%':'—'}</strong></div><div class="notice neutral" style="margin-top:16px">${p.invest==='all'?'Modo presupuesto completo: intenta asignar el máximo posible con profit y límites de demanda válidos.':'Modo cautela: máximo 30% del capital por objeto.'} <strong>El riesgo incluye precio de venta -${p.priceStress}% y materiales +${p.resourceStress}%. No se fuerzan compras ni se supone que las órdenes observadas se venderán.</strong></div></div></div>
  ${automaticSales}
+ ${topTierAuditHtml(p)}
  <div class="col-12" ${p.autoMeta?'hidden':''}><div class="panel"><h3 class="subheading">Distribución de ventas ${marketLabel}</h3><div class="table-scroll">${cities?`<table class="data-table"><thead><tr><th>Tipo</th><th>Destino</th><th>Unidades para vender</th><th>Rutas</th><th>Capital</th><th>Profit estimado</th></tr></thead><tbody>${cities}</tbody></table>`:empty('Sin destinos')}</div><p class="explain">${p.market==='royal'?'El plan considera precios de las ciudades Royal y hasta 3 mercados por objeto, priorizando precios netos y ventas observadas. Los registros históricos no garantizan que una orden futura se venda.':p.market==='mixed'?'Mercado Negro usa niveles de órdenes de compra observadas cuando los hay; sin niveles verificados, limita a 1 craft provisional por objeto. Las cantidades pueden desaparecer antes de vender. Las rutas Royal usan precios y ventas históricas por ciudad, con hasta tres destinos por objeto. El capital y los recursos solo se cuentan una vez por unidad fabricada.':'Los artículos del Mercado Negro se publican mediante órdenes propias. El precio observado de compra del NPC es una referencia prudente, no una venta garantizada ni una profundidad de demanda para anuncios futuros. Se aplica un tope conservador de unidades.'}</p></div></div>
  ${refinedBox}
  <div class="col-12"><div class="panel"><h3 class="subheading">Diarios de crafting por tier y profesión</h3>${journals?`<div class="table-scroll"><table class="data-table"><thead><tr><th>Diario vacío</th><th>Comprar</th><th>Se llenan</th><th>Ciudad de compra</th><th>Capital estimado</th><th>Exactitud</th></tr></thead><tbody>${journals}</tbody></table></div>`:`<div class="notice neutral">${p.journals?'No se pudo inferir la profesión o fama del diario en este plan. No se inventan cantidades.':'Puedes activar diarios en Opciones avanzadas.'}</div>`}<p class="explain">Diarios enteros presupuestados por profesión. Cuando no se conoce la fama exacta se usa una estimación, y el precio de trabajador es solo referencia si falta cotización. El profit no incluye vender diarios llenos sin precio válido. Cambia cantidades arriba para recalcular diarios, presupuesto y recursos.</p></div></div>
@@ -1700,14 +1704,15 @@ async function runCraft(force=false){
   // Así un objeto .0 de alta rotación puede evaluarse para venta POR ORDEN,
   // sin convertir precios históricos en compra inmediata garantizada.
   let warning=[response.warning,recipeScanPartial?`Exploración parcial: ${ids.length} de ${recipeUniverse.length} recetas. Límite temporal para proteger AODP West.`:null].filter(Boolean).join(' · ');
-  let lookup=new Map(),historyVerified=false;
-  const marketHistoryIds=chosenDemandIds(ids,900);
+  let lookup=new Map(),historyVerified=false,topAuditEntries=[],sharedQuality=new Map(),sharedTop=new Map();
+  const marketHistoryIds=chosenDemandIds(ids,450);
+  if(marketHistoryIds.length<ids.length)warning=[warning,`Historial Top parcial: ${marketHistoryIds.length}/${ids.length} variantes, equilibradas entre tiers y encantamientos.`].filter(Boolean).join(' · ');
   if(marketHistoryIds.length){
    setBusy('craft-results','Consultando precios y actividad de 14 días en América…');
-   try{const hist=await history(marketHistoryIds,prefs.region,force);
+   try{const hist=await historyTopMarket(marketHistoryIds,prefs.region,force,input.market==='black'?['Black Market']:ALL_CITIES,14);
     if(hist.warning)warning=[warning,hist.warning].filter(Boolean).join(' · ');
-    historyVerified=!!hist.rows?.length&&!hist.warning;
-    lookup=demandHistoryIndex(hist.rows);
+    historyVerified=!!hist.rows?.length&&!hist.warning&&!hist.partial;
+    const shared=sharedTopCraftHistory(hist.rows);topAuditEntries=shared.entries;sharedQuality=shared.qualityVolumes;sharedTop=shared.topByMarket;lookup=shared.normalHistory;
    }catch(e){warning=[warning,'Sin historial West: '+e.message].filter(Boolean).join(' · ');}
   }
   const candidates=[];let noFocusValues=0,noQualityQuotes=0;
@@ -1796,13 +1801,13 @@ async function runCraft(force=false){
    }
    }
   }
-  const demandAudit=demandEvidence(candidates,lookup,marketHistoryIds,input.market==='black'?['Black Market']:CITIES,await qualityDemandLookup(candidates,force));
+  const demandAudit=demandEvidence(candidates,lookup,marketHistoryIds,input.market==='black'?['Black Market']:CITIES,sharedQuality,sharedTop);
   if(demandAudit.bmSpikes)warning=[warning,`${demandAudit.bmSpikes} rutas del Mercado Negro tenían la puja por encima de su media de 14 días: el lote se valoró a la media, no al pico.`].filter(Boolean).join(' · ');
   const marketCoverage=coverageByMarket(ids,map,{cities:input.market==='black'?['Black Market']:CITIES,market:input.market,maxAge:prefs.maxAge,history:lookup.size?lookup:null});
   marketCoverage.historySample=marketHistoryIds.length;marketCoverage.historyUniverse=ids.length;
   marketCoverage.historyObserved=new Set([...lookup].filter(([,data])=>data.length).map(([key])=>key.split('|')[0])).size;
   marketCoverage.historyPairs=[...lookup].filter(([,data])=>data.length).length;
-  marketCoverage.historyPartial=!historyVerified;
+  marketCoverage.historyPartial=!historyVerified||marketHistoryIds.length<ids.length;
   // Del v6: comprobar niveles del libro de compra observados, no inferir
   // que el mejor precio podrá absorber todas las unidades sugeridas.
   let bookVerified=0,bookWarning=null;
@@ -1870,8 +1875,9 @@ async function runCraft(force=false){
   const safety=validateCraftPlan(plan.rows,{tiers:qcSelectedSettings('craft').tiers,enchants:qcSelectedSettings('craft').enchants,
    ids,budget:input.budget,totalCost:plan.totalCost,market:'black',focusLimit:input.focus?input.focusBudget:null});
   if(!safety.ok)throw Error('Plan bloqueado: '+safety.problems.slice(0,3).join(' · '));
+  const topTierReport=tierTopAudit({ids:marketHistoryIds,topEntries:topAuditEntries,routes:candidates,viable:viable.accepted,rejected:viable.rejected,plan:plan.rows,tiers:qcSelectedSettings('craft').tiers,market:input.market});
   const proposals=makeCraftProposals(adaptive.routes,adaptive.investment.spendable,{style:craftPrefs.style,horizonDays:input.horizonDays,focusLimit:input.focus?input.focusBudget:null,pending:adaptive.pending,useAll:input.invest==='all',primaryPlan:plan,primaryGoal:craftPrefs.fameGoal??1});
-  state.plan={proposals,selectedProposal:craftPrefs.fameGoal??1,allowedIds:ids,allowedTiers:qcSelectedSettings('craft').tiers,allowedEnchants:qcSelectedSettings('craft').enchants,frozenFocusLimit:input.focus?input.focusBudget:null,fameGoal:craftPrefs.fameGoal??1,style:craftPrefs.style||DEFAULT_STYLE,needCandidates:shortlisted,fees:{tax:prefs.tax,setup:prefs.setup},smartPortfolio:portfolioDiversityStats(plan.rows,{budget:input.budget, reserve:0,pending:adaptive.pending}),fill:adaptive.fill,bulkEligible:adaptive.bulkEligible,minWeekly:adaptive.minWeekly,exposureFraction:adaptive.exposureFraction,investableBudget:adaptive.investment.spendable,reserveSilver:adaptive.investment.reserve,procurementAudit:purchasing.depthAudit||null,marketReferences:await marketReferencesPromise,planStrategy:adaptive.strategy,supplyPending:!!purchasing.supplyPending,marketCoverage,horizonDays:input.horizonDays,scanDiagnosis:diagnoseScan({recipes:ids.length,candidates:candidates.length,viable,recommendations:plan.rows.length}),plan,budget:input.budget,branch:branch.label,city:input.city,daily:input.daily,focus:input.focus,refiningFocus:input.refiningFocus,refiningMode:input.refiningMode,refiningFee:input.refiningFee,refiningDaily:input.refiningDaily,market:input.market,invest:input.invest,journals:input.journals,cap:capFraction,unknownCap:input.unknownCap,scanned:ids.length,advanced:state.fullCatalog,warning:warnings.join(' · '),goal:input.goal,focusBudget:input.focusBudget,buyMode:input.buyMode,availableCandidates:shortlisted,bmDepth:bookVerified,requireBook:input.requireBook,qualityMode:input.qualityMode,priceStress:input.priceStress,resourceStress:input.resourceStress,matShipping:input.matShipping,useWallet:input.useWallet,solverMethod:adaptive.method||'asignación de capital'};
+  state.plan={topTierAudit:topTierReport,proposals,selectedProposal:craftPrefs.fameGoal??1,allowedIds:ids,allowedTiers:qcSelectedSettings('craft').tiers,allowedEnchants:qcSelectedSettings('craft').enchants,frozenFocusLimit:input.focus?input.focusBudget:null,fameGoal:craftPrefs.fameGoal??1,style:craftPrefs.style||DEFAULT_STYLE,needCandidates:shortlisted,fees:{tax:prefs.tax,setup:prefs.setup},smartPortfolio:portfolioDiversityStats(plan.rows,{budget:input.budget, reserve:0,pending:adaptive.pending}),fill:adaptive.fill,bulkEligible:adaptive.bulkEligible,minWeekly:adaptive.minWeekly,exposureFraction:adaptive.exposureFraction,investableBudget:adaptive.investment.spendable,reserveSilver:adaptive.investment.reserve,procurementAudit:purchasing.depthAudit||null,marketReferences:await marketReferencesPromise,planStrategy:adaptive.strategy,supplyPending:!!purchasing.supplyPending,marketCoverage,horizonDays:input.horizonDays,scanDiagnosis:diagnoseScan({recipes:ids.length,candidates:candidates.length,viable,recommendations:plan.rows.length}),plan,budget:input.budget,branch:branch.label,city:input.city,daily:input.daily,focus:input.focus,refiningFocus:input.refiningFocus,refiningMode:input.refiningMode,refiningFee:input.refiningFee,refiningDaily:input.refiningDaily,market:input.market,invest:input.invest,journals:input.journals,cap:capFraction,unknownCap:input.unknownCap,scanned:ids.length,advanced:state.fullCatalog,warning:warnings.join(' · '),goal:input.goal,focusBudget:input.focusBudget,buyMode:input.buyMode,availableCandidates:shortlisted,bmDepth:bookVerified,requireBook:input.requireBook,qualityMode:input.qualityMode,priceStress:input.priceStress,resourceStress:input.resourceStress,matShipping:input.matShipping,useWallet:input.useWallet,solverMethod:adaptive.method||'asignación de capital'};
   control('craft-results').innerHTML=craftResult(state.plan);
   if(plan.rows.length){state.resultSource='crafting';sendPlanToCalculator('crafting');}
   if(!plan.rows.length)showToast('No hay margen verificable. Amplía la búsqueda a todos los tiers y encantamientos o actualiza AODP West.',true);

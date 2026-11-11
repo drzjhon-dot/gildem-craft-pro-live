@@ -83,7 +83,7 @@ test('recuperación visible, precache de todos los módulos y versión sin estad
  assert.match(html,/app\.js\?v=9\.9\.0/);
  assert.match(app,/data-action="retry-catalog"/);
  assert.match(app,/if\(action==='retry-catalog'\)syncCatalog\(true\)/);
- assert.match(sw,/gildem-craft-pro-v9\.9\.0-top\.5/);
+ assert.match(sw,/gildem-craft-pro-v9\.9\.0-top\.6/);
  for(const match of app.matchAll(/from ['"]\.\/(core\/[^'"]+)['"]/g))assert(sw.includes("'./"+match[1]+"'"),match[1]+' no está en la caché');
  assert.match(netlify,/for = "\/app\.js"/);
 });

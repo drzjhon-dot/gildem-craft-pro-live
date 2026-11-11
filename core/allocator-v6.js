@@ -213,6 +213,13 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
     return pool;
    })():ordered;
    const seeded=new Set();
+   if(opts.diversityLanes){
+    // Dar una oportunidad a cada tier con una ruta rentable y con volumen.
+    // Si T7/T8 supera presupuesto, lote mínimo o exposición, take() no lo fuerza.
+    const bestTier=new Map();
+    for(const x of seedOrder){const t=tierOf(x);if(!bestTier.has(t)||val(x)>val(bestTier.get(t)))bestTier.set(t,x);}
+    for(const x of bestTier.values())if(take(x,1))seeded.add(x.id);
+   }
    for(const x of seedOrder){
     if(seeded.size>=desiredItems||counts.size>=maxVariants)break;
     if(seeded.has(x.id))continue;

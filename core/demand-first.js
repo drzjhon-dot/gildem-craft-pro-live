@@ -1,6 +1,7 @@
 // Demand-first discovery for BOTH Black Market and Royal markets.
 // Historical market counts are a liquidity signal, not committed orders or guaranteed sales.
 import {historyMetrics} from './optimizer.js';
+import {diversifiedRecipeIds} from './craft-plan-controls.js';
 import {effectiveDaily} from './market-impact.js';
 
 const finite=x=>Number.isFinite(Number(x))?Math.max(0,Number(x)):0;
@@ -49,12 +50,12 @@ export function discoverDemand(ids=[],series=new Map(),cities=['Black Market'],n
 export function chosenDemandIds(ids,limit=900){
  const unique=[...new Set(ids||[])];
  if(unique.length<=limit)return unique;
- // If an API limit forces sampling, prioritize normal and .1 items and
- // distribute the rest across tiers. Report partial coverage in the UI.
- const order=unique.map((id,index)=>({id,index,tier:Number((id.match(/^T(\d+)_/)||[])[1]||9),ench:Number((id.split('@')[1]||0))}));
- order.sort((a,b)=>a.ench-b.ench||a.tier-b.tier||a.index-b.index);
- return order.slice(0,limit).map(x=>x.id);
+ // No dedicar el cupo completo a T4/T5 .0: una muestra equilibrada
+ // contiene primero representantes de CADA tier y encantamiento elegido.
+ const chosen=diversifiedRecipeIds(unique,{limit:Math.max(1,Math.floor(limit))});
+ return chosen;
 }
+
 export function listingCapacity(route,{horizonDays=DEFAULT_HORIZON_DAYS,share=.06,maxPerRoute=6000,unknownCap=1}={}){
  if(!route)return 0;
  if(route.city==='Black Market'&&route.mode==='instant')return route.depthVerified?Math.max(0,Math.floor(finite(route.marketCapacity))):0;

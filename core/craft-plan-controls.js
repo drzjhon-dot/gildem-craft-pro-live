@@ -56,7 +56,7 @@ export function portfolioSettings({style=2,fameGoal=1,eligibleItems=0}={}){
  const target=fame===2?32:fame===1?20:10;
  const adjusted=Math.max(1,target+(mode===1?4:mode===3?-4:0));
  return {targetDifferentItems:Math.min(60,adjusted,Math.max(1,eligibleItems)),
-  diversityLanes:fame>=1, diversityWeight:fame===2?.13:fame===1?.07:.025,
+  diversityLanes:fame>=1||eligibleItems>=4, diversityWeight:fame===2?.13:fame===1?.07:.025,
   // El estilo mantiene su política de saturación; el objetivo cambia el reparto.
   itemFractionCeiling:fame===2?.22:fame===1?.34:.60};
 }

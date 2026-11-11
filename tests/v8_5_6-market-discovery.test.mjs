@@ -75,8 +75,8 @@ test('investiga ventas observadas aunque NO haya candidatos rentables',()=>{
  assert.deepEqual(new Set(marketAuditIds(all,[],{maxItems:5,maxExtra:5})),new Set(all));
  assert(marketAuditIds(all,['T5_MAIN_AXE'],{maxItems:3,maxExtra:2}).includes('T5_MAIN_AXE'));
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- assert(app.includes('const marketHistoryIds=chosenDemandIds([...new Set([...ids,...scanRefining.map(x=>x.id)])],900)'));
- assert(app.includes('const marketHistoryIds=chosenDemandIds(ids,900)'));
+ assert(app.includes('const marketHistoryIds=chosenDemandIds(marketHistoryUniverse,deep?320:200)'));
+ assert(app.includes('const marketHistoryIds=chosenDemandIds(ids,450)'));
  assert(app.includes('marketCoverage.historySample=marketHistoryIds.length'));
  assert(app.includes('marketCoverage.historyObserved='));
 });

@@ -61,8 +61,8 @@ test('una tabla externa europea nunca afecta planes West ni siquiera si tiene ID
 });
 test('la interfaz conserva valor seleccionado y muestra el motivo de cantidades',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- assert(app.includes("chosenDemandIds(ids,900)"));
- assert(app.includes("chosenDemandIds([...new Set([...ids,...scanRefining.map(x=>x.id)])],900)"));
+ assert(app.includes("chosenDemandIds(ids,450)"));
+ assert(app.includes("chosenDemandIds(marketHistoryUniverse,deep?320:200)"));
  assert(app.includes('QC_HORIZON=[7,14,30]'));
  assert(app.includes("demandSource||'historial'"));
  assert(!app.includes("saveExternalMarketVolume()"));
