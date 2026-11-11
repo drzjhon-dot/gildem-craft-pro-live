@@ -7,14 +7,13 @@
   <meta name="description" content="Planificador de crafting Royal y Mercado Negro para Albion Online. Ramas, bonos, Focus, presupuesto, diarios y listas de compras.">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=9.8.3">
-  <title>Gildem Albion Lab · Craft Pro v9.8.3</title>
+  <link rel="stylesheet" href="./styles.css?v=9.8.4">
+  <title>Gildem Albion Lab · Craft Pro v9.8.4</title>
 </head>
 <body data-page="crafting">
 <div class="app-shell">
   <aside class="sidebar">
     <div class="brand brand-logo-only" aria-label="Gildem Albion Lab"><img class="brand-logo-only-img" src="./assets/branding/gildem-sidebar-logo.webp" alt="Gildem Albion Lab" width="214" height="214"></div>
-    <div class="nav-title">Mi taller</div>
     <nav class="nav" aria-label="Navegación principal">
       <button data-nav="crafting" class="nav-item active"><span class="nav-art" aria-hidden="true"><img src="./assets/tabs/black-craft.svg" alt="" width="42" height="42"></span><span>Black Craft</span></button>
       <button data-nav="autocraft" class="nav-item"><span class="nav-art" aria-hidden="true"><img src="./assets/tabs/royal-craft.svg" alt="" width="42" height="42"></span><span>Royal Craft</span></button>
@@ -52,7 +51,7 @@
   if(text)text.textContent=message||'No se pudo iniciar el panel. Puedes reparar la carga sin borrar tus inversiones.';
   const title=boot.querySelector('h2');if(title)title.textContent='No se pudo iniciar Gildem Craft Pro';
  }
- // v9.8.3 · Diagnóstico: además del aviso, averigua QUÉ módulo falló. Un error de
+ // v9.8.4 · Diagnóstico: además del aviso, averigua QUÉ módulo falló. Un error de
  // «export» casi siempre significa un despliegue mezclado (un archivo de core/ de
  // una versión anterior junto a un app.js nuevo).
  let probed=false;
@@ -75,10 +74,10 @@
   button.disabled=true;button.textContent='Limpiando caché…';
   try{if('serviceWorker' in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(x=>x.unregister()));}}catch{}
   try{if('caches' in window){const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('gildem-craft-pro-')).map(k=>caches.delete(k)));}}catch{}
-  const url=new URL(window.location.href);url.searchParams.set('carga','9.8.3');window.location.replace(url.toString());
+  const url=new URL(window.location.href);url.searchParams.set('carga','9.8.4');window.location.replace(url.toString());
  });
 })();
 </script>
-<script type="module" src="./app.js?v=9.8.3"></script>
+<script type="module" src="./app.js?v=9.8.4"></script>
 </body>
 </html>

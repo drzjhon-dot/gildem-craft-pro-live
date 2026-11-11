@@ -1032,3 +1032,50 @@ body.gcp-results-active .workspace{
 .sidebar .brand.brand-logo-only{display:block;min-width:0;padding:3px 2px 21px;overflow:visible;}
 .sidebar .brand-logo-only-img{display:block;width:100%;max-width:214px;height:auto;aspect-ratio:1/1;object-fit:contain;margin-inline:auto;border:0;border-radius:15px;box-shadow:none;}
 @media(max-width:740px){.sidebar .brand.brand-logo-only{padding:3px 2px 18px;}}
+
+
+/* v9.8.4: logotipo sin tarjeta. La ilustración original conserva su detalle,
+   mientras sus bordes se funden gradualmente con el fondo del sidebar. */
+.sidebar{
+  --gildem-sidebar-bg:#120c21;
+}
+.sidebar::before{
+  content:"";
+  position:absolute;z-index:-1;inset:0 0 auto;height:305px;
+  background-image:
+    linear-gradient(180deg,rgba(16,10,29,.42) 0%,rgba(16,10,29,.68) 49%,var(--gildem-sidebar-bg) 100%),
+    url('./assets/scenes/royal-craft.webp');
+  background-position:center top;
+  background-repeat:no-repeat;
+  background-size:cover;
+  opacity:.32;
+  pointer-events:none;
+}
+.sidebar .brand.brand-logo-only{
+  display:grid;place-items:center;
+  position:relative;
+  margin:-27px -14px 3px;
+  padding:19px 14px 15px;
+  min-height:251px;
+  overflow:hidden;
+  isolation:isolate;
+}
+.sidebar .brand.brand-logo-only::before{
+  content:"";position:absolute;inset:12px 0 4px;z-index:-1;
+  background:radial-gradient(ellipse 77% 68% at 50% 45%,rgba(230,171,83,.12) 0%,rgba(50,32,69,.09) 43%,transparent 80%);
+  pointer-events:none;
+}
+.sidebar .brand-logo-only-img{
+  display:block;
+  width:100%;max-width:222px;height:auto;aspect-ratio:1;
+  object-fit:contain;margin:0 auto;border:0;border-radius:0;box-shadow:none;
+  -webkit-mask-image:radial-gradient(ellipse 92% 91% at 50% 49%,#000 71%,rgba(0,0,0,.94) 85%,transparent 100%);
+  mask-image:radial-gradient(ellipse 92% 91% at 50% 49%,#000 71%,rgba(0,0,0,.94) 85%,transparent 100%);
+  filter:drop-shadow(0 4px 10px rgba(0,0,0,.20));
+}
+/* Los botones aparecen directamente bajo el logo, sin el rótulo «Mi taller». */
+.sidebar .nav{margin-top:0}
+@media(max-width:740px){
+  .sidebar .brand.brand-logo-only{margin:-27px -14px 2px;padding:18px 14px 12px;min-height:242px}
+  .sidebar .brand-logo-only-img{max-width:218px}
+}

@@ -205,3 +205,7 @@
 
 ## v9.8.3
 Logo solo en esquina superior izquierda y tests de branding actualizados para Netlify. Motor intacto.
+
+## v9.8.4
+- Eliminar «Mi taller» y fundir el logo original con el sidebar sin recuadro.
+- Actualizar precaché, etiquetas de versión y prueba visual.

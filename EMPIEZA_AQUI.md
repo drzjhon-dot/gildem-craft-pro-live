@@ -1,14 +1,15 @@
-# Gildem Albion Lab · Craft Pro v9.8.3
+# Gildem Albion Lab · Craft Pro v9.8.4
 
-Esta versión parte del proyecto **v9.8.2** y realiza exclusivamente el cambio del logo lateral solicitado. El código de los motores no fue alterado.
+La versión v9.8.4 se basa en la v9.8.3 validada para Netlify. Cambios exclusivamente de presentación en el menú lateral:
 
-## Publicación
+- Se eliminó el texto «Mi taller».
+- El logo aprobado se integra sobre el fondo del menú, sin cuadro visible. El archivo WebP tiene transparencia para conservar el escudo y el texto.
+- Se conserva una copia del arte previo como `assets/branding/gildem-sidebar-logo-original.webp`.
+- No se modificaron `app.js` ni los módulos de `core/`.
 
-1. Elimina del repositorio los archivos de la versión rota que estén obsoletos y sube **todos** los archivos y carpetas de este ZIP, no solo la imagen.
-2. Haz commit y push a la rama desplegada por Netlify.
-3. Netlify ejecutará `npm run build`, incluidas las pruebas.
-4. Si el navegador sigue mostrando una versión anterior, recarga con Ctrl+Shift+R.
+## Publicación a GitHub + Netlify
 
-## Control de regresión
-
-Los tests verifican la imagen `assets/branding/gildem-sidebar-logo.webp`, la ausencia de texto duplicado y su inclusión en el Service Worker.
+1. Descomprime el ZIP y sube **todo su contenido** a la raíz del repositorio, reemplazando los archivos de la versión anterior; incluye `tests/`, `scripts/`, `assets/`, `core/`, `sw.js`, `package.json` y `index.html`.
+2. Haz Commit en la rama conectada a Netlify.
+3. Netlify ejecutará `npm run build`, incluidas todas las pruebas automatizadas.
+4. Si sigues viendo la versión anterior, recarga usando Ctrl+Shift+R. La versión de caché cambió a 9.8.4.
