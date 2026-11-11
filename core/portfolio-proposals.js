@@ -34,7 +34,7 @@ export function makeCraftProposals(routes,budget,{style=2,horizonDays=14,focusLi
    unknownCap:0,horizonDays,focusLimit,minimumConfidence:0,intelligent:true,
    bulkMode:true,saturation:style,fameWeight:[0,.5,1][spec.fameGoal],
    maxPerItemFraction:fraction,maxVariants:80,targetDifferentItems:profile.targetDifferentItems,
-   diversityLanes:profile.diversityLanes,diversityWeight:profile.diversityWeight,forceDiversity,
+   diversityLanes:forceDiversity&&profile.diversityLanes,diversityWeight:profile.diversityWeight,forceDiversity,
    pendingByMarket:pending instanceof Map?pending:new Map()
   }):{rows:[]};
   const plan=fitPlan(estimate.rows||[],cap,focusLimit,{preserveTiers:forceDiversity});

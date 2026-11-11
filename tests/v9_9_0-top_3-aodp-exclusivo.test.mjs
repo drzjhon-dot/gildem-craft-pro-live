@@ -6,7 +6,7 @@ import marketProxy from '../netlify/functions/market.mjs';
 import {REGION,NUMERIC_SOURCE,WEST_MARKET_SOURCES} from '../core/server-policy.js';
 const code=file=>readFileSync(new URL('../'+file,import.meta.url),'utf8');
 
-test('v9.9.0-top.7.1: único proveedor numérico de mercado AODP West, sin importaciones externas',()=>{
+test('v9.9.0-top.8.1: único proveedor numérico de mercado AODP West, sin importaciones externas',()=>{
  assert.equal(REGION,'west');
  assert.equal(NUMERIC_SOURCE.base,'https://west.albion-online-data.com');
  assert.equal(WEST_MARKET_SOURCES.length,0);
@@ -21,7 +21,7 @@ test('v9.9.0-top.7.1: único proveedor numérico de mercado AODP West, sin impor
  assert(app.includes("sendPlanToCalculator('autocraft')"));
 });
 
-test('v9.9.0-top.7.1: un ranking externo previamente guardado no puede alterar la demanda de crafting',()=>{
+test('v9.9.0-top.8.1: un ranking externo previamente guardado no puede alterar la demanda de crafting',()=>{
  const source=code('app.js');
  const start=source.indexOf('function demandEvidence(');
  const end=source.indexOf('function control(id){',start);
@@ -47,7 +47,7 @@ test('v9.9.0-top.7.1: un ranking externo previamente guardado no puede alterar l
  assert.equal(r.importedRows,0);
 });
 
-test('v9.9.0-top.7.1: historial sin AODP no se rellena con datos de terceros',()=>{
+test('v9.9.0-top.8.1: historial sin AODP no se rellena con datos de terceros',()=>{
  const source=code('app.js'),start=source.indexOf('function demandEvidence('),end=source.indexOf('function control(id){',start);
  const c={id:'T6_MAIN_MACE_HELL',city:'Black Market'};
  const ctx={discoverDemand:()=>({byMarket:new Map()}),historyMetrics:()=>({activeDays:0,observations:0}),
@@ -61,7 +61,7 @@ test('v9.9.0-top.7.1: historial sin AODP no se rellena con datos de terceros',()
  assert.equal(c.demandSource,'Sin historial AODP');
 });
 
-test('v9.9.0-top.7.1: proxy de mercado usa únicamente REST West y preserva filtros de historia',async()=>{
+test('v9.9.0-top.8.1: proxy de mercado usa únicamente REST West y preserva filtros de historia',async()=>{
  const req=new Request('https://gildem.invalid/.netlify/functions/market?region=west&kind=history&items=T4_MAIN_MACE&locations=Black%20Market&qualities=1,2,3,4,5&date=2026-11-01&end_date=2026-11-08&time-scale=24');
  const original=globalThis.fetch;
  const requests=[];
@@ -78,7 +78,7 @@ test('v9.9.0-top.7.1: proxy de mercado usa únicamente REST West y preserva filt
  }finally{globalThis.fetch=original;}
 });
 
-test('v9.9.0-top.7.1: imágenes solo del render oficial, nunca webs de otros mercados',()=>{
+test('v9.9.0-top.8.1: imágenes solo del render oficial, nunca webs de otros mercados',()=>{
  const icon=code('core/icons.js'),image=code('netlify/functions/item-image.mjs');
  assert(icon.includes('render.albiononline.com'));
  assert(image.includes('render.albiononline.com'));

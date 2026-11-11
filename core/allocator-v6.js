@@ -9,6 +9,7 @@ import {resolveStyle,impactCapacity,horizonVolumeUnits} from './market-impact.js
 import {needWeight} from './market-mechanics.js';
 import {pendingAdjustedCapacity,portfolioDiversityStats} from './intelligent-portfolio.js';
 import {variantParts} from './craft-plan-controls.js';
+import {diversityPolicy,diversityRouteCapacity} from './diversity-policy.js';
 const f=(x,d=0)=>Number.isFinite(Number(x))?Number(x):d;
 export function capacityFor(x,capFraction,unknownCap,horizonDays=14){
  if(Number.isFinite(x.marketCapacity))return Math.max(0,Math.floor(x.marketCapacity));
@@ -81,6 +82,9 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  const minConfidence=opts.minimumConfidence||0;
  const smart=opts.intelligent===true;
  const forceDiversity=opts.forceDiversity===true&&smart;
+ // La casilla de diversidad manda: no puede quedar anulada por un perfil de objetivo.
+ const diversifyLanes=forceDiversity||opts.diversityLanes===true;
+ const diversityRules=diversityPolicy(opts.saturation); 
  // "Usar todo" allows spending available funds, never the removal of exposure caps.
  const itemFraction=smart?Math.min(.50,Math.max(.05,f(opts.maxPerItemFraction,.12))):
    Math.min(1,Math.max(0,f(opts.maxPerItemFraction,.30)));
@@ -127,7 +131,10 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
     base=Math.min(base,impactCapacity(x,{horizonDays,style}));
    }
   }
-  const capacity=pendingAdjustedCapacity(x,base,pending);
+  const pendingCapacity=pendingAdjustedCapacity(x,base,pending);
+  // Limitamos también la exposición por OBJETO. El antiguo 55% conjunto
+  // en T4/T5 permitía lotes muy grandes a pesar de marcar diversidad.
+  const capacity=forceDiversity?diversityRouteCapacity(x,{style:opts.saturation,horizonDays,available:pendingCapacity}):pendingCapacity;
   return {...x,saturation:saturation||x.saturation||null,intelligentCapacity:capacity,minLot:forceDiversity&&variantParts(x.id)?.tier>=6?1:minUsefulLot(x,capacity),pendingUnits:pending.get(x.id+'|'+x.city)||0};
  }).filter(x=>x.intelligentCapacity>0);
  if(!all.length)return empty;
@@ -166,7 +173,7 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  }
  const itemShare=new Map();
  for(const x of all)itemShare.set(x.id,(itemShare.get(x.id)||0)+routeShare.get(x));
- const itemFractionFor=id=>{const ordinary=demandWeighted?Math.max(itemFraction,Math.min(opts.diversityLanes?.32:.60,(itemShare.get(id)||0)*1.5)):itemFraction;
+ const itemFractionFor=id=>{const ordinary=demandWeighted?Math.max(itemFraction,Math.min(diversifyLanes?.32:.60,(itemShare.get(id)||0)*1.5)):itemFraction;
   if(!forceDiversity||variantParts(id)?.tier<6)return ordinary;
   // T7/T8: una unidad puede superar el 22% de capital aunque cumpla presupuesto.
   const cheapest=Math.min(...all.filter(x=>x.id===id).map(x=>x.capitalPerUnit));
@@ -176,7 +183,7 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  // con actividad, beneficio bajo estrés y capital para lotes mínimos.
  const laneOf=x=>{const p=variantParts(x.id);return p?`${p.tier}.${p.enchant}`:'?';};
  const lanes=new Set(all.map(laneOf));
- const laneCapFactor=opts.diversityLanes&&lanes.size>1?(fameWeight>=.9?.44:fameWeight>=.4?.65:.86):1;
+ const laneCapFactor=diversifyLanes&&lanes.size>1?(fameWeight>=.9?.44:fameWeight>=.4?.65:.86):1;
  const laneLimit=budgetValue*(forceDiversity?.74:Math.max(1/lanes.size,Math.min(1,laneCapFactor)));
  const destinations=new Set(all.map(x=>x.city));
  const tiers=new Set(all.map(x=>String(x.id).match(/^T([4-8])_/)?.[1]).filter(Boolean));
@@ -210,7 +217,7 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
    // Con T6–T8 viables, no gastar todo el capital en T4 y T5 solo porque son más baratos.
    const highTierAvailable=forceDiversity&&[...tiers].some(t=>Number(t)>=6);
    const lowerSpent=(byTier.get('4')||0)+(byTier.get('5')||0);
-   const lowTierRoom=highTierAvailable&&['4','5'].includes(tierOf(x))?Math.floor((budgetValue*.55-lowerSpent+1e-8)/x.capitalPerUnit):Infinity;
+   const lowTierRoom=highTierAvailable&&['4','5'].includes(tierOf(x))?Math.floor((budgetValue*diversityRules.lowTierBudgetShare-lowerSpent+1e-8)/x.capitalPerUnit):Infinity;
    const laneRoom=Math.floor((laneLimit-(byLane.get(laneOf(x))||0)+1e-8)/x.capitalPerUnit);
    return Math.max(0,Math.min(x.intelligentCapacity-qty,cashRoom,focusRoom,itemRoom,cityRoom,tierRoom,lowTierRoom,laneRoom));
   };
@@ -229,23 +236,30 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
   };
   if(smart){
    // Phase one: recorrer combinaciones T/encantamiento con margen y actividad.
-   const seedOrder=opts.diversityLanes?(()=>{
+   const seedOrder=diversifyLanes?(()=>{
     const lanes=new Map();for(const x of ordered){const key=laneOf(x);const group=lanes.get(key)||[];group.push(x);lanes.set(key,group);}
     const groups=[...lanes.values()].sort((a,b)=>forceDiversity?(variantParts(b[0].id)?.tier||0)-(variantParts(a[0].id)?.tier||0)||val(b[0])-val(a[0]):val(b[0])-val(a[0]));const pool=[];
     let index=0;while(index<ordered.length){let added=0;for(const group of groups)if(group[index]){pool.push(group[index]);added++;}if(!added)break;index++;}
     return pool;
    })():ordered;
    const seeded=new Set();
-   if(opts.diversityLanes){
-    // Dar una oportunidad a cada tier con una ruta rentable y con volumen.
-    // Si T7/T8 supera presupuesto, lote mínimo o exposición, take() no lo fuerza.
-    const bestTier=new Map();
-    for(const x of seedOrder){const t=tierOf(x),prior=bestTier.get(t);
-     // Cuotas primero: elegir una ruta asequible y con margen, no la más cara del tier.
-     if(!prior||forceDiversity&&x.capitalPerUnit<prior.capitalPerUnit*.9||(!forceDiversity&&val(x)>val(prior)))bestTier.set(t,x);
+   if(diversifyLanes){
+    // Cada tier tiene una lista de alternativas, NO un solo representante.
+    // Una ruta barata puede no caber por Focus, por profundidad o por exposición;
+    // si falla hay que intentar otra del mismo tier antes de descartarlo.
+    const optionsByTier=new Map();
+    for(const x of seedOrder){const tier=tierOf(x),list=optionsByTier.get(tier)||[];
+     list.push(x);optionsByTier.set(tier,list);
     }
-    const candidatesByTier=[...bestTier.values()].sort((a,b)=>forceDiversity?Number(tierOf(b))-Number(tierOf(a)):0);
-    for(const x of candidatesByTier)if(take(x,1))seeded.add(x.id);
+    const tierChoices=[...optionsByTier].sort((a,b)=>forceDiversity?Number(b[0])-Number(a[0]):0);
+    for(const [,options] of tierChoices){
+     const choices=[...options].sort((a,b)=>forceDiversity?
+      a.capitalPerUnit-b.capitalPerUnit||val(b)-val(a):val(b)-val(a));
+     for(const x of choices){
+      if(maxFor(x)<x.minLot)continue;
+      if(take(x,1)){seeded.add(x.id);break;}
+     }
+    }
    }
    for(const x of seedOrder){
     if(seeded.size>=desiredItems||counts.size>=maxVariants)break;
@@ -302,6 +316,6 @@ export function allocatePortfolioV6(candidates,budget,opts={}){
  return {rows,capital:budgetValue,totalCost,totalNetCost:rows.reduce((a,x)=>a+x.qty*x.cost,0),
   totalProfit:best.profit,focusUsed:rows.reduce((a,x)=>a+x.qty*f(x.focusPerUnit),0),
   remaining:Math.max(0,budgetValue-totalCost),diversity:stats,totalFame:rows.reduce((a,x)=>a+f(x.fameTotal),0),fameWeight,
-  method:opts.bulkMode?'Producción de volumen: actividad semanal superior a 50; reinversión del presupuesto sin reserva; topes dinámicos, mercado e inventario pendiente':smart?'Cartera inteligente: objetos distintos primero; topes por artículo, tier, destino e inventario pendiente':
+  method:forceDiversity?'Diversidad prioritaria: reserva por tier, lotes conservadores por objeto y límite de capital T4/T5; historial AODP observado, no venta garantizada':opts.bulkMode?'Producción de volumen: actividad semanal superior a 50; reinversión del presupuesto sin reserva; topes dinámicos, mercado e inventario pendiente':smart?'Cartera inteligente: objetos distintos primero; topes por artículo, tier, destino e inventario pendiente':
    'asignación conjunta multi-inicio; resultado aproximado'};
 }

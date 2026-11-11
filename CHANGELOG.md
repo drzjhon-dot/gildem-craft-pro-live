@@ -250,3 +250,14 @@ Logo solo en esquina superior izquierda y tests de branding actualizados para Ne
 
 ## v9.9.0-top.7.1
 - El filtro final ya no elimina lotes de una unidad de T6-T8 aceptados por diversidad; identificador de versión visible para auditar Netlify.
+
+## 9.9.0-top.8
+- Diversidad con lotes limitados por actividad, perfil, horizonte y tier; 24/32/42% de capital máximo agregado en T4/T5 cuando hay T6+ viable.
+- Auditoría visible de configuraciones, tiers y encantamientos por plan.
+- Siete simulaciones nuevas de rotación, Focus, presupuestos, mercados Royal/BM y objetivos.
+
+## 9.9.0-top.8.1 · Continuación de auditoría y diversidad (Claude)
+- Cuando «Forzar diversidad» está activado, el motor reserva tiers aunque un perfil de objetivo no solicite explícitamente diversidad por carriles.
+- Al reservar una ruta por tier, prueba recetas alternativas del mismo tier cuando la primera no cabe por Focus, coste, tamaño mínimo o exposición.
+- Se conserva el reparto ordinario cuando la casilla se desactiva, así como el presupuesto, el horizonte, las recetas, los datos de AODP, el retorno y los diarios.
+- Pruebas de regresión de la etapa final, filtros exactos, controles de Black/Royal, límites y Focus.
