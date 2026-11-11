@@ -1027,3 +1027,13 @@ body.gcp-results-active .workspace{
  #main-content::before{height:154px;opacity:.68;background-position:60% top}
 }
 @media(prefers-reduced-motion:reduce){.workspace::before{animation:none}}
+
+
+/* v9.8.3 · Sidebar logo-only header requested by user. */
+.sidebar .brand.brand-logo-only{display:block;padding:2px 4px 22px}
+.sidebar .brand-logo-only-img{display:block;width:min(100%, 214px);height:auto;margin:0 auto;filter:drop-shadow(0 10px 24px rgba(0,0,0,.35));border-radius:18px}
+.sidebar .brand-logo-only::after{content:none}
+@media (max-width: 760px){
+  .sidebar .brand.brand-logo-only{padding:6px 4px 16px}
+  .sidebar .brand-logo-only-img{width:min(100%, 190px)}
+}
