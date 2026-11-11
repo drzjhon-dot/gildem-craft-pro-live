@@ -19,7 +19,7 @@ test('Resultados: listas en filas, ordenadas por tier, con «Para», «sobran» 
  assert(app.includes('groupLogistics(rows).sort(byTier)'));
  assert(app.includes('[...supply].sort(byTier)'));
  assert(app.includes('itemTier(id)*10+itemEnch(id)'));
- for(const text of ['gx-count','data-label="Para"','sobran ${fmt(spare)}','No se devuelve','data-label="Vender en"','data-plan-group'])assert(app.includes(text),text);
+ for(const text of ['gx-count','data-label="Para"','reutilizas ${fmt(reused)}','No se devuelve','data-label="Vender en"','data-plan-group'])assert(app.includes(text),text);
  assert(!app.includes('marketNeedsHtml'));
  assert(!app.includes('gcp-compact-card gcp-production-card'));
 });

@@ -1,15 +1,5 @@
-# Gildem Albion Lab · Craft Pro v9.8.4
+# Gildem Albion Lab v9.9.0 · Compras netas en los planes
 
-La versión v9.8.4 se basa en la v9.8.3 validada para Netlify. Cambios exclusivamente de presentación en el menú lateral:
+Las listas de compras de Black Craft y Royal Craft compran el consumo real: el retorno (bono de ciudad, diario, Focus) ya cambia las cantidades. Detalles en `RELEASE_NOTES_9_9_0.md`.
 
-- Se eliminó el texto «Mi taller».
-- El logo aprobado se integra sobre el fondo del menú, sin cuadro visible. El archivo WebP tiene transparencia para conservar el escudo y el texto.
-- Se conserva una copia del arte previo como `assets/branding/gildem-sidebar-logo-original.webp`.
-- No se modificaron `app.js` ni los módulos de `core/`.
-
-## Publicación a GitHub + Netlify
-
-1. Descomprime el ZIP y sube **todo su contenido** a la raíz del repositorio, reemplazando los archivos de la versión anterior; incluye `tests/`, `scripts/`, `assets/`, `core/`, `sw.js`, `package.json` y `index.html`.
-2. Haz Commit en la rama conectada a Netlify.
-3. Netlify ejecutará `npm run build`, incluidas todas las pruebas automatizadas.
-4. Si sigues viendo la versión anterior, recarga usando Ctrl+Shift+R. La versión de caché cambió a 9.8.4.
+Instalación: copia todos los archivos sobre tu repositorio con GitHub Desktop, Commit to main → Push origin, espera `Published` en Netlify y recarga con Ctrl + Shift + R (debe verse `v9.9.0`).

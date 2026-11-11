@@ -1,3 +1,7 @@
+## v9.9.0 (2026-11-11)
+
+- Listas de compras de los planes: «A comprar» descuenta el retorno (bono de ciudad, bono diario y Focus ahora cambian las cantidades); «reutilizas N», techos y texto copiable sobre la cantidad comprada. Versión unificada tras el ZIP del usuario. Ver `RELEASE_NOTES_9_9_0.md`.
+
 ## v9.8.2 · 2026-11-11
 - Branding Gildem Albion Lab con escudo y seis fondos ilustrados locales para cada pestaña. Sin cambios en cálculos.
 

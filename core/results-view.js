@@ -48,20 +48,27 @@ export function budgetGroups(source,categoryOf){
 // Los techos de compra se derivan del plan y del presupuesto, NO de un libro de órdenes.
 // Si todos los materiales alcanzan su techo, el aumento de costo agregado no excede
 // ni 25% del profit estimado ni el capital restante. Los lotes pueden no estar disponibles.
+// v9.9.0 · «A comprar» descuenta el retorno: la estación devuelve recursos que se
+// reutilizan mientras se fabrica, así que se compra el consumo NETO (qtyNet). El
+// bruto de la receta queda como referencia, y por eso el bono de ciudad, el bono
+// diario y el Focus ahora SÍ cambian cuánto comprar. Los techos y el capital se
+// calculan sobre la cantidad comprada.
 export function shoppingWithCeilings(source){
   const plan=source?.plan||{};
-  const gross=(Array.isArray(plan.materials)?plan.materials:[]).map(m=>({
-    ...m,qtyGross:Math.ceil(nonnegative(m.qtyGross)),
-    unitPrice:nonnegative(m.unitPrice)
-  }));
-  const totalMaterial=gross.reduce((s,m)=>s+m.qtyGross*m.unitPrice,0);
+  const gross=(Array.isArray(plan.materials)?plan.materials:[]).map(m=>{
+    const qtyGross=Math.ceil(nonnegative(m.qtyGross));
+    const net=m.qtyNet==null?qtyGross:Math.ceil(nonnegative(m.qtyNet)-1e-9);
+    const qtyBuy=Math.max(0,Math.min(qtyGross,net));
+    return {...m,qtyGross,qtyBuy,reused:Math.max(0,qtyGross-qtyBuy),unitPrice:nonnegative(m.unitPrice)};
+  });
+  const totalMaterial=gross.reduce((s,m)=>s+m.qtyBuy*m.unitPrice,0);
   const spare=Math.max(0,nonnegative(source?.investableBudget??source?.budget)-nonnegative(plan.totalCost));
   const extra=Math.min(spare,Math.max(0,amount(plan.totalProfit))*.25);
   return gross.map(m=>{
-    const cost=m.qtyGross*m.unitPrice;
+    const cost=m.qtyBuy*m.unitPrice;
     const allowance=totalMaterial>0?extra*cost/totalMaterial:0;
-    const ceiling=m.qtyGross>0?m.unitPrice+allowance/m.qtyGross:m.unitPrice;
-    return {...m,grossCost:cost,suggestedCeiling:ceiling};
+    const ceiling=m.qtyBuy>0?m.unitPrice+allowance/m.qtyBuy:m.unitPrice;
+    return {...m,buyCost:cost,grossCost:cost,suggestedCeiling:ceiling};
   });
 }
 
@@ -92,7 +99,7 @@ export function shoppingListText(source,nameOf=id=>id){
   const journals=source?.plan?.journalSummary?.items||[];
   const lines=['GILDEM CRAFT PRO | LISTA DE COMPRAS',
     'Material | Comprar | Ciudad | Precio presupuestado/u | Techo prudente/u'];
-  for(const m of mats)lines.push(`${nameOf(m.id)} | ${m.qtyGross} | ${m.city||'Sin ciudad'} | ${Math.round(m.unitPrice)} | ${Math.floor(m.suggestedCeiling)}`);
+  for(const m of mats)lines.push(`${nameOf(m.id)} | ${m.qtyBuy??m.qtyGross} | ${m.city||'Sin ciudad'} | ${Math.round(m.unitPrice)} | ${Math.floor(m.suggestedCeiling)}`);
   if(journals.length){lines.push('DIARIOS VACÍOS | Cantidad | Ciudad | Costo estimado');for(const j of journals)lines.push(`${j.name||nameOf(j.empty)} | ${j.qty} | ${j.buyCity||'Por definir'} | ${Math.round(amount(j.purchaseCost))}`)}
   lines.push('Precios orientativos sujetos a antigüedad, volumen, tasas y ejecución. Confirmar en el juego.');
   return lines.join('\n');
