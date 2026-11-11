@@ -6,7 +6,6 @@ const publicCache={'Cache-Control':'public,max-age=604800,immutable','Netlify-CD
 export function imageUpstreams(id,size){
  const encoded=encodeURIComponent(id);
  return [
-  `https://cdn.albionfreemarket.com/item/${encoded}.png?size=${size}`,
   `https://render.albiononline.com/v1/item/${encoded}.png?size=${size}&quality=1`
  ];
 }

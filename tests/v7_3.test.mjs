@@ -8,13 +8,12 @@ import {BRANCHES,BRANCH_CATEGORIES} from '../core/branches.js';
 const png=new Uint8Array([137,80,78,71,13,10,26,10,0,0,0,0,73,72,68,82,0,0,0,1,0,0,0,1]);
 const headers={get:key=>key==='content-type'?'image/png':'0'};
 
-test('v7.3 iconos usan CDN externo verificado, proxy, render oficial y respaldo local',()=>{
+test('v9.9.0-top.3 iconos usan render oficial de Albion y respaldo local',()=>{
  const sources=iconSources('T4_BAG',84);
- assert.equal(sources.length,4);
+ assert.equal(sources.length,3);
  assert.match(sources[0],/^\.\/\.netlify\/functions\/item-image/);
  assert.match(sources[1],/^https:\/\/render\.albiononline\.com\/v1\/item\//);
- assert.match(sources[2],/^https:\/\/cdn\.albionfreemarket\.com\/item\//);
- assert.equal(sources[3],FALLBACK_ICON);
+ assert.equal(sources[2],FALLBACK_ICON);
 });
 test('v7.3 icono local precede las fuentes externas cuando compilado en Netlify',()=>{
  const src=iconSources('T4_MAIN_AXE',128,{localIcons:new Set(['T4_MAIN_AXE'])});
@@ -34,11 +33,11 @@ test('v7.3 fallback avanza sin cambiar el ID del objeto',()=>{
  assert.equal(first.step,1);
  assert.equal(nextIconSource('T4_BAG',90,2).final,true);
 });
-test('v7.3 proxy admite PNG, valida firmas y usa fuente alternativa si otra falla',async()=>{
+test('v9.9.0-top.3 proxy admite PNG y valida firmas del renderer oficial',async()=>{
  let calls=0;
- const fetched=await resolveIcon('T4_POTION_HEAL',90,async()=>{calls++;return calls===1?{ok:false,headers}:{ok:true,headers,arrayBuffer:async()=>png.buffer};});
+ const fetched=await resolveIcon('T4_POTION_HEAL',90,async()=>{calls++;return {ok:true,headers,arrayBuffer:async()=>png.buffer};});
  assert.ok(fetched);
- assert.equal(calls,2);
+ assert.equal(calls,1);
  assert.equal(fetched.contentType,'image/png');
  assert.equal(fetched.bytes.length,png.length);
  assert.equal(imageUpstreams('T4_BAG@1',84).every(x=>x.includes('T4_BAG%401')),true);

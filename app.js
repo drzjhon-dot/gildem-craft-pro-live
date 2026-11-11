@@ -37,10 +37,7 @@ import {sellHoursByCity,bestSellHours,parseFestivities} from './core/sell-hours.
 import {calcBatch,calcPriceIds,quoteIndex,variantId,availableTiers,availableEnchants} from './core/craft-calc.js';
 import {CALCULATOR_ITEM_LIMIT,prepareCalculatorHandoff} from './core/calculator-handoff.js';
 import {evidenceForPlan} from './core/market-proof.js';
-import {MARKET_SNAPSHOT_KEY,parseMarketRanking,validMarketSnapshot,externalDaily,conflictingServerLabel} from './core/external-demand.js';
-import {MARKET_REFERENCES,marketReferenceSnapshot} from './core/market-references.js';
 import {REGION,requireWest,sourceLabel} from './core/server-policy.js';
-import {makeWestResearchBrief} from './core/west-ai-brief.js';
 import {selectUniversalRecipes,createUniversalCandidates,verifiedRotation} from './core/opportunity-scan.js';
 import {chooseRoyalSaleCities,filterRoyalSaleRoutes} from './core/royal-sale-markets.js';
 import {filterViableCraftRoutes} from './core/viability.js';
@@ -59,34 +56,28 @@ try{Object.assign(prefs,JSON.parse(localStorage.getItem('gildem-prefs')||'{}'));
 prefs.region=REGION; // Corrige preferencias antiguas que apuntaban a Europa/Asia.
 const state={resultSource:'crafting',autoPlan:null,autoRunning:false,autoInfo:null,levelPlan:null,levelRunning:false,preflight:null,page:'crafting',id:'T4_BAG',market:null,trade:null,plan:null,refine:null,enchant:null,transmute:null,catalogReady:false,loading:true,lastFetch:0,lastWarning:null,query:'',fullCatalog:false};
 function save(){prefs.region=REGION;try{localStorage.setItem('gildem-prefs',JSON.stringify(prefs));}catch{}}
-function importedMarketVolume(){try{const data=JSON.parse(localStorage.getItem(MARKET_SNAPSHOT_KEY)||'null');return validMarketSnapshot(data,{region:prefs.region})?data:null;}catch{return null;}}
 function demandEvidence(candidates,historyRows,ids,cities,qualityVolumes=null){
  let spikes=0;
- const byMarket=discoverDemand(ids,historyRows,cities).byMarket,snapshot=importedMarketVolume();
+ const byMarket=discoverDemand(ids,historyRows,cities).byMarket;
  for(const x of candidates){
   const market=byMarket.get(x.id+'|'+x.city);
   x.activity=market?.activity||historyMetrics([],14);
   x.activity7=market?.activity7||historyMetrics([],7);
   x.activity30=market?.activity30||historyMetrics([],30);
-  const imported=externalDaily(snapshot,x.id,x.city,{region:prefs.region});
+  // AODP-only: aunque existan antiguas tablas importadas en localStorage,
+  // NUNCA alteran la demanda, la cantidad recomendada ni el profit.
   const aodp=market?.daily??null;
-  // A user-pasted report may cover more history than AODP's sampled feed.
-  // Source, date and provisional status remain visible. NEVER import its prices.
-  if(imported&&imported.daily>(aodp??0)){
-   x.demandDaily=imported.daily;x.demandSource=imported.source+' · importación manual';x.externalDemand=true;
-  }else{
-   // v8.9.0 · Las calidades 2 y 3 amplían lo que el mercado absorbe de un lote.
-   const adj=addressableDemand(aodp,qualityVolumes?.get(x.id+'|'+x.city)||null);
-   x.demandDaily=adj.daily;x.qualityFactor=adj.factor;x.qualityDemand=adj.byQuality;
-   x.demandSource=market?.verified?(adj.factor>1?'AODP · historial West (calidades 1-3)':'AODP · historial del servidor'):'Sin historial de mercado';x.externalDemand=false;
-  }
+  const adj=addressableDemand(aodp,qualityVolumes?.get(x.id+'|'+x.city)||null);
+  x.demandDaily=adj.daily;x.qualityFactor=adj.factor;x.qualityDemand=adj.byQuality;
+  x.demandSource=market?.verified?(adj.factor>1?'AODP West · historial calidades 1–3':'AODP West · historial de mercado'):'Sin historial AODP';
+  x.externalDemand=false;
   // Fama de crafteo estimada por fabricación (Premium incluido si está activo).
   const fame=craftingFameFromRecipe(x.id,recipes[x.id],{premium:prefs.premium});
   x.craftFame=fame?.value||0;x.craftFameEstimated=!!fame?.estimated;
   // El lote BM se valora a la mediana pagada, no al pico de la puja actual.
   if(applyBmReversion(x))spikes++;
  }
- return {importedRows:snapshot?.rows.length||0,observedAt:snapshot?.observedAt||null,bmSpikes:spikes};
+ return {importedRows:0,observedAt:null,bmSpikes:spikes,source:'AODP West'};
 }
 // Historial de calidades 2-3 solo para las rutas con margen (máx. 135 objetos, 3 consultas).
 async function qualityDemandLookup(candidates,force){
@@ -97,22 +88,6 @@ async function qualityDemandLookup(candidates,force){
  if(!ids.length||!cities.length)return new Map();
  try{const res=await historyQuality(ids,prefs.region,force,cities);return qualityVolumeIndex(res.rows);}catch{return new Map();}
 }
-function saveExternalMarketVolume(){
- const field=val('market-volume-paste','').trim(),source=val('market-volume-source','hub');
- const date=val('market-volume-date','');
- const market=val('market-volume-market','Black Market');
- const region='west';
- if(!checked('market-volume-west-proof'))return showToast('No se pueden importar cantidades sin confirmar expresamente que la tabla corresponde a América (West).',true);
- if(conflictingServerLabel(field))return showToast('La tabla menciona Europa o Asia: no se importará a América West.',true);
- if(!date||!Number.isFinite(Date.parse(date+'T12:00:00Z')))return showToast('Indica la fecha real que muestra la página para no usar datos viejos.',true);
- const rows=parseMarketRanking(field,{source,market});
- if(!rows.length)return showToast('No pude leer IDs y cantidades. Copia una tabla con la columna de unidades diarias.',true);
- const snapshot={source,region,serverProof:'user-confirmed-west',observedAt:date+'T12:00:00Z',rows};
- if(!validMarketSnapshot(snapshot,{region}))return showToast('Solo se permiten tablas confirmadas de América (West), con fecha de hasta 14 días.',true);
- try{localStorage.setItem(MARKET_SNAPSHOT_KEY,JSON.stringify(snapshot));settingsPage();showToast('Guardadas '+rows.length+' estadísticas por objeto y ciudad. Son referencias manuales, NO precios live.');}
- catch{return showToast('El navegador no permite guardar estas estadísticas en este dispositivo.',true);}
-}
-
 function control(id){return document.getElementById(id);}
 function val(id,def=''){return control(id)?.value??def;}
 function num(id,def=0){const v=Number(val(id,def));return Number.isFinite(v)?v:def;}
@@ -627,7 +602,7 @@ function levelResults(result){const plan=result.plan,goal=result.goal,spent=plan
  <h3 class="subheading" style="margin-top:15px">Lista exacta: qué fabricar</h3><div class="table-scroll"><table class="data-table"><thead><tr><th>Objeto y tier</th><th>Ciudad de craft</th><th>Uso</th><th>Cantidad</th><th>Fama</th></tr></thead><tbody>${rows||'<tr><td colspan="5">No hay rutas con cotizaciones verificables para estos filtros.</td></tr>'}</tbody></table></div>
  <h3 class="subheading" style="margin-top:16px">Lista de compras de materiales</h3><div class="table-scroll"><table class="data-table"><thead><tr><th>Material</th><th>Comprar en</th><th>A comprar (neto)</th><th>Bruto de la receta</th></tr></thead><tbody>${mats||'<tr><td colspan="4">Sin materiales calculados.</td></tr>'}</tbody></table></div>
  <h3 class="subheading" style="margin-top:16px">Distribución de ventas Royal y Mercado Negro</h3><div class="table-scroll"><table class="data-table"><thead><tr><th>Objeto</th><th>Destino</th><th>Unidades</th><th>Beneficio</th></tr></thead><tbody>${dist||'<tr><td colspan="4">No hay ventas planificadas.</td></tr>'}</tbody></table></div>
- ${rounds}${marketReferencesPanel(result.marketReferences)}<p class="explain">Inversión por primera ronda: ${short(plan.stages[0]?.investment||0)} silver. El valor de reventa se calcula con precios observados y puede cambiar. Estudiar destruye el objeto: nunca se incluye en ventas. Los diarios de crafting y LP no están incluidos en estos cálculos.</p></div></div></div>`;
+ ${rounds}<p class="explain">Inversión por primera ronda: ${short(plan.stages[0]?.investment||0)} silver. El valor de reventa se calcula con precios observados y puede cambiar. Estudiar destruye el objeto: nunca se incluye en ventas. Los diarios de crafting y LP no están incluidos en estos cálculos.</p></div></div></div>`;
 }
 async function runLevelCraft(force=false){if(state.levelRunning)return;
  const p={...levelPrefs};Object.assign(p,{spec:num('level-spec',0),exactRemaining:val('level-fame',''),budget:num('level-budget',20000000),market:val('level-market','mixed'),
@@ -642,7 +617,7 @@ async function runLevelCraft(force=false){if(state.levelRunning)return;
  Object.assign(levelPrefs,p);saveLevel();
  if(p.market==='black'&&['gathering','kits','siege','foods','potions','mounts'].includes(p.category))return showToast('Esta categoría no se planifica para el Mercado Negro. Elige Royal o combinado.',true);
  if(target.required===0){state.levelPlan={goal:target,plan:planLevelCraft({goalFame:0,budget:p.budget})};levelPage();return;}
- const marketReferencesPromise=checkMarketReferences();
+ const marketReferencesPromise=Promise.resolve(null);
  state.levelRunning=true;setBusy('level-results','Cargando recetas y cotizaciones de tu especialización…');
  const status=text=>setBusy('level-results',text);
  try{
@@ -725,7 +700,7 @@ async function runAutoScan(force=false){
   bmTax:prefs.tax,royalTax:prefs.tax,listingFee:prefs.setup,riskBM:Number(craftPrefs.riskBM)||0,riskRoyal:Number(craftPrefs.riskRoyal)||0,priceStress:Number(craftPrefs.priceStress)||8,resourceStress:Number(craftPrefs.resourceStress)||7,refiningMode,refiningFee,refiningDaily:Number(craftPrefs.refiningDaily)||0,refiningFocus:false,refiningFocusUnit:0};
  Object.assign(autoPrefs,{saleCities,budget,city,maxCraftCities,market,goal,focus,focusUnit,deep,daily,tierMin,tierMax,ench:enchant,enchExact,refiningMode,refiningFee,refineFamilies,refineSale,refineDaily,refineStation,refineFreight,refineDelivery,requireBook:checked('auto-require-book'),categories:cats,branchMode,branchKeys,itemMode,itemKeys});
  localStorage.setItem('gildem-v8-autocraft',JSON.stringify(autoPrefs));
- const marketReferencesPromise=checkMarketReferences();
+ const marketReferencesPromise=Promise.resolve(null);
  state.autoRunning=true;state.preflight=null;setBusy('auto-results','Preparando el catálogo de las ramas seleccionadas…');
  const status=text=>setBusy('auto-results',text);
  try{
@@ -1042,39 +1017,6 @@ function gameEventsLine(){
 }
 // Verificar disponibilidad NO significa importar precios, ventas ni profundidad de las webs.
 // Cada plan renueva este diagnóstico, con la fuente numérica AODP separada.
-async function checkMarketReferences(){
- try{const request=new URL('./.netlify/functions/market-references',window.location.href);
-  request.searchParams.set('region',REGION);
-  const res=await fetch(request,{headers:{'Accept':'application/json'},signal:AbortSignal.timeout(7500)});
-  if(!res.ok||!(res.headers.get('content-type')||'').includes('json'))return null;
-  const data=await res.json();
-  return data&&Array.isArray(data.checks)?data:null;
- }catch{return null;}
-}
-function marketReferencesPanel(data){
- const rows=marketReferenceSnapshot(data);
- const checkedAt=data?.checkedAt&&Number.isFinite(Date.parse(data.checkedAt))?new Date(data.checkedAt).toLocaleString('es-ES'):null;
- const verified=data?.region==='west'&&Array.isArray(data?.checks)&&data.checks.length>0;
- const accessible=rows.filter(r=>r.status==='accessible').length;
- const checked=verified?`Accesibilidad comprobada: ${accessible} de ${rows.length} páginas respondieron · ${h(checkedAt||'fecha desconocida')}.`:'No se pudo comprobar la accesibilidad de las páginas externas en esta consulta.';
- const cards=rows.map(r=>{
-  const status=r.status==='accessible'?'Página accesible, servidor de los datos NO verificado':r.status==='unavailable'?'La página no respondió':'Acceso no confirmado';
-  const region=r.westSelectable==='yes'?'Permite seleccionar América (West), pero este chequeo no leyó su selección':'Servidor West sin verificación automática';
-  return `<a href="${h(r.url)}" target="_blank" rel="noopener noreferrer" class="gcp-reference-card" aria-label="Abrir ${h(r.name)}">
-    <strong class="gcp-source-name">${h(r.name)}</strong>
-    <span class="gcp-source-server">${h(region)}</span>
-    <small class="gcp-source-status">${h(status)} · Sin estadísticas importadas</small>
-    <span class="gcp-source-uses">${h(r.description)}</span>
-   </a>`;
- }).join('');
- return `<section class="gcp-market-references panel"><details open><summary>Fuentes y evidencia de mercado · América (West)</summary>
- <div class="gcp-reference-primary"><strong>AODP América (West)</strong><span>Única fuente numérica automática: cotizaciones, historial y órdenes observadas. Los datos pueden ser antiguos o incompletos.</span></div>
- <p class="explain">${checked} Estas comprobaciones solo prueban disponibilidad de páginas, NO importan ventas ni verifican automáticamente su servidor. <strong>0 de ${rows.length} referencias externas aportaron estadísticas al cálculo.</strong></p>
- <div class="gcp-reference-grid">${cards}</div>
- <p class="explain">El plan solo utiliza AODP West y tablas externas importadas manualmente con servidor West confirmado. Los anuncios de particulares no prueban ventas ejecutadas. Nunca se mezcla Europa ni Asia con América.</p>
- <div class="gcp-reference-actions"><button type="button" class="btn sm ghost" data-nav="ajustes">Importar estadísticas West</button><button type="button" class="btn sm ghost" data-action="research-west-ai">Copiar consulta para investigación con IA · West</button></div>
- <small class="muted">La investigación con IA genera una consulta para copiar. No es una búsqueda automática, ni una importación de cifras, ni una comprobación de profit.</small></details></section>`;
-}
 function marketCoverageHtml(p){
  const coverage=p?.marketCoverage,diagnosis=p?.scanDiagnosis;
  if(!coverage&&!diagnosis)return '';
@@ -1283,7 +1225,7 @@ function calcItemDropdown(){
 }
 function calcPage(){
  main.innerHTML=`<div class="page-grid"><div class="col-12"><section class="panel gcp-craft-cal">
-  <div class="section-head"><h2>Calculadora de Craft</h2><p class="explain">Calculadora de crafteo por lotes con las mismas reglas que el motor: retorno con bono de ciudad${calcPrefs.focus?' y Focus':''}, comisiones de Ajustes y precios de AODP (West), todos editables. Observaciones del mercado, no ventas garantizadas.</p></div>
+  <div class="section-head"><h2>Calculadora de Craft</h2><p class="explain">Calculadora de crafteo por lotes (mercado exclusivamente AODP West) con las mismas reglas que el motor: retorno con bono de ciudad${calcPrefs.focus?' y Focus':''}, comisiones de Ajustes y precios de AODP (West), todos editables. Observaciones del mercado, no ventas garantizadas.</p></div>
   ${calcOrigin?`<div class="gcp-cal-origin" role="status"><div><strong>Plan de ${calcOrigin.source==='autocraft'?'Royal Craft':'Black Craft'} enviado a la calculadora</strong><p>${fmt(calcPrefs.items.length)} objetos · ${fmt(calcOrigin.crafts)} fabricaciones${calcOrigin.refining?' (incluye refinados)':''} · Presupuesto original: ${short(calcOrigin.budget)} silver</p><small>Las cantidades son editables. Los precios actuales de la calculadora pueden diferir de los del plan original; no conservan automáticamente su destino, transporte ni modalidad de venta.</small></div><button type="button" class="btn sm ghost" data-nav="${calcOrigin.source}">Volver al generador</button></div>`:''}
   <div class="gcp-cal-controls">
    <details class="gcp-branch-dd" id="cal-add-dd"><summary>Añadir objeto</summary><div class="gcp-dd-panel">${calcItemDropdown()}</div></details>
@@ -1437,7 +1379,7 @@ function topMarketPage(){
    <div class="gcp-dd-items">${items.map(b=>`<label><input type="checkbox" data-top-branch-pick data-dd-cat="${h(cat)}" value="${h(b.key)}" ${selected.has(b.key)?'checked':''}> ${h(b.label)}</label>`).join('')}</div></details>`;
  }).join('');
  main.innerHTML=`<div class="page-grid"><div class="col-12"><section class="panel gcp-top-market">
-  <div class="section-head"><h2>Top del mercado</h2><p class="explain">Fuente oficial AODP REST de América (West), endpoint History. Suma calidades 1–5 en días UTC completos. Las cifras pueden diferir del EMV de otras webs y no garantizan demanda ejecutable.</p></div>
+  <div class="section-head"><h2>Top del mercado</h2><p class="explain">Fuente única de mercado: AODP REST de América (West), endpoint History. Suma calidades 1–5 en días UTC completos. Las cifras pueden diferir del EMV de otras webs y no garantizan demanda ejecutable.</p></div>
   <div class="gcp-top-controls">
    <details class="gcp-branch-dd" id="top-branch-dd"><summary>Ramas · <span id="top-branch-count">${selected.size}</span> de ${TOP_MAX_BRANCHES} máx.</summary>
     <div class="gcp-dd-panel"><div class="gcp-dd-tools gcp-dd-global"><button type="button" class="btn sm ghost" data-dd-clear>Borrar selección</button><small>Hasta ${TOP_MAX_BRANCHES} ramas por consulta.</small></div>${groups}</div>
@@ -1635,15 +1577,7 @@ function settingsPage(){main.innerHTML=`${blockTitle('Ajustes y datos','Parámet
  <form id="focus-form" class="form-grid">${field('ID exacto del objeto','focus-item','<input id="focus-item" class="input" placeholder="T6_SHOES_PLATE_SET1" required>','span4')}${numberField('Focus por craft','focus-cost',0,1,1,'span4')}${numberField('Spec','focus-spec',0,0,1,'span2')}<div class="field span2"><button class="btn sm gold" type="submit">Guardar Focus</button></div></form>
  <p class="explain">Para registrar ventas de planes guardados anteriormente, existe una vista de historial opcional dentro de Ajustes; no ocupa espacio en el menú principal.</p><div class="button-row"><button class="btn sm ghost" data-nav="cartera">Abrir historial opcional</button><button class="btn sm" data-action="backup-data">↓ Exportar respaldo</button></div>
  </details></div>
- <div class="col-12"><details class="panel gcp-snapshot-input"><summary>Estadísticas de volumen West (opcional)</summary><p class="explain">Solo se aceptan tablas de Albion Online Hub cuando hayas confirmado en la página que el ranking corresponde a <strong>América (West)</strong>. Si la página no identifica su servidor, no la importes. Royal Forge, Albion Free Market, AO MCT y Albion Online Tools se ofrecen como enlaces de contraste con selector West; no se leen sus números automáticamente. Los anuncios entre jugadores no cuentan como ventas. Nunca se importan precios para el cálculo de profit.</p>
- <div class="form-grid"><div class="field span3"><label>Fuente</label><select class="form-select" id="market-volume-source"><option value="hub">Albion Online Hub · Top Selling (West confirmado)</option></select></div>
- <div class="field span3"><label>Mercado</label><select class="form-select" id="market-volume-market">${opts(['Black Market',...CITIES], 'Black Market')}</select></div>
- <div class="field span3"><label>Servidor admitido</label><div class="input">Solo América (West)</div></div>
- <div class="field span3"><label>Fecha real de la tabla</label><input id="market-volume-date" type="date" class="input"></div></div>
- <label class="field" style="display:block;margin-top:12px"><input type="checkbox" id="market-volume-west-proof"> Confirmo que la fuente identifica explícitamente estos datos como América (West), no Europa/Asia.</label>
- <textarea id="market-volume-paste" class="input" rows="6" maxlength="280000" placeholder="Pega la tabla con IDs y Cantidad diaria media…" style="width:100%;margin:12px 0"></textarea>
- <button type="button" class="btn gold" data-action="save-market-volume">Importar estadísticas históricas</button><small class="muted">${importedMarketVolume()?importedMarketVolume().rows.length+' registros importados · '+h(importedMarketVolume().observedAt.slice(0,10)):'Sin estadísticas manuales válidas para el servidor actual'}</small></details></div>
- <div class="col-12"><div class="panel"><h3 class="subheading">Diagnóstico de imágenes de Albion</h3><p class="explain">Las fotos se buscan en el CDN alternativo, el proxy de Netlify y el render oficial; si fallan, se muestra una imagen local de respaldo. No depende de la API de precios.</p><div class="button-row"><button class="btn" data-action="test-icons" type="button">▣ Comprobar servidores de imágenes</button></div><div id="icon-diagnostics" class="muted tiny" aria-live="polite" style="margin-top:12px">Puedes verificar la conexión de los iconos desde este navegador.</div></div></div>
+ <div class="col-12"><div class="panel"><h3 class="subheading">Diagnóstico de imágenes de Albion</h3><p class="explain">Las fotos se buscan en el proxy de Netlify y el render oficial de Albion; si fallan, se muestra una imagen local de respaldo. No depende de la API de precios.</p><div class="button-row"><button class="btn" data-action="test-icons" type="button">▣ Comprobar servidores de imágenes</button></div><div id="icon-diagnostics" class="muted tiny" aria-live="polite" style="margin-top:12px">Puedes verificar la conexión de los iconos desde este navegador.</div></div></div>
  <div class="col-12"><div class="panel"><h3 class="subheading">Sincronización privada entre dispositivos (opcional)</h3>
  <p class="explain">Tus inversiones, Focus, inventario y alertas siguen siendo locales por defecto. Si habilitas GILDEM_SYNC_ENABLED=1 en Netlify, podrás guardar y recuperar una copia cifrada con AES-GCM. La clave nunca sale de tu navegador; quien la pierda no podrá descifrar el respaldo. No es una cuenta de usuario ni un servicio de copia continua.</p>
  <div class="form-grid">
@@ -1651,7 +1585,7 @@ function settingsPage(){main.innerHTML=`${blockTitle('Ajustes y datos','Parámet
  </div><div class="button-row" style="margin-top:12px"><button class="btn sm" type="button" data-action="sync-generate">Generar clave segura</button><button class="btn sm" type="button" data-action="sync-upload">↑ Subir copia cifrada</button><button class="btn sm gold" type="button" data-action="sync-download">↓ Recuperar copia cifrada</button></div>
  <div id="sync-message" class="muted tiny" style="margin-top:12px">Por defecto la sincronización está desactivada en Netlify. Actívala desde Environment variables si deseas usarla.</div>
  </div></div>
- <div class="col-12"><div class="panel"><h3 class="subheading">Fuentes del proyecto</h3><p class="explain">Precios e historial: <a target="_blank" rel="noopener" href="https://west.albion-online-data.com/api-docs">Albion Online Data Project (AODP)</a>. Catálogo de nombres y recetas: <a target="_blank" rel="noopener" href="https://github.com/vkorne-web/albion-market">albion-market</a>, extraído de <a target="_blank" rel="noopener" href="https://github.com/ao-data/ao-bin-dumps">ao-bin-dumps</a>. Referencia de funcionalidades y flujo de trabajo: <a target="_blank" rel="noopener" href="https://albiononlinehub.com/">Albion Online Hub</a> (no se importan sus precios). Esta es una herramienta de fans, no oficial, sin afiliación con Albion Online ni con Albion Online Hub.</p></div></div></div>`;}
+ <div class="col-12"><div class="panel"><h3 class="subheading">Fuentes del proyecto</h3><p class="explain">Precios e historial: <a target="_blank" rel="noopener" href="https://west.albion-online-data.com/api-docs">Albion Online Data Project (AODP)</a>. Catálogo de nombres y recetas: <a target="_blank" rel="noopener" href="https://github.com/vkorne-web/albion-market">albion-market</a>, extraído de <a target="_blank" rel="noopener" href="https://github.com/ao-data/ao-bin-dumps">ao-bin-dumps</a>. No se consultan otras webs de mercado ni se aceptan rankings importados para calcular cantidades. El catálogo de recetas y nombres viene de datos del juego, no de AODP, porque AODP no ofrece recetas completas. Esta es una herramienta de fans, no oficial y sin afiliación con el juego ni con AODP.</p></div></div></div>`;}
 async function runLookup(force=false){const t=val('item-search',state.id).trim();let id=state.id;
  if(t===itemName(state.id)){id=state.id;}else if(/^T\d+_[A-Z\d_]+(?:@\d)?$/i.test(t)){id=t.toUpperCase();}else if(t){const found=findItems(t,1)[0];if(found)id=found.id;else return showToast('Selecciona un objeto del buscador o introduce su ID',true);}
  if(!id)return showToast('Introduce un objeto',true);
@@ -1713,7 +1647,7 @@ async function runCraft(force=false){
  let ids=recipesForBranch(recipes,input.branch,input.tierMin,input.tierMax,input.ench,650,'auto',id=>itemMatches(id,{mode:choice.mode,stems:choice.stems,enchExact:input.enchExact})&&qcVariantIncluded('craft',id,input.branch));
  ids=ids.filter(id=>qcVariantIncluded('craft',id,input.branch));
  if(!ids.length){control('craft-results').innerHTML=empty('No hay recetas de esa rama con la ciudad elegida','Intenta la ciudad automática o amplía los tiers.');return;}
- const marketReferencesPromise=checkMarketReferences();
+ const marketReferencesPromise=Promise.resolve(null);
  setBusy('craft-results','Consultando recetas y materiales de '+ids.length+' variantes…');
  try{
   const materialIds=[...new Set(ids.flatMap(id=>recipes[id].materials.map(m=>m.id)))];
@@ -2321,7 +2255,7 @@ function probeImage(url,timeoutMs=5000){return new Promise(resolve=>{
 async function runIconDiagnostics(){
  const el=control('icon-diagnostics');if(!el)return;el.textContent='Probando fuentes de imágenes…';
  const sources=iconSources('T4_BAG',84).filter(src=>src!==FALLBACK_ICON&&!src.startsWith('./item-icons/'));
- const labels=['Netlify CDN','Render oficial','CDN alternativo'];
+ const labels=['Netlify CDN','Render oficial'];
  const results=await Promise.all(sources.map(src=>probeImage(src)));
  const dest=control('icon-diagnostics');if(!dest)return;
  dest.innerHTML=results.map((ok,i)=>`<span class="pill ${ok?'green':'red'}">${h(labels[i]||'Fuente '+(i+1))}: ${ok?'Funciona':'No disponible'}</span>`).join(' ') + '<p class="explain">Si todas fallan, revisa extensiones de bloqueo, tu red o utiliza la versión completa con iconos guardados durante el despliegue.</p>';
@@ -2363,12 +2297,6 @@ document.addEventListener('click',e=>{
  if(action==='results-edit'){changePage(state.resultSource==='autocraft'?'autocraft':'crafting');return;}
  if(action==='results-copy'){void resultsCopyShopping();return;}
  if(action==='results-copy-first'){void resultsCopyShopping(true);return;}
- if(action==='research-west-ai'){
-  const current=currentPlan();
-  const prompt=makeWestResearchBrief({market:current?.market||'black',branch:current?.branch||'',rows:current?.plan?.rows||current?.availableCandidates||[]});
-  if(!navigator.clipboard?.writeText){showToast('Tu navegador no admite copiar automáticamente. Abre el plan con un navegador seguro.',true);return;}
-  void navigator.clipboard.writeText(prompt).then(()=>showToast('Consulta West copiada. Pégala en una IA con búsqueda web activa: las fuentes externas todavía NO están conectadas automáticamente.')).catch(()=>showToast('No fue posible copiar la consulta.',true));return;
- }
  if(action==='save-investment')savePlanPortfolio();
  if(action==='run-auto')runAutoScan();
  if(action==='watch-route')appendPlanAlert(btn.dataset.index);
@@ -2408,7 +2336,6 @@ document.addEventListener('click',e=>{
  if(action==='refresh-craft-now'){const source=state.page==='resultados'?(state.resultSource==='autocraft'?'autocraft':'crafting'):state.page;if(state.page==='resultados')changePage(source);if(source==='autocraft')runAutoScan(true);else runCraft(true);}
  if(action==='add-route')addPlanRoute(btn.dataset.routeKey);
  if(action==='clear-cache'){if(confirm('¿Eliminar los precios almacenados en este dispositivo?')){clearCache();showToast('Caché eliminada');settingsPage();}}
- if(action==='save-market-volume')saveExternalMarketVolume();
  if(action==='test-icons')runIconDiagnostics();
  if(action==='sync-catalog')syncCatalog(true);
  if(action==='refresh-game-recipes')syncGameRecipes();

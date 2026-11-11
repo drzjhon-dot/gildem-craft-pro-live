@@ -24,11 +24,12 @@ test('la API de mercado no consulta Europa, ni directa ni por proxy',async()=>{
  assert.match(content('netlify/functions/snapshot.mjs'),/region!=='west'/);
  assert.match(content('netlify/functions/hourly-prices.mjs'),/const region='west'/);
 });
-test('referencias accesibles no demuestran servidor ni ventas ejecutadas',async()=>{
- const result=await verifyMarketReferences(async(_url,opt)=>{assert.equal(opt.method,'HEAD');return {ok:true,status:200};});
- assert.equal(result.region,'west');assert.equal(result.checks.length,WEST_MARKET_SOURCES.length);
- assert.equal(result.usedForPrices,false);assert.equal(result.usedForMarketVolume,false);
- assert(marketReferenceSnapshot(result).every(s=>s.serverVerified===false&&s.numericImported===false));
+test('AODP-only: ninguna página externa se comprueba, sin prometer ventas',async()=>{
+ let calls=0;
+ const result=await verifyMarketReferences(async()=>{calls++;throw Error('No consultar')});
+ assert.equal(calls,0);assert.equal(result.region,'west');assert.deepEqual(result.checks,[]);
+ assert.equal(result.usedForPrices,true);assert.equal(result.usedForMarketVolume,true);
+ assert.deepEqual(marketReferenceSnapshot(result),[]);
  assert.equal((await verifyMarketReferences(async()=>{throw Error('Unexpected fetch')},{region:'europe'})).checks.length,0);
  assert.equal((await (await import('../netlify/functions/market-references.mjs')).default(new Request('https://test.invalid/.netlify/functions/market-references?region=europe'))).status,400);
 });
@@ -45,12 +46,15 @@ test('la importacion West exige declaracion, fecha y no admite etiquetas Europe/
  assert.deepEqual(parseMarketRanking('T5_SHOES_PLATE_SET2 Europe Black Market 3,696',{source:'hub'}),[]);
  assert.deepEqual(parseMarketRanking('T5_SHOES_PLATE_SET2 Black Market 3,696',{source:'journal'}),[]);
 });
-test('UI no ofrece selector de Europa, y publica consulta de IA sin pretender importacion',()=>{
+test('UI no ofrece Europa ni permite mezclas manuales de estadísticas',()=>{
  const app=content('app.js'),html=content('index.html'),sw=content('sw.js');
- assert(app.includes('prefs.region=REGION;'));assert(app.includes('market-volume-west-proof'));
- assert(app.includes('research-west-ai'));assert(!app.includes('vanatoliyv.github.io'));
+ assert(app.includes('prefs.region=REGION;'));
+ assert(!app.includes('market-volume-west-proof'));
+ assert(!app.includes('research-west-ai'));
+ assert(!app.includes('saveExternalMarketVolume'));
  assert(!html.includes('value="europe"'));assert(sw.includes('core/server-policy.js'));
  const prompt=makeWestResearchBrief({branch:'Botas de placas',market:'black',rows:[{id:'T5_SHOES_PLATE_SET2'}]});
- assert(prompt.includes('T5_SHOES_PLATE_SET2'));assert(prompt.includes('AMÉRICA (WEST)'));assert(prompt.includes('Albion Online Hub'));
- assert(!prompt.includes('vanatoliyv.github.io'));
+ assert(prompt.includes('T5_SHOES_PLATE_SET2'));assert(prompt.includes('AMÉRICA (WEST)'));
+ assert(prompt.includes('Albion Online Data Project'));
+ assert(!prompt.includes('Albion Online Hub'));
 });

@@ -1,3 +1,11 @@
+# Gildem Albion Lab · v9.9.0-top.3
+
+Este ZIP contiene la prueba **AODP como única fuente de mercado**. No necesitas instalar nada extra en GitHub: reemplaza todos los archivos, haz Commit y Netlify ejecutará `npm run build`.
+
+Mantiene las cinco pestañas y la transferencia de Black/Royal a Calculadora de Craft de v9.9.0-top.2. El ranking importado desde otras páginas ya no interviene en los cálculos. Las recetas se conservan desde metadatos del juego, porque la API AODP no suministra recetas completas.
+
+**Verificaciones locales:** `npm run build`, tests de exclusividad AODP, caché y proxy West.
+
 # Gildem Albion Lab · v9.9.0-top.2
 
 **Base conservada:** v9.9.0 original en Black Craft y Royal Craft, con el Top Mercado mejorado de v9.9.6. Los 53 módulos `core/` originales de la base v9.9.0-top.1 siguen intactos.

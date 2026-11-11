@@ -49,7 +49,7 @@ test('imagen de cualquier item: Netlify cache primero, buckets compartidos y fal
  assert.equal(iconBucket(192),192);
 });
 
-test('proxy: dos proveedores en paralelo y cache reusable para todos los ids',async()=>{
+test('proxy: solo renderer oficial y caché reusable para todos los ids',async()=>{
  const src=readFileSync(new URL('../netlify/functions/item-image.mjs',import.meta.url),'utf8');
  assert(src.includes('Promise.any(attempts)'));
  assert(src.includes("Netlify-CDN-Cache-Control"));
@@ -57,7 +57,7 @@ test('proxy: dos proveedores en paralelo y cache reusable para todos los ids',as
  const png=new Uint8Array([137,80,78,71,13,10,26,10,0,0,0,0,73,72,68,82,0,0,0,1,0,0,0,1]);
  let calls=0;
  const result=await resolveIcon('T6_2H_TOOL_AXE',96,async()=>{calls++;return {ok:true,headers:{get:x=>x==='content-type'?'image/png':'0'},arrayBuffer:async()=>png.buffer};});
- assert.equal(calls,2);
+ assert.equal(calls,1);
  assert.equal(result.contentType,'image/png');
 });
 

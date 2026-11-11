@@ -9,7 +9,7 @@ import {materialPurchaseCities} from './material-cities.js';
 import {filterViableCraftRoutes} from './viability.js';
 
 const BASE_PROGRESS=[[0,0],[10,14424],[30,169582],[60,750526],[90,2886914],[100,12879472]];
-export const FAME_REFERENCE='https://albionfreemarket.com/articles/view/how-much-fame-to-reach-level-100-in-albion-online-the-destiny-board-explained';
+export const FAME_REFERENCE=''; // Sin consultas ni referencias a webs externas de mercado.
 export const CRAFT_FAME_BY_MATERIAL_TIER={2:1.5,3:7.5,4:22.5,5:90,6:270,7:645,8:1395};
 function clean(id){return String(id||'').split('@')[0];}
 export function specFameTotal(id){

@@ -224,3 +224,8 @@ Logo solo en esquina superior izquierda y tests de branding actualizados para Ne
 - Retirada la pestaña Resultados, reordenadas cinco pestañas y renombrada Calculadora de Craft.
 - Importación automática de planes Black y Royal a Calculadora por ID exacto, con cantidades editables y presupuesto recordatorio.
 - Fuentes y evidencia del mercado ocultas en la interfaz.
+
+## v9.9.0-top.3
+- AODP West exclusivo para precios, historial, profundidad y demanda del planificador.
+- Inhabilitada estadística externa importada; retirados verificadores de otras webs de mercado.
+- Se conservan recetas y traducciones del juego como datos de crafting.

@@ -65,6 +65,7 @@ test('la interfaz conserva valor seleccionado y muestra el motivo de cantidades'
  assert(app.includes("chosenDemandIds([...new Set([...ids,...scanRefining.map(x=>x.id)])],900)"));
  assert(app.includes('QC_HORIZON=[7,14,30]'));
  assert(app.includes("demandSource||'historial'"));
- assert(app.includes("saveExternalMarketVolume()"));
+ assert(!app.includes("saveExternalMarketVolume()"));
+ assert(!app.includes("externalDaily(snapshot"));
  assert(!app.includes('const marketHistoryIds=marketAuditIds(ids,preferred'));
 });

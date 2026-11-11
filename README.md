@@ -1,5 +1,14 @@
 # Versión actual: Gildem Albion Lab v9.9.0-top.2
 
+## Experimento v9.9.0-top.3 · Mercado exclusivamente AODP West
+
+**Única fuente automática y manual admitida para precios, cotizaciones, historial, actividad y profundidad de órdenes: [Albion Online Data Project (West)](https://west.albion-online-data.com/api-docs).** Las importaciones manuales de rankings de terceros se han desactivado y los respaldos antiguos con esos rankings no intervienen en los planes.
+
+**La API AODP no proporciona recetas completas.** Para que Black Craft, Royal Craft y Calculadora de Craft continúen funcionando, se conservan por separado el catálogo de recetas y los nombres del juego (albion-market / ao-bin-dumps). Son metadatos del crafting, no datos de demanda ni precios.
+
+La actividad y los precios observados por AODP son comunitarios y pueden ser incompletos o antiguos. Ninguna cifra implica ventas garantizadas. El flujo de cinco pestañas y los cálculos económicos siguen la base 9.9.0-top.2. Véase `RELEASE_NOTES_9_9_0_TOP_3_AODP.md`.
+
+
 La navegación visible tiene cinco pestañas: **Calculadora de Craft, Black Craft, Royal Craft, Top Mercado, Ajustes y Datos**. Ya no existe la pestaña Resultados; los planes completos pasan automáticamente a la calculadora para editar cantidades y añadir objetos. La sección «Fuentes y evidencia de mercado» permanece oculta. Los motores de 9.9.0 y el Top Mercado de 9.9.6 se conservan. Consulta `EMPIEZA_AQUI.md` y `RELEASE_NOTES_9_9_0_TOP_2.md`.
 
 ---
