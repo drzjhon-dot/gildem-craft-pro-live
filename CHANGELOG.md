@@ -1,3 +1,7 @@
+## v9.5.0 (2026-11-10)
+
+- Craft Cal.: desplegable de objetos por categoría/rama, selectores de tier y encantamiento por fila, y cálculo que nunca se rinde: cotizaciones antiguas marcadas y precios que faltan editables. Ver `RELEASE_NOTES_9_5_0.md`.
+
 ## v9.4.0 (2026-11-10)
 
 - Nueva pestaña «Craft Cal.»: calculadora de crafteo por lotes con materiales, diarios, Focus y doble profit (Mercado Negro y Royal). «Agregar a Cal.» desde Top mercado. Ver `RELEASE_NOTES_9_4_0.md`.

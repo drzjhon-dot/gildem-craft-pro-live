@@ -1,5 +1,5 @@
-# Gildem Craft Pro v9.4.0 · Craft Cal.
+# Gildem Craft Pro v9.5.0 · Craft Cal. afinada
 
-Nueva pestaña «Craft Cal.»: añade objetos (desde Top mercado con «Agregar a Cal.» o por buscador), fija cantidades por lote y obtén materiales, diarios, fama y doble profit (Mercado Negro y Royal), con precios solo de AODP West. Detalles en `RELEASE_NOTES_9_4_0.md`.
+La calculadora ya no se rinde por cotizaciones viejas o ausentes (las marca y te deja escribirlas), añade objetos con un desplegable por categorías y cada fila tiene selectores de tier y encantamiento. Detalles en `RELEASE_NOTES_9_5_0.md`.
 
-Instalación: copia todos los archivos sobre tu repositorio con GitHub Desktop, Commit to main → Push origin, espera `Published` en Netlify y recarga con Ctrl + Shift + R (debe verse `v9.4.0`).
+Instalación: copia todos los archivos sobre tu repositorio con GitHub Desktop, Commit to main → Push origin, espera `Published` en Netlify y recarga con Ctrl + Shift + R (debe verse `v9.5.0`).

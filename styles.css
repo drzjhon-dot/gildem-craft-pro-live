@@ -888,3 +888,22 @@ body[data-page="craftcal"]{--glow:#8f7bff}
 }
 .gx-item>.item-cell{flex:1 1 auto;min-width:0}
 .gx-item>.gcp-tier,.gx-item>.gx-noreturn{flex:none}
+.gcp-cal-price{display:inline-flex;align-items:center;gap:4px}
+.gcp-cal-price .qty-input.price{width:92px;text-align:right;padding:4px 6px;font-size:12.5px}
+.gcp-cal-price.manual .qty-input.price{border-color:var(--oro);color:var(--oro)}
+.gcp-cal-reset{background:none;border:0;color:var(--mist);cursor:pointer;font-size:14px;padding:2px}
+.gcp-cal-reset:hover{color:var(--oro)}
+
+/* v9.5.0 · Craft Cal.: desplegable de objetos y variantes */
+.gcp-dd-sub{margin-left:10px}
+.gcp-dd-sub>summary{font-weight:600;font-size:13.5px}
+.gcp-cal-hit{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:0;color:var(--parch);padding:5px 8px;border-radius:7px;cursor:pointer;font-size:13.5px}
+.gcp-cal-hit:hover{background:#ffffff0d}
+.gcp-cal-hit img{width:24px;height:24px}
+.gcp-cal-variant{display:inline-flex;gap:4px;flex:none}
+.gcp-cal-variant select{background:#100c1c;border:1px solid var(--line);color:var(--parch);border-radius:8px;padding:4px 6px;font-size:12px;font-weight:700}
+.gcp-cal-variant select:hover{border-color:var(--oro)}
+.gcp-cal-price.missing .qty-input.price{border-color:var(--brasa);background:#ff5a4514}
+.gcp-cal-price .qty-input.price{width:76px;font-size:11.5px;padding:3px 5px}
+.gcp-cal-variant select{padding:2px 4px;font-size:11px}
+.gx-cal-row .gx-item .item-cell strong{max-width:150px}
