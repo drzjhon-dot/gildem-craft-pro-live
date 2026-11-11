@@ -1,3 +1,7 @@
+## v9.5.1 (2026-11-10)
+
+- La pantalla «No se pudo iniciar» ahora muestra qué módulo falló y, si el despliegue mezcla versiones, explica cómo arreglarlo. Ver `RELEASE_NOTES_9_5_1.md`.
+
 ## v9.5.0 (2026-11-10)
 
 - Craft Cal.: desplegable de objetos por categoría/rama, selectores de tier y encantamiento por fila, y cálculo que nunca se rinde: cotizaciones antiguas marcadas y precios que faltan editables. Ver `RELEASE_NOTES_9_5_0.md`.

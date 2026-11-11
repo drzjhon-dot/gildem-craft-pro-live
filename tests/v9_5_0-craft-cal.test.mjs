@@ -49,7 +49,7 @@ test('materiales y diarios agregados: brutos con «sobran», totales y a quién 
  assert(out.totals.grossCapital>=t5.grossCost);
  assert(out.totals.profitBM!==null&&out.totals.royalMissing===0&&out.totals.bmMissing===1,'el T4 no tiene puja BM');
 });
-test('v9.5.0 · sin cotización no se inventa nada, pero la fila SÍ calcula: material sin precio entra a 0, se señala y el profit queda pendiente',()=>{
+test('v9.5.1 · sin cotización no se inventa nada, pero la fila SÍ calcula: material sin precio entra a 0, se señala y el profit queda pendiente',()=>{
  const out=calcBatch([{id:'T9_NO_EXISTE',qty:3},{id:'T5_SHOES_PLATE_SET1@1',qty:2}],opts);
  assert.equal(out.rows[0].ok,false,'sin receta sigue siendo fila inválida');
  const row=out.rows[1];
@@ -67,7 +67,7 @@ test('v9.5.0 · sin cotización no se inventa nada, pero la fila SÍ calcula: ma
  assert.equal(fixed.rows[0].incomplete,false);
  assert(fixed.rows[0].profitBM!==undefined);
 });
-test('v9.5.0 · una cotización vieja ya no desaparece: se usa marcada como antigua, con su edad',()=>{
+test('v9.5.1 · una cotización vieja ya no desaparece: se usa marcada como antigua, con su edad',()=>{
  const stale=[price('T5_METALBAR','Thetford',3600)].map(x=>({...x,sell_price_min_date:new Date(now-30*3600000).toISOString()}));
  const q24=quoteIndex(stale,{maxAgeHours:24,now}).get('T5_METALBAR');
  assert.equal(q24.ask.size,1);
@@ -82,7 +82,7 @@ test('v9.5.0 · una cotización vieja ya no desaparece: se usa marcada como anti
  const used=batch.materials.find(m=>m.id==='T5_METALBAR');
  assert.equal(used.city,'Lymhurst','prefiere la cotización fresca sobre la antigua más barata');
 });
-test('v9.5.0 · variantes: tiers y encantamientos disponibles según recetas, con fusión de ids',()=>{
+test('v9.5.1 · variantes: tiers y encantamientos disponibles según recetas, con fusión de ids',()=>{
  const rec={T4_SHOES_PLATE_SET1:{materials:[{id:'T4_METALBAR',count:8}]},T5_SHOES_PLATE_SET1:{materials:[{id:'T5_METALBAR',count:8}]},'T5_SHOES_PLATE_SET1@1':{materials:[{id:'T5_METALBAR_LEVEL1@1',count:8}]}};
  assert.deepEqual(availableTiers(rec,'T4_SHOES_PLATE_SET1'),[4,5]);
  assert.deepEqual(availableEnchants(rec,'T5_SHOES_PLATE_SET1',5),[0,1]);

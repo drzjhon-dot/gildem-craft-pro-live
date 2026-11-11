@@ -1198,7 +1198,7 @@ const topPrefs=(()=>{try{const stored=JSON.parse(localStorage.getItem('gildem-to
 function saveTopPrefs(input){Object.assign(topPrefs,input);try{localStorage.setItem('gildem-top-market',JSON.stringify(topPrefs));}catch{}}
 // ── v9.4.0 · Craft Cal. — calculadora de crafteo por lotes ───────────────────
 const calcOverride=v=>{const out={};for(const [k,x] of Object.entries(v||{}))if(Number(x)>0&&/^[A-Z0-9_@-]{3,100}$/.test(k))out[k]=Number(x);return out;};
-const calcPrefs=(()=>{try{const v=JSON.parse(localStorage.getItem('gildem-craft-cal')||'{}');return {buy:calcOverride(v.buy),sellBM:calcOverride(v.sellBM),sellRoyal:calcOverride(v.sellRoyal),items:Array.isArray(v.items)?v.items.filter(x=>x&&x.id).slice(0,30):[],focus:v.focus===true};}catch{return {items:[],focus:false};}})();
+const calcPrefs=(()=>{try{const v=JSON.parse(localStorage.getItem('gildem-craft-cal')||'{}');return {buy:calcOverride(v.buy),sellBM:calcOverride(v.sellBM),sellRoyal:calcOverride(v.sellRoyal),items:Array.isArray(v.items)?v.items.filter(x=>x&&x.id).slice(0,30):[],focus:v.focus===true};}catch{return {items:[],focus:false,buy:{},sellBM:{},sellRoyal:{}};}})();
 function saveCalcPrefs(){try{localStorage.setItem('gildem-craft-cal',JSON.stringify(calcPrefs));}catch{}}
 function calcAddItem(id,qty=1){
  if(!id)return;
