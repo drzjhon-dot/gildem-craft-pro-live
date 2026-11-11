@@ -1,3 +1,11 @@
+# Versión actual: Gildem Albion Lab v9.9.0-top.2
+
+La navegación visible tiene cinco pestañas: **Calculadora de Craft, Black Craft, Royal Craft, Top Mercado, Ajustes y Datos**. Ya no existe la pestaña Resultados; los planes completos pasan automáticamente a la calculadora para editar cantidades y añadir objetos. La sección «Fuentes y evidencia de mercado» permanece oculta. Los motores de 9.9.0 y el Top Mercado de 9.9.6 se conservan. Consulta `EMPIEZA_AQUI.md` y `RELEASE_NOTES_9_9_0_TOP_2.md`.
+
+---
+
+## Historial de documentación de versiones anteriores
+
 # Gildem Craft Pro v8.6.9
 
 **Actualización:** ya no se emiten listas ficticias de una unidad como «plan de investigación». Black Craft consulta el historial West antes de decidir rentabilidad y admite escenarios de venta por orden BM calculados a partir de medianas históricas de al menos cuatro días con actividad, alto volumen y cotizaciones recientes. Los escenarios históricos se identifican como **CONDICIONADOS**: nunca se debe comprar ni fabricar sin confirmar el precio objetivo dentro del juego. La disponibilidad de materiales sigue siendo verificable por etapas.

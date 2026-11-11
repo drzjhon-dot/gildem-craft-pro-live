@@ -3,6 +3,14 @@ export const HOUR=3600000;
 import {REGION,requireWest,AODP_WEST} from './server-policy.js';
 const prefixes={west:AODP_WEST};
 const inflight=new Map();
+// v9.9.0-top.1: fecha UTC de Top Mercado; no modifica history() de crafting.
+export function completeUtcHistoryRange(days=7,now=Date.now()){
+ const span=[1,3,7,14,30].includes(Number(days))?Number(days):7;
+ const finish=Math.floor(now/86400000)*86400000;
+ return {date:new Date(finish-span*86400000).toISOString().slice(0,10),
+  end_date:new Date(finish).toISOString().slice(0,10)};
+}
+
 const prefix='gildem-aodp-v2:';
 let lastCall=0;
 let coolUntil=0;
@@ -58,6 +66,9 @@ async function api(kind,ids,region='west',params={},force=false){requireWest(reg
 }
 export const prices=(ids,region='west',force=false)=>api('prices',ids,region,{locations:'Bridgewatch,Fort Sterling,Lymhurst,Martlock,Thetford,Caerleon,Brecilien,Black Market',qualities:'1'},force);
 export const history=(ids,region='west',force=false)=>api('history',ids,region,{locations:'Bridgewatch,Fort Sterling,Lymhurst,Martlock,Thetford,Caerleon,Brecilien,Black Market',qualities:'1','time-scale':'24'},force);
+// Solo Top Mercado: todas las calidades y ventana de días UTC completos.
+export const historyTopMarket=(ids,region='west',force=false,cities=['Black Market'],days=7)=>
+ api('history',ids,region,{locations:cities.join(','),qualities:'1,2,3,4,5','time-scale':'24',...completeUtcHistoryRange(days)},force);
 // v8.9.0 · Volumen de las calidades 2 y 3 (cada calidad es un mercado aparte).
 export const historyHourly=(ids,region='west',force=false)=>api('history',ids,region,{locations:'Bridgewatch,Fort Sterling,Lymhurst,Martlock,Thetford,Caerleon,Brecilien,Black Market',qualities:'1','time-scale':'1'},force);
 // Eventos confirmados del juego (festivities). 404 = sin eventos confirmados.

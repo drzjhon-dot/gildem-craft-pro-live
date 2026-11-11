@@ -216,3 +216,11 @@ Logo solo en esquina superior izquierda y tests de branding actualizados para Ne
 
 ## v9.8.5
 - Botón de copiar movido junto al final del nombre en materiales, diarios y listas de resultados.
+
+## v9.9.0-top.1
+- Volver a 9.9.0 (ZIP del usuario); portar solamente Top Mercado 9.9.6. No se integran los cambios de planificación de 9.9.1–9.9.6.
+
+## v9.9.0-top.2
+- Retirada la pestaña Resultados, reordenadas cinco pestañas y renombrada Calculadora de Craft.
+- Importación automática de planes Black y Royal a Calculadora por ID exacto, con cantidades editables y presupuesto recordatorio.
+- Fuentes y evidencia del mercado ocultas en la interfaz.

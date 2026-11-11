@@ -8,14 +8,14 @@ const series=pts=>pts.map(([ago,count,price])=>({timestamp:new Date(now-ago*day)
 
 test('agrega por objeto y ciudad: promedio sobre la ventana y precio ponderado por volumen',()=>{
  const rows=[
-  {item_id:'T4_BAG',location:'Caerleon',quality:1,data:series([[0.5,100,2000],[1.5,50,4000],[10,999,100]])},
+  {item_id:'T4_BAG',location:'Caerleon',quality:1,data:series([[1.5,100,2000],[2.5,50,4000],[10,999,100]])},
   {item_id:'T4_BAG',location:'Lymhurst',quality:1,data:series([[2,70,1000]])},
   {item_id:'T5_BAG',location:'Caerleon',quality:1,data:series([[20,500,900]])},
  ];
  const out=aggregateTopMarket(rows,{days:7,now});
  const bag=out.find(x=>x.id==='T4_BAG'&&x.city==='Caerleon');
  assert(bag);
- assert.equal(bag.totalUnits,150,'el punto de hace 10 días queda fuera de la ventana de 7');
+ assert.equal(bag.totalUnits,150,'solo se incluyen días UTC completos dentro de la ventana de 7');
  assert(Math.abs(bag.dailyAmount-150/7)<1e-9);
  assert(Math.abs(bag.unitPrice-(100*2000+50*4000)/150)<1e-6,'precio medio ponderado por unidades');
  assert(Math.abs(bag.dailySilver-bag.dailyAmount*bag.unitPrice)<1e-6);
@@ -43,7 +43,7 @@ test('branchForItem: rama concreta, nunca una agregada, con su mercado',()=>{
 });
 test('la app tiene la página Top mercado cableada a la calculadora',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- for(const t of ["if(state.page==='topmercado')topMarketPage();","data-top-cal","calcAddItem(topCal.dataset.topCal,1)","Agregar a Cal.","aggregateTopMarket(res.rows","rankTopMarket(snap.entries"])assert(app.includes(t),t);
+ for(const t of ["if(state.page==='topmercado')topMarketPage();","data-top-cal","calcAddItem(topCal.dataset.topCal,1)","Agregar a Calculadora","aggregateTopMarket(res.rows","rankTopMarket(snap.entries"])assert(app.includes(t),t);
  assert(!app.includes('data-top-plan'),'el botón Planificar fue sustituido');
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  assert(html.includes('data-nav="topmercado"'));

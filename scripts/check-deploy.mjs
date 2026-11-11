@@ -8,14 +8,16 @@ const must=['package.json','netlify.toml','index.html','app.js','styles.css',
 'netlify/functions/hourly-prices.mjs','netlify/functions/snapshot.mjs'];
 for(const path of must)await access(join(process.cwd(),path));
 const pkg=JSON.parse(await readFile('package.json','utf8'));
-assert.match(pkg.version,/^9\.9\.0$/,'La distribución debe declarar la versión 9.9.0');
+assert.match(pkg.version,/^9\.9\.0-top\.2$/,'La distribución debe declarar la versión 9.9.0-top.2');
 // Prevent the regression that sent only test files to GitHub while keeping
 // app.js/index.html on an older version. These checks run in every Netlify build.
 const html=await readFile('index.html','utf8');
 const source=await readFile('app.js','utf8');
 const sw=await readFile('sw.js','utf8');
 const builder=await readFile('scripts/build.mjs','utf8');
-assert.ok(html.includes('data-nav="resultados"'),'La pestaña Resultados falta en index.html');
+assert.ok(!html.includes('data-nav="resultados"'),'La pestaña Resultados debe estar eliminada del menú');
+for(const tab of ['craftcal','crafting','autocraft','topmercado','ajustes'])assert.ok(html.includes('data-nav="'+tab+'"'),'Falta la pestaña: '+tab);
+assert.ok(source.includes("sendPlanToCalculator('crafting')")&&source.includes("sendPlanToCalculator('autocraft')"),'Los planes no llegan a la calculadora');
 assert.ok(source.includes('function resultsPage(){'),'La pantalla Resultados falta en app.js');
 assert.ok(source.includes('royalSaleCitiesHtml()')&&source.includes('selectedRoyalSaleCities()'),'Royal Craft debe permitir elegir destinos de venta');
 const css=await readFile('styles.css','utf8');

@@ -1087,3 +1087,13 @@ body.gcp-results-active .workspace{
 .gcp-results .gx-item .gcp-copyable-name>.item-cell>div{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .gcp-results .gx-item .gcp-copyable-name>.item-cell strong{display:inline;white-space:normal}
 .gcp-results .gx-item .gcp-copyable-name>.item-cell small{display:block;flex-basis:100%}
+
+
+/* v9.9.0-top.2: transferencia al calculador, sin pestaña de resultados ni tarjetas de fuentes. */
+.gcp-market-references{display:none !important}
+.gcp-cal-origin{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:15px 18px;margin:2px 0 18px;background:linear-gradient(110deg,#2b261f,#211a31);border:1px solid #a0805170;border-radius:13px}
+.gcp-cal-origin>div{flex:1 1 260px;min-width:0}
+.gcp-cal-origin strong{color:#f8da9e;display:block;font-size:14px}
+.gcp-cal-origin p{margin:6px 0;font-weight:650;color:#f1e5c9;font-size:12px}
+.gcp-cal-origin small{display:block;color:#beaeca;line-height:1.5;font-size:11px}
+.gcp-cal-transfer-inline{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:12px;padding:12px;border:1px solid #b1895366;border-radius:12px;color:#f4dca8;background:#3c30272d}

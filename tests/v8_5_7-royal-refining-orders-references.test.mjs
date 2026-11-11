@@ -69,7 +69,7 @@ test('Las cinco referencias compatibles con West se comprueban sin convertirlas 
 });
 test('El formulario y los resultados muestran órdenes y fuentes por plan',()=>{
  assert.ok(source.includes('marketReferencesPromise=checkMarketReferences()'));
- assert.ok(source.includes('marketReferencesPanel(current.marketReferences)'));
+ assert.ok(!source.includes('marketReferencesPanel(current.marketReferences)'), 'Las tarjetas de Fuentes y evidencia no deben renderizarse');
  assert.ok(source.includes('bmMode:\'listed\''));
  assert.ok(source.includes('refineDaily=daily'));
  assert.ok(source.includes("bonusCity:checked('auto-qc-bonus')"));

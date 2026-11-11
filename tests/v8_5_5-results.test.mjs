@@ -30,10 +30,13 @@ test('integración: tab, iconos oficiales y acciones principales',async()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
- assert(html.includes('data-nav="resultados"'));
+ assert(!html.includes('data-nav="resultados"'));
+ assert(html.includes('>Calculadora de Craft</span>'));
+ assert(app.includes("sendPlanToCalculator('crafting')"));
+ assert(app.includes("sendPlanToCalculator('autocraft')"));
  assert(app.includes("if(state.page==='resultados')resultsPage()"));
- assert(app.includes("state.resultSource='crafting';changePage('resultados')"));
- assert(app.includes("state.resultSource='autocraft';changePage('resultados')"));
+ assert(!app.includes("state.resultSource='crafting';changePage('resultados')"));
+ assert(!app.includes("state.resultSource='autocraft';changePage('resultados')"));
  assert(app.includes("currentPlan(){return (state.page==='autocraft'"));
  assert(app.includes('copyableItemCell(m.id)')); // Ahora incluye copia de nombres sin tocar cálculos
  assert(app.includes('data-action="preflight"'));
