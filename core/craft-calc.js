@@ -68,7 +68,9 @@ export function availableEnchants(recipes,id,tier){
  return [0,1,2,3,4].filter(e=>recipes[variantId(id,t,e)]?.materials?.length);
 }
 
-// Calcula un lote. items: [{id, qty}]. Nunca se rinde por falta de cotización:
+// Calcula un lote. items: [{id, qty, noBonus}]. `noBonus` = craftear fuera de la
+// ciudad con bono de esa receta (sin el 15 % de especialidad; a veces compensa
+// por logística o por las tasas de la estación). Nunca se rinde por falta de cotización:
 // un material sin precio entra a 0, se lista en missingPrices y la fila queda
 // marcada como incompleta hasta que el usuario escriba el precio.
 export function calcBatch(items=[],{recipes={},quotes=new Map(),journalLookup=()=>null,
@@ -82,7 +84,9 @@ export function calcBatch(items=[],{recipes={},quotes=new Map(),journalLookup=()
   if(!id||!qty)continue;
   const recipe=recipes[id];
   if(!recipe?.materials?.length){rows.push({id,qty,ok:false,reason:'Sin receta cargada para este objeto.'});continue;}
-  const rate=craftingReturnRate({specialty:!!recipe.city,dailyBonus,focus}).returnRate;
+  const noBonus=item?.noBonus===true;
+  const specialty=!!recipe.city&&!noBonus&&recipe.specialtyEnabled!==false;
+  const rate=craftingReturnRate({specialty,dailyBonus,focus}).returnRate;
   // Coste material a material; un precio ausente cuenta como 0 y se señala.
   const parts=[];let netCost=0,rawCost=0,oldest=0;const missingPrices=[];
   for(const m of recipe.materials){
@@ -109,7 +113,7 @@ export function calcBatch(items=[],{recipes={},quotes=new Map(),journalLookup=()
   const branch=branchForItem(id);
   const journal=journalInfo(id,recipe,branch?.key||'',journalLookup(id));
   const journalsPerCraft=journal?.ratio>0?journal.ratio:0;
-  rows.push({id,qty,ok:true,incomplete,missingPrices,priceAgeHours:oldest,craftCity:recipe.city||null,returnRate:rate,amount,
+  rows.push({id,qty,ok:true,incomplete,missingPrices,priceAgeHours:oldest,craftCity:recipe.city||null,noBonus,specialty,returnRate:rate,amount,
    unitCost:cost.total,totalCost:cost.total*qty,rawPerCraft:cost.rawMaterials,
    bmBid:bm>0?bm:null,bmManual,bmStale:!!bmQuote?.stale&&!bmManual,
    royalAsk:royal?.price||null,royalCity:royal?.city||null,royalManual,royalStale:!!royal?.stale&&!royalManual,

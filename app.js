@@ -1198,7 +1198,7 @@ const topPrefs=(()=>{try{const stored=JSON.parse(localStorage.getItem('gildem-to
 function saveTopPrefs(input){Object.assign(topPrefs,input);try{localStorage.setItem('gildem-top-market',JSON.stringify(topPrefs));}catch{}}
 // ── v9.4.0 · Craft Cal. — calculadora de crafteo por lotes ───────────────────
 const calcOverride=v=>{const out={};for(const [k,x] of Object.entries(v||{}))if(Number(x)>0&&/^[A-Z0-9_@-]{3,100}$/.test(k))out[k]=Number(x);return out;};
-const calcPrefs=(()=>{try{const v=JSON.parse(localStorage.getItem('gildem-craft-cal')||'{}');return {buy:calcOverride(v.buy),sellBM:calcOverride(v.sellBM),sellRoyal:calcOverride(v.sellRoyal),items:Array.isArray(v.items)?v.items.filter(x=>x&&x.id).slice(0,30):[],focus:v.focus===true};}catch{return {items:[],focus:false,buy:{},sellBM:{},sellRoyal:{}};}})();
+const calcPrefs=(()=>{try{const v=JSON.parse(localStorage.getItem('gildem-craft-cal')||'{}');return {buy:calcOverride(v.buy),sellBM:calcOverride(v.sellBM),sellRoyal:calcOverride(v.sellRoyal),items:Array.isArray(v.items)?v.items.filter(x=>x&&x.id).map(x=>({id:x.id,qty:x.qty,noBonus:x.noBonus===true})).slice(0,30):[],focus:v.focus===true,dailyBonus:[0,10,20].includes(Number(v.dailyBonus))?Number(v.dailyBonus):0};}catch{return {items:[],focus:false,dailyBonus:0,buy:{},sellBM:{},sellRoyal:{}};}})();
 function saveCalcPrefs(){try{localStorage.setItem('gildem-craft-cal',JSON.stringify(calcPrefs));}catch{}}
 function calcAddItem(id,qty=1){
  if(!id)return;
@@ -1242,6 +1242,7 @@ function calcPage(){
   <div class="gcp-cal-controls">
    <details class="gcp-branch-dd" id="cal-add-dd"><summary>Añadir objeto</summary><div class="gcp-dd-panel">${calcItemDropdown()}</div></details>
    <label class="gcp-cal-focus"><input id="cal-focus" type="checkbox" ${calcPrefs.focus?'checked':''}> Usar Focus (59 % de bono de retorno)</label>
+   <label class="gcp-cal-daily" title="Bono de producción del día en la ciudad donde crafteas (lo anuncia el juego)">Bono diario <select id="cal-daily">${[[0,'Sin bono'],[10,'+10 %'],[20,'+20 %']].map(([v,label])=>`<option value="${v}" ${calcPrefs.dailyBonus===v?'selected':''}>${label}</option>`).join('')}</select></label>
    <div class="gcp-top-actions"><button class="btn gold" data-cal-run="normal">Recalcular</button><button class="btn ghost sm" data-cal-run="force" title="Ignora la caché de 1 hora">Precios frescos</button><button class="btn ghost sm" data-cal-clear>Vaciar</button></div>
   </div>
   <div id="cal-results">${calcPrefs.items.length?'':'<p class="muted">Añade objetos con el desplegable o con «Agregar a Cal.» en Top mercado. El tier y el encantamiento se cambian en cada fila.</p>'}</div>
@@ -1249,6 +1250,8 @@ function calcPage(){
  if(!Object.keys(recipes).length)loadCatalog().then(()=>{if(state.page==='craftcal')calcPage();}).catch(()=>{});
  const focus=control('cal-focus');
  if(focus)focus.addEventListener('change',()=>{calcPrefs.focus=focus.checked;saveCalcPrefs();void runCraftCalc(false);});
+ const daily=control('cal-daily');
+ if(daily)daily.addEventListener('change',()=>{calcPrefs.dailyBonus=[0,10,20].includes(Number(daily.value))?Number(daily.value):0;saveCalcPrefs();void runCraftCalc(false);});
  if(calcPrefs.items.length)void runCraftCalc(false);
 }
 async function runCraftCalc(force=false){
@@ -1263,7 +1266,7 @@ async function runCraftCalc(force=false){
   const res=await prices(ids,prefs.region,force);
   updateStatus(res);
   const result=calcBatch(calcPrefs.items,{recipes,quotes:quoteIndex(res.rows,{maxAgeHours:prefs.maxAge}),journalLookup:journalFor,
-   premium:prefs.premium,focus:calcPrefs.focus,tax:prefs.tax,setup:prefs.setup,stationFee:prefs.station,maxAgeHours:prefs.maxAge,overrides:{buy:calcPrefs.buy,sellBM:calcPrefs.sellBM,sellRoyal:calcPrefs.sellRoyal}});
+   premium:prefs.premium,focus:calcPrefs.focus,dailyBonus:calcPrefs.dailyBonus,tax:prefs.tax,setup:prefs.setup,stationFee:prefs.station,maxAgeHours:prefs.maxAge,overrides:{buy:calcPrefs.buy,sellBM:calcPrefs.sellBM,sellRoyal:calcPrefs.sellRoyal}});
   state.craftCalc={result,fetchedAt:res.fetchedAt||Date.now(),warning:res.warning||null};
   renderCraftCalc();
  }catch(e){out.innerHTML=`<p class="notice">No se pudo calcular: ${h(e.message)}</p>`;}
@@ -1277,7 +1280,7 @@ function renderCraftCalc(){
  const body=rows.map(r=>r.ok?`<div class="gx-row gx-cal-row">
    <div class="gx-item"><span class="gx-count">×${fmt(r.qty)}</span>${itemCell(r.id,String(itemName(r.id)).replace(/ · T?\d\.\d$/,''))}<span class="gcp-cal-variant"><select data-cal-tier="${h(r.id)}" aria-label="Tier">${availableTiers(recipes,r.id).map(t=>`<option value="${t}" ${t===itemTier(r.id)?'selected':''}>T${t}</option>`).join('')}</select><select data-cal-ench="${h(r.id)}" aria-label="Encantamiento">${availableEnchants(recipes,r.id,itemTier(r.id)).map(e=>`<option value="${e}" ${e===itemEnch(r.id)?'selected':''}>.${e}</option>`).join('')}</select></span></div>
    <div class="gx-cell gx-cell-qty" data-label="Cantidad"><input class="qty-input" type="number" min="0" max="99999" step="1" value="${r.qty}" data-cal-qty="${h(r.id)}" aria-label="Cantidad de ${h(itemName(r.id))}"></div>
-   <div class="gx-cell gx-cell-city" data-label="Fabricar en">${cityChip(r.craftCity)}<small>retorno ${r.returnRate.toFixed(1)} %</small></div>
+   <div class="gx-cell gx-cell-city" data-label="Fabricar en">${cityChip(r.noBonus?null:r.craftCity)}<small>retorno ${r.returnRate.toFixed(1)} %${r.craftCity&&!r.noBonus?'':' · sin bono'}${calcPrefs.dailyBonus?` · día +${calcPrefs.dailyBonus} %`:''}</small><label class="gcp-cal-nobonus" title="Craftear en otra ciudad, sin el 15 % de especialidad"><input type="checkbox" data-cal-nobonus="${h(r.id)}" ${r.noBonus?'checked':''}> Fuera de ciudad de bono</label></div>
    <div class="gx-cell gx-cell-num" data-label="Coste del lote">${moneyCell(r.totalCost)}<small>${short(r.unitCost)}/u.</small></div>
    <div class="gx-cell gx-cell-num" data-label="Profit Mercado Negro">${money(r.profitBM,r)}<span class="gcp-cal-price ${r.bmManual?'manual':''}"><input class="qty-input price" type="number" min="0" step="1" value="${r.bmBid??''}" placeholder="escribe la puja" data-cal-sell-bm="${h(r.id)}" aria-label="Puja del Mercado Negro de ${h(itemName(r.id))}">${r.bmManual?`<button class="gcp-cal-reset" data-cal-reset="sellBM:${h(r.id)}" title="Volver al precio de AODP">↺</button>`:r.bmStale?'<small title="Última cotización vista, más vieja que tu ventana de Ajustes">antigua</small>':''}</span></div>
    <div class="gx-cell gx-cell-num" data-label="Profit Royal">${money(r.profitRoyal,r)}<span class="gcp-cal-price ${r.royalManual?'manual':''}"><input class="qty-input price" type="number" min="0" step="1" value="${r.royalAsk??''}" placeholder="escribe la venta" data-cal-sell-royal="${h(r.id)}" aria-label="Precio de venta Royal de ${h(itemName(r.id))}">${r.royalManual?`<button class="gcp-cal-reset" data-cal-reset="sellRoyal:${h(r.id)}" title="Volver al precio de AODP">↺</button>`:`<small>${r.royalCity?h(r.royalCity)+(r.royalStale?' · antigua':''):''}</small>`}</span></div>
@@ -1320,6 +1323,10 @@ function renderCraftCalc(){
   if(value>0)map[id]=value;else delete map[id];
   saveCalcPrefs();void runCraftCalc(false);
  }));
+ out.querySelectorAll('[data-cal-nobonus]').forEach(box=>box.addEventListener('change',()=>{
+  const item=calcPrefs.items.find(x=>x.id===box.dataset.calNobonus);
+  if(!item)return;item.noBonus=box.checked;saveCalcPrefs();void runCraftCalc(false);
+ }));
  out.querySelectorAll('[data-cal-tier],[data-cal-ench]').forEach(sel=>sel.addEventListener('change',()=>{
   const id=sel.dataset.calTier||sel.dataset.calEnch;
   const tier=sel.dataset.calTier?Number(sel.value):itemTier(id);
@@ -1329,7 +1336,7 @@ function renderCraftCalc(){
   if(!recipes[next]?.materials?.length){showToast('Esa variante no tiene receta.');renderCraftCalc();return;}
   const item=calcPrefs.items.find(x=>x.id===id);if(!item)return;
   const existing=calcPrefs.items.find(x=>x.id===next);
-  if(existing&&existing!==item){existing.qty+=item.qty;calcPrefs.items=calcPrefs.items.filter(x=>x!==item);}
+  if(existing&&existing!==item){existing.qty+=item.qty;existing.noBonus=existing.noBonus||item.noBonus;calcPrefs.items=calcPrefs.items.filter(x=>x!==item);}
   else item.id=next;
   saveCalcPrefs();void runCraftCalc(false);
  }));
@@ -2247,13 +2254,15 @@ async function runIconDiagnostics(){
 }
 
 document.addEventListener('click',e=>{
+ document.querySelectorAll('details.gcp-branch-dd[open]').forEach(dd=>{if(!dd.contains(e.target))dd.removeAttribute('open');});
+
  const royalGroup=e.target.closest('[data-auto-group]');if(royalGroup){qcChooseAutoGroup(royalGroup.dataset.autoGroup);return;}
  const group=e.target.closest('[data-branch-group]');if(group){changeBranchGroup(group.dataset.branchGroup);return;}
  const family=e.target.closest('[data-level-family]');if(family){levelPrefs.stem=family.dataset.levelFamily;state.levelPlan=null;saveLevel();levelFamilyChoices();const r=control('level-results');if(r)r.innerHTML=empty('Listo para calcular','Seleccionaste '+family.dataset.levelFamily+'. Configura tu spec y presupuesto.');return;}
  const topCal=e.target.closest('[data-top-cal]');
  if(topCal){calcAddItem(topCal.dataset.topCal,1);showToast(itemName(topCal.dataset.topCal)+' añadido a Craft Cal.');return;}
  const calAdd=e.target.closest('[data-cal-add]');
- if(calAdd){calcAddItem(calAdd.dataset.calAdd,1);void runCraftCalc(false);return;}
+ if(calAdd){calcAddItem(calAdd.dataset.calAdd,1);const dd=document.getElementById('cal-add-dd');if(dd)dd.removeAttribute('open');void runCraftCalc(false);return;}
  const calRemove=e.target.closest('[data-cal-remove]');
  if(calRemove){calcPrefs.items=calcPrefs.items.filter(x=>x.id!==calRemove.dataset.calRemove);saveCalcPrefs();void runCraftCalc(false);return;}
  const calReset=e.target.closest('[data-cal-reset]');

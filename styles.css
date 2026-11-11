@@ -907,3 +907,9 @@ body[data-page="craftcal"]{--glow:#8f7bff}
 .gcp-cal-price .qty-input.price{width:76px;font-size:11.5px;padding:3px 5px}
 .gcp-cal-variant select{padding:2px 4px;font-size:11px}
 .gx-cal-row .gx-item .item-cell strong{max-width:150px}
+
+.gcp-cal-nobonus{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--mist);cursor:pointer;margin-top:2px}
+.gcp-cal-nobonus input{accent-color:var(--oro)}
+
+.gcp-cal-daily{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--parch);font-weight:600}
+.gcp-cal-daily select{background:#100c1c;border:1px solid var(--line);color:var(--parch);border-radius:9px;padding:6px 8px}

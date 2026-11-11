@@ -1,3 +1,11 @@
+## v9.7.0 (2026-11-10)
+
+- Craft Cal.: selector de bono diario de producción (+10/+20 %) combinado con bono de ciudad, «fuera de bono» y Focus. Ver `RELEASE_NOTES_9_7_0.md`.
+
+## v9.6.0 (2026-11-10)
+
+- Craft Cal.: checkbox «Fuera de ciudad de bono» por objeto (retorno sin el 15 % de especialidad) y los desplegables se cierran al añadir o al hacer clic fuera. Ver `RELEASE_NOTES_9_6_0.md`.
+
 ## v9.5.1 (2026-11-10)
 
 - La pantalla «No se pudo iniciar» ahora muestra qué módulo falló y, si el despliegue mezcla versiones, explica cómo arreglarlo. Ver `RELEASE_NOTES_9_5_1.md`.

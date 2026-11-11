@@ -49,7 +49,7 @@ test('materiales y diarios agregados: brutos con «sobran», totales y a quién 
  assert(out.totals.grossCapital>=t5.grossCost);
  assert(out.totals.profitBM!==null&&out.totals.royalMissing===0&&out.totals.bmMissing===1,'el T4 no tiene puja BM');
 });
-test('v9.5.1 · sin cotización no se inventa nada, pero la fila SÍ calcula: material sin precio entra a 0, se señala y el profit queda pendiente',()=>{
+test('v9.7.0 · sin cotización no se inventa nada, pero la fila SÍ calcula: material sin precio entra a 0, se señala y el profit queda pendiente',()=>{
  const out=calcBatch([{id:'T9_NO_EXISTE',qty:3},{id:'T5_SHOES_PLATE_SET1@1',qty:2}],opts);
  assert.equal(out.rows[0].ok,false,'sin receta sigue siendo fila inválida');
  const row=out.rows[1];
@@ -67,7 +67,7 @@ test('v9.5.1 · sin cotización no se inventa nada, pero la fila SÍ calcula: ma
  assert.equal(fixed.rows[0].incomplete,false);
  assert(fixed.rows[0].profitBM!==undefined);
 });
-test('v9.5.1 · una cotización vieja ya no desaparece: se usa marcada como antigua, con su edad',()=>{
+test('v9.7.0 · una cotización vieja ya no desaparece: se usa marcada como antigua, con su edad',()=>{
  const stale=[price('T5_METALBAR','Thetford',3600)].map(x=>({...x,sell_price_min_date:new Date(now-30*3600000).toISOString()}));
  const q24=quoteIndex(stale,{maxAgeHours:24,now}).get('T5_METALBAR');
  assert.equal(q24.ask.size,1);
@@ -82,7 +82,7 @@ test('v9.5.1 · una cotización vieja ya no desaparece: se usa marcada como anti
  const used=batch.materials.find(m=>m.id==='T5_METALBAR');
  assert.equal(used.city,'Lymhurst','prefiere la cotización fresca sobre la antigua más barata');
 });
-test('v9.5.1 · variantes: tiers y encantamientos disponibles según recetas, con fusión de ids',()=>{
+test('v9.7.0 · variantes: tiers y encantamientos disponibles según recetas, con fusión de ids',()=>{
  const rec={T4_SHOES_PLATE_SET1:{materials:[{id:'T4_METALBAR',count:8}]},T5_SHOES_PLATE_SET1:{materials:[{id:'T5_METALBAR',count:8}]},'T5_SHOES_PLATE_SET1@1':{materials:[{id:'T5_METALBAR_LEVEL1@1',count:8}]}};
  assert.deepEqual(availableTiers(rec,'T4_SHOES_PLATE_SET1'),[4,5]);
  assert.deepEqual(availableEnchants(rec,'T5_SHOES_PLATE_SET1',5),[0,1]);
@@ -120,4 +120,27 @@ test('precios manuales: compra, puja BM y venta Royal corregidas a mano mandan s
 test('la interfaz permite editar precios y volver a AODP',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  for(const t of ['data-cal-buy','data-cal-sell-bm','data-cal-sell-royal','data-cal-reset','overrides:{buy:calcPrefs.buy'])assert(app.includes(t),t);
+});
+
+test('v9.7.0 · fuera de ciudad de bono: sin el 15 % de especialidad, el retorno baja y el coste sube',()=>{
+ const inBonus=calcBatch([{id:'T5_SHOES_PLATE_SET1',qty:4}],opts).rows[0];
+ const outBonus=calcBatch([{id:'T5_SHOES_PLATE_SET1',qty:4,noBonus:true}],opts).rows[0];
+ assert(Math.abs(inBonus.returnRate-24.812)<.1,'con bono ~24,8 %');
+ assert(Math.abs(outBonus.returnRate-15.254)<.1,'sin bono ~15,3 %');
+ assert(outBonus.unitCost>inBonus.unitCost,'fuera del bono cuesta más');
+ assert.equal(outBonus.noBonus,true);assert.equal(outBonus.specialty,false);
+ const focused=calcBatch([{id:'T5_SHOES_PLATE_SET1',qty:4,noBonus:true}],{...opts,focus:true}).rows[0];
+ assert(Math.abs(focused.returnRate-43.503)<.1,'sin bono con Focus ~43,5 %');
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert(app.includes('data-cal-nobonus')&&app.includes('Fuera de ciudad de bono'));
+});
+
+test('v9.7.0 · bono diario de producción: +10/+20 % suben el retorno dentro y fuera de la ciudad de bono',()=>{
+ const rate=(o={})=>calcBatch([{id:'T5_SHOES_PLATE_SET1',qty:1,...o}],{...opts,...o}).rows[0].returnRate;
+ assert(Math.abs(rate({dailyBonus:10})-30.07)<.1,'con bono de ciudad y día +10 ≈ 30,1 %');
+ assert(Math.abs(rate({dailyBonus:20})-34.64)<.1,'con bono de ciudad y día +20 ≈ 34,6 %');
+ assert(Math.abs(rate({dailyBonus:20,noBonus:true})-27.54)<.1,'fuera de bono con día +20 ≈ 27,5 %');
+ assert(rate({dailyBonus:20})>rate({dailyBonus:10})&&rate({dailyBonus:10})>rate());
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ for(const x of ['cal-daily','Bono diario','dailyBonus:calcPrefs.dailyBonus'])assert(app.includes(x),x);
 });
