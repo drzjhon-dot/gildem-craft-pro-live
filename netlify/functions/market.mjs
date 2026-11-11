@@ -7,7 +7,7 @@ export default async (request)=>{
  if(region!=='west'||!['prices','history','orderbook'].includes(kind)||items.length<1||items.length>60||items.some(s=>!/^[A-Z0-9_@-]{3,100}$/.test(s))){return json({error:'Parámetros inválidos'},400);}
  const allowed={locations:u.searchParams.get('locations')||'',qualities:u.searchParams.get('qualities')||'1'};
  if(!/^[a-zA-Z ,]{0,240}$/.test(allowed.locations)||!/^[1-5,]{1,11}$/.test(allowed.qualities)){return json({error:'Filtros inválidos'},400);}
- if(kind==='history')allowed['time-scale']='24';
+ if(kind==='history'){const ts=u.searchParams.get('time-scale');allowed['time-scale']=['1','6','24'].includes(ts)?ts:'24';}
  const key=region+'|'+kind+'|'+items.join(',')+'|'+JSON.stringify(allowed);
  const old=memory.get(key),forceRefresh=u.searchParams.get('refresh')==='1';if(!forceRefresh&&old&&Date.now()-old.time<(kind==='orderbook'?300000:3600000))return json(old.data,200,{'x-gildem-cache':'HIT'});
  const link=hosts[region]+'/api/v2/stats/'+kind+'/'+items.map(encodeURIComponent).join(',')+'.json?'+new URLSearchParams(allowed);

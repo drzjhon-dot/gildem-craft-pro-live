@@ -1,3 +1,7 @@
+## v9.3.0 (2026-11-10)
+
+- Mejores horas para vender por mercado (historial por horas de AODP), aviso de eventos del juego y desplegable de ramas por categorías en Top mercado (hasta 6 ramas). Ver `RELEASE_NOTES_9_3_0.md`.
+
 ## v9.2.0 (2026-11-10)
 
 - Nueva pestaña «Top mercado»: lo más vendido por rama y mercado en América (West), calculado del historial público (AODP), con salto directo a crear el plan. Ver `RELEASE_NOTES_9_2_0.md`.

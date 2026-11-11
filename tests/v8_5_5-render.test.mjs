@@ -10,6 +10,7 @@ import {groupProduction,groupLogistics,materialUsage} from '../core/production-v
 import {observedWeeklyActivity} from '../core/high-volume.js';
 import {saturationSummary,PLAN_STYLES,DEFAULT_STYLE} from '../core/market-impact.js';
 import {marketNeedsRanking} from '../core/market-mechanics.js';
+import {sellHoursByCity,bestSellHours,parseFestivities} from '../core/sell-hours.js';
 const fragment=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 // La prueba ejecuta un fragmento aislado de la pantalla sobre datos reales de estructura
 // del motor, sin que sea necesario un navegador, API de precios o login.
@@ -26,7 +27,7 @@ function run(current=fake,report=null){
  const main={innerHTML:''};
  const state={resultSource:'crafting',plan:current,autoPlan:null,preflight:report};
  const context={main,state,prefs:{region:'west'},document:{body:{classList:{add(){}}}},
-   currentPlan:()=>current,resultsSummary,budgetGroups,shoppingWithCeilings,preflightOverview,shoppingListText,marketReferenceSnapshot,evidenceForPlan,stagedMaterialNeeds,observedRotation,groupProduction,groupLogistics,materialUsage,saturationSummary,PLAN_STYLES,DEFAULT_STYLE,marketNeedsRanking,observedWeeklyActivity,
+   currentPlan:()=>current,resultsSummary,budgetGroups,shoppingWithCeilings,preflightOverview,shoppingListText,marketReferenceSnapshot,evidenceForPlan,stagedMaterialNeeds,observedRotation,groupProduction,groupLogistics,materialUsage,saturationSummary,PLAN_STYLES,DEFAULT_STYLE,marketNeedsRanking,sellHoursByCity,bestSellHours,parseFestivities,observedWeeklyActivity,
    itemName:id=>id,itemTier:()=>5,itemEnch:()=>0,
    itemCell:id=>`<span class="item-cell"><img src="https://render.albiononline.com/v1/item/${id}.png">${id}</span>`,
    moneyCell:n=>`<span>${n}</span>`,preflightResult:report=>`<aside>${report.ok?'OK':'REVISAR'}</aside>`,

@@ -49,3 +49,18 @@ Conclusión: ninguna web externa ofrece una API pública de demanda para West me
 - https://www.albion-online-data.com/api-site/api.html
 - https://itemlevel.net/albion-online-black-market-guide/
 - https://massivelyop.com/?p=105879
+
+## 5. Documentación oficial de la API (añadido v9.3.0)
+
+Revisión de los api-docs y la página de desarrolladores de AODP que nos pasaste:
+
+| Recurso | Qué da | En la herramienta |
+|---|---|---|
+| `/api/v2/stats/history` con `time-scale=1` | Historial POR HORAS (unidades y precio medio por hora) | **Nuevo:** panel «Mejores horas para vender» en Resultados |
+| `/api/v2/stats/festivities` | Calendario de eventos confirmado por la comunidad (tiempos en ticks de C#; 404 = sin eventos) | **Nuevo:** aviso de evento en el resumen del plan |
+| `items.json` / `world.json` de ao-bin-dumps | IDs y metadatos oficiales | Ya se usaba: las recetas especiales salen de ao-bin-dumps |
+| IDs de localización (Black Market=3003, Thetford=7…) | Alternativa a los nombres en `locations` | No hace falta: los nombres funcionan |
+| Volcados diarios (`albion-online-data.com/database/`) | Base de datos completa por día | Anotado para una futura calibración masiva |
+| NATS (`nats.albion-online-data.com:4222`) | Flujo en vivo de órdenes e historiales | Fuera de alcance para una web estática |
+
+El proxy de Netlify ahora acepta `time-scale` 1, 6 y 24 (antes forzaba 24).

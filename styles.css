@@ -832,3 +832,32 @@ body[data-page="topmercado"]{--glow:#f07fd0}
  .gx-row.gx-top-row .gx-top-rank{display:none}
  .gx-row.gx-top-row .gx-item{grid-column:1/-1}
 }
+
+/* v9.3.0 · Mejores horas de venta */
+.gcp-sell-hours{grid-column:1/-1}
+.gcp-hours-list{display:grid;gap:8px;margin-top:10px}
+.gcp-hours-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:8px 10px;border:1px solid color-mix(in srgb,var(--line) 60%,transparent);border-radius:12px}
+.gcp-hour-chip{display:inline-flex;align-items:baseline;gap:7px;background:#ffffff0d;border:1px solid #ffffff1a;border-radius:9px;padding:5px 10px}
+.gcp-hour-chip strong{font-variant-numeric:tabular-nums;color:var(--oro)}
+.gcp-hour-chip small{color:var(--mist)}
+
+/* v9.3.0 · Desplegable de ramas del Top mercado */
+.gcp-branch-dd{position:relative;min-width:230px}
+.gcp-branch-dd>summary{list-style:none;cursor:pointer;background:#100c1c;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-weight:650;color:var(--parch)}
+.gcp-branch-dd>summary::after{content:"▾";margin-left:8px;color:var(--mist)}
+.gcp-branch-dd[open]>summary{border-color:var(--oro)}
+.gcp-dd-panel{position:absolute;z-index:40;top:calc(100% + 6px);left:0;width:min(420px,86vw);max-height:420px;overflow:auto;background:var(--ink2);border:1px solid var(--line);border-radius:14px;padding:10px;box-shadow:0 22px 60px -20px #000}
+.gcp-dd-group{border-bottom:1px solid color-mix(in srgb,var(--line) 55%,transparent);padding:4px 0}
+.gcp-dd-group:last-child{border-bottom:0}
+.gcp-dd-group>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:7px 8px;border-radius:8px;font-weight:650}
+.gcp-dd-group>summary:hover{background:#ffffff0a}
+.gcp-dd-group>summary::after{content:"›";color:var(--mist);margin-left:8px;transition:transform .15s}
+.gcp-dd-group[open]>summary::after{transform:rotate(90deg)}
+.gcp-dd-group>summary small{color:var(--mist);font-variant-numeric:tabular-nums}
+.gcp-dd-items{display:grid;gap:2px;padding:2px 4px 8px}
+.gcp-dd-items label{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:7px;font-size:13.5px;cursor:pointer}
+.gcp-dd-items label:hover{background:#ffffff0a}
+.gcp-dd-tools{display:flex;gap:8px;align-items:center;padding:2px 6px 6px}
+.gcp-dd-global{justify-content:space-between;border-bottom:1px solid var(--line);margin-bottom:4px;padding-bottom:8px}
+.gcp-top-controls .gcp-dd-items label,.gcp-top-controls .gcp-dd-group summary{flex-direction:row;align-items:center}
+.gcp-top-controls .gcp-branch-dd{align-self:flex-end}

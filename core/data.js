@@ -59,6 +59,25 @@ async function api(kind,ids,region='west',params={},force=false){requireWest(reg
 export const prices=(ids,region='west',force=false)=>api('prices',ids,region,{locations:'Bridgewatch,Fort Sterling,Lymhurst,Martlock,Thetford,Caerleon,Brecilien,Black Market',qualities:'1'},force);
 export const history=(ids,region='west',force=false)=>api('history',ids,region,{locations:'Bridgewatch,Fort Sterling,Lymhurst,Martlock,Thetford,Caerleon,Brecilien,Black Market',qualities:'1','time-scale':'24'},force);
 // v8.9.0 · Volumen de las calidades 2 y 3 (cada calidad es un mercado aparte).
+export const historyHourly=(ids,region='west',force=false)=>api('history',ids,region,{locations:'Bridgewatch,Fort Sterling,Lymhurst,Martlock,Thetford,Caerleon,Brecilien,Black Market',qualities:'1','time-scale':'1'},force);
+// Eventos confirmados del juego (festivities). 404 = sin eventos confirmados.
+export async function festivities(region='west',force=false){
+ requireWest(region);
+ const key='west|festivities';const cache=storageGet(key);
+ if(!force&&cache&&Date.now()-cache.ts<6*HOUR)return {events:cache.rows,cached:true,fetchedAt:cache.ts};
+ try{
+  const res=await fetch(prefixes.west+'/api/v2/stats/festivities',{headers:{Accept:'application/json'}});
+  if(res.status===404){storageSet(key,{rows:[],ts:Date.now()});return {events:[],cached:false,fetchedAt:Date.now()};}
+  if(!res.ok)throw Error('AODP '+res.status);
+  const data=await res.json();
+  const rows=Array.isArray(data)?data:(data&&typeof data==='object'?data:[]);
+  storageSet(key,{rows,ts:Date.now()});
+  return {events:rows,cached:false,fetchedAt:Date.now()};
+ }catch(e){
+  if(cache)return {events:cache.rows,cached:true,stale:true,fetchedAt:cache.ts};
+  return {events:null,error:e.message};
+ }
+}
 export const historyQuality=(ids,region='west',force=false,cities=['Black Market'])=>api('history',ids,region,{locations:cities.join(','),qualities:'2,3','time-scale':'24'},force);
 export const orderbook=(ids,region='west',force=false,cities=['Black Market'])=>api('orderbook',ids,region,{locations:cities.join(','),qualities:'1'},force);
 export function clearCache(){try{Object.keys(localStorage).filter(k=>k.startsWith(prefix)).forEach(k=>localStorage.removeItem(k));}catch{}}
