@@ -1139,3 +1139,7 @@ body.gcp-results-active .workspace{
 
 /* top.7.1: código publicado identificable sin alterar el logo. */
 .gildem-build-tag{display:block;margin:9px 0 0;color:#a28fb8;font-size:10px;letter-spacing:.04em;user-select:text}
+/* v9.10 · Focus disponible y FCE en la configuración rápida */
+.qc-focus-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:8px 0 6px}
+.qc-focus-fields label{display:flex;flex-direction:column;gap:3px}
+.qc-focus-fields input{width:100%;min-width:0}

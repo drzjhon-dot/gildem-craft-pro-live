@@ -4,6 +4,7 @@
 // tier anterior. No se presume que el inventario previo sea gratuito.
 import {CITIES,quote} from './engine.js';
 import {REFINING_FAMILIES,refiningRecipeFor,refiningReturnRate} from './refining-integration.js';
+import {gameFocusCost,focusAfterEfficiency} from './game-focus.js';
 
 export const REFINERY_CHOICES=Object.freeze(Object.entries(REFINING_FAMILIES).map(([key,family])=>({key,label:family.label,city:family.city,iconId:'T4_'+key})));
 const finite=(v,otherwise=0)=>Number.isFinite(Number(v))?Number(v):otherwise;
@@ -32,14 +33,17 @@ export function refiningPriceIds(items){
 
 export function createRefiningCandidates({selected=[],priceMap,market='mixed',saleCities=CITIES,mode='listed',maxAge=24,
   stationFee=0,dailyBonus=0,bonusCity=true,materialShipping=0,transport=0,royalTax=4,listingFee=2.5,
-  riskRoyal=0,priceStress=8,resourceStress=7,nameOf=id=>id}={}){
+  riskRoyal=0,priceStress=8,resourceStress=7,nameOf=id=>id,focus=false,focusEfficiency=0}={}){
  const result=[];const missing={materials:0,sales:0};
  if(market==='black')return {candidates:result,missing};
  if(!['listed','instant'].includes(mode))throw Error('Forma de venta del refinado no válida');
  const fee=Math.max(0,finite(stationFee)),shipping=Math.max(0,finite(materialShipping)),delivery=Math.max(0,finite(transport));
  const tax=Math.max(0,finite(royalTax)),setup=mode==='listed'?Math.max(0,finite(listingFee)):0;
- const rate=refiningReturnRate({bonusCity,dailyBonus});
+ const baseRate=refiningReturnRate({bonusCity,dailyBonus});
  for(const {id,recipe:r} of selected){
+  // v9.10 · Focus de refinado con el coste del juego (y tu FCE): retorno 53,9 % en la ciudad de bono.
+  const focusPerUnit=focus?focusAfterEfficiency(gameFocusCost(id)||0,focusEfficiency):0;
+  const rate=focusPerUnit>0?refiningReturnRate({bonusCity,dailyBonus,focus:true}):baseRate;
   // Comprobación defensiva: no se construyen productos que no tengan receta reconocida.
   if(!r||!refiningRecipeFor(id))continue;
   const refiningCity=bonusCity?r.city:(r.city==='Caerleon'?'Bridgewatch':'Caerleon');
@@ -75,7 +79,7 @@ export function createRefiningCandidates({selected=[],priceMap,market='mixed',sa
    result.push({id,itemName:nameOf(id),branch:'refining_'+r.family,craftCity:refiningCity,city:saleCity,mode,
     sell:q.price,profit,cost,capitalPerUnit:upfront,roi:profit/cost*100,returnRate:rate,
     materials,rawMaterials:gross,at:q.at,ageHours:(Date.now()-at)/3600000,
-    activity:null,confidence:null,personalLearning:null,focusPerUnit:0,focusGain:0,
+    activity:null,confidence:null,personalLearning:null,focusPerUnit,focusGain:focusPerUnit>0?gross*(rate-baseRate)/100:0,
     stressProfit:stressRevenue-stressCost,taxRate:tax/100,saleTaxPercent:tax,craftAmount:1,
     recipeKind:'refining',setupRate:setup/100,referenceSide:mode==='listed'?'sell_price_min':'buy_price_max',transportCost:shippingSale,
     transportRiskPct:0,expectedRiskCost:riskCost,stationCost:fee,

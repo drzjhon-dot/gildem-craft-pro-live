@@ -25,6 +25,6 @@ test('el filtro final de Black/Royal llama al mismo criterio sin volver a minUse
 });
 test('la versión es visible en el sidebar para verificar despliegue',()=>{
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
- assert.ok(html.includes('Gildem v9.9.0-top.8.1'));
+ assert.ok(html.includes('Gildem v9.11.0'));
  assert.ok(html.includes('gildem-build-tag'));
 });

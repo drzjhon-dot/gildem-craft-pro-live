@@ -8,7 +8,7 @@ const must=['package.json','netlify.toml','index.html','app.js','styles.css',
 'netlify/functions/hourly-prices.mjs','netlify/functions/snapshot.mjs'];
 for(const path of must)await access(join(process.cwd(),path));
 const pkg=JSON.parse(await readFile('package.json','utf8'));
-assert.match(pkg.version,/^9\.9\.0-top\.8\.1$/,'La distribución debe declarar la versión 9.9.0-top.8.1');
+assert.match(pkg.version,/^9\.11\.0$/,'La distribución debe declarar la versión 9.11.0');
 // Prevent the regression that sent only test files to GitHub while keeping
 // app.js/index.html on an older version. These checks run in every Netlify build.
 const html=await readFile('index.html','utf8');

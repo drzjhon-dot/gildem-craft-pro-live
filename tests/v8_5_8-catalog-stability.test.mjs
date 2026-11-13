@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {fetchCatalogFile} from '../netlify/functions/catalog.mjs';
 import {validCatalogPayload} from '../core/catalog.js';
+import {RECIPE_SUPPLEMENT} from '../core/recipe-supplement.js';
 
 const goodRecipes={
  'T4_MAIN_AXE':{materials:[{id:'T4_METALBAR',count:12,ret:true}],city:'Martlock'},
@@ -27,7 +28,7 @@ test('si IndexedDB lanza SecurityError, el catálogo y las ramas siguen cargando
   };
   const catalog=await import('../core/catalog.js?catalog-stability-1');
   const result=await catalog.loadCatalog(true);
-  assert.equal(result.recipes,2);
+  assert.equal(result.recipes,2+Object.keys(RECIPE_SUPPLEMENT).length); // v9.10: + objetos nuevos del juego
   assert.equal(result.names,2);
   assert.equal(catalog.recipes.T4_MAIN_AXE.city,'Martlock');
   assert(calls.some(x=>x.includes('/.netlify/functions/catalog?file=recipes.json')));
@@ -44,7 +45,7 @@ test('si fallan los nombres en español pero no las recetas, todavía se puede e
   globalThis.fetch=async url=>String(url).includes('names_es.json')?response({error:'sin traducción'},false):response(goodRecipes);
   const catalog=await import('../core/catalog.js?catalog-stability-2');
   const result=await catalog.loadCatalog(true);
-  assert.equal(result.recipes,2);
+  assert.equal(result.recipes,2+Object.keys(RECIPE_SUPPLEMENT).length); // v9.10: + objetos nuevos del juego
   assert.match(result.warning,/nombres en español/);
   assert.equal(catalog.recipes.T5_MAIN_AXE.city,'Martlock');
  }finally{globalThis.fetch=previousFetch;}
@@ -62,7 +63,7 @@ test('si el proxy falla, se intenta la fuente pública sin inventar una receta',
   };
   const catalog=await import('../core/catalog.js?catalog-stability-3');
   const result=await catalog.loadCatalog(true);
-  assert.equal(result.recipes,2);
+  assert.equal(result.recipes,2+Object.keys(RECIPE_SUPPLEMENT).length); // v9.10: + objetos nuevos del juego
   assert(called.some(x=>x.startsWith('https://cdn.jsdelivr.net/')));
  }finally{globalThis.fetch=previousFetch;if(previousLocation===undefined)delete globalThis.location;else globalThis.location=previousLocation;}
 });
@@ -80,10 +81,10 @@ test('recuperación visible, precache de todos los módulos y versión sin estad
  const netlify=readFileSync(new URL('../netlify.toml',import.meta.url),'utf8');
  assert.match(html,/id="gildem-boot"/);
  assert.match(html,/data-boot-repair/);
- assert.match(html,/app\.js\?v=9\.9\.0/);
+ assert.match(html,/app\.js\?v=9\.11\.0/);
  assert.match(app,/data-action="retry-catalog"/);
  assert.match(app,/if\(action==='retry-catalog'\)syncCatalog\(true\)/);
- assert.match(sw,/gildem-craft-pro-v9\.9\.0-top\.8\.1/);
+ assert.match(sw,/gildem-craft-pro-v9\.11\.0/);
  for(const match of app.matchAll(/from ['"]\.\/(core\/[^'"]+)['"]/g))assert(sw.includes("'./"+match[1]+"'"),match[1]+' no está en la caché');
  assert.match(netlify,/for = "\/app\.js"/);
 });

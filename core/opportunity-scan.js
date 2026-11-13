@@ -1,3 +1,4 @@
+import {gameFocusCost,focusAfterEfficiency} from './game-focus.js';
 // Exploración multi-rama. No afirma escanear TODO Albion si los límites de consulta
 // obligan a seleccionar una muestra. La cobertura se devuelve explícitamente.
 import {itemTier,itemEnch,craftCost,craftProfit,craftingReturnRate,quote} from './engine.js';
@@ -42,7 +43,8 @@ export function createUniversalCandidates({selected,recipes,priceMap,inputs,prof
  const results=[],missing={material:0,sale:0,focus:0},side=inputs.buyMode==='order'?'buy_price_max':'sell_price_min';
  for(const {id,branch} of selected){const r=recipes[id];if(!r?.materials?.length||!r.city)continue;
   const kind=specialType(id),products=Math.max(1,Number(r.amountCrafted)||1),noSpecial=r.specialtyEnabled===false;
-  const focusPerUnit=inputs.focus?(Number(profile[id]?.focus)||inputs.focusPerUnit||0):0;
+  // v9.10 · Coste de Focus: el de Ajustes por objeto; si no, el del juego con tu FCE; si no, el manual.
+  const focusPerUnit=inputs.focus?(Number(profile[id]?.focus)||focusAfterEfficiency(gameFocusCost(id,r)||0,inputs.focusEfficiency)||inputs.focusPerUnit||0):0;
   if(inputs.focus&&focusPerUnit<=0){missing.focus++;continue;}
   // Royal only products cannot be sold at BM, regardless of user selection.
   if(inputs.market==='black'&&!blackMarketEligible(id))continue;

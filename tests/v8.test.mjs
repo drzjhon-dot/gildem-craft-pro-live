@@ -6,6 +6,7 @@ import {recipeSnapshot,compareSnapshot,flagChangedPortfolios} from '../core/patc
 import {newSyncCode,syncId,encryptPayload,decryptPayload,fromBase64Url} from '../core/sync-crypto.js';
 import {rebuildPlan} from '../core/plan.js';
 import {cashPosition,startPortfolio} from '../core/cashflow.js';
+import {gameFocusCost} from '../core/game-focus.js';
 const now=new Date(Date.now()-1800000).toISOString();
 const recipes={T4_MAIN_AXE:{city:'Martlock',materials:[{id:'T4_METALBAR',count:8,ret:true}],amountCrafted:1},T5_MAIN_AXE:{city:'Martlock',materials:[{id:'T5_METALBAR',count:8,ret:true}]},T4_MEAL_SALAD:{city:'Caerleon',materials:[{id:'T4_CARROT',count:6,ret:true}],amountCrafted:10,kind:'food'},T4_SHOES_PLATE_SET1:{city:'Martlock',materials:[{id:'T4_METALBAR',count:8,ret:true}]}};
 const branches=[{key:'axe',test:id=>id.includes('MAIN_AXE')},{key:'foods_all',test:id=>id.includes('MEAL_')},{key:'boots_plate',test:id=>id.includes('SHOES_PLATE')}];
@@ -32,9 +33,13 @@ test('v8 food batch profit uses 10 outputs, 10x transport, 1x inputs',()=>{
  const y=x.candidates.find(r=>r.city==='Lymhurst');assert(y);
  assert.equal(y.craftAmount,10);assert.equal(y.transportCost,500);assert.equal(y.materials[0].count,6);
 });
-test('v8 Focus auto requires verified cost; never guesses',()=>{
+test('v8 Focus auto: coste verificado del juego (ao-bin-dumps) o ninguno; nunca se adivina',()=>{
+ // v9.10: el hacha T4 tiene coste de Focus publicado en el juego → se usa.
  const x=createUniversalCandidates({selected:[{id:'T4_MAIN_AXE',branch:'axe'}],recipes,priceMap:map,inputs:{...inputs,focus:true},profile:{}});
- assert.equal(x.candidates.length,0);assert.equal(x.missing.focus,1);
+ assert.equal(x.missing.focus,0);assert(x.candidates.every(c=>c.focusPerUnit===gameFocusCost('T4_MAIN_AXE')));
+ // Un objeto sin coste conocido sigue sin Focus inventado.
+ const y=createUniversalCandidates({selected:[{id:'T4_MAIN_UNKNOWNTHING',branch:'axe'}],recipes:{T4_MAIN_UNKNOWNTHING:recipes.T4_MAIN_AXE},priceMap:map,inputs:{...inputs,focus:true},profile:{}});
+ assert.equal(y.candidates.length,0);assert.equal(y.missing.focus,1);
 });
 test('v8 personal rotation needs 3 sold units, AODP history alone is insufficient',()=>{
  assert.equal(verifiedRotation({profit:1200,personalLearning:null}),null);

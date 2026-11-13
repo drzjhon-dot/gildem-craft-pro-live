@@ -1,4 +1,5 @@
 import {extractSpecialRecipes,FULL_ITEM_DUMP,FULL_ITEM_DUMP_BACKUP} from './special-recipes.js';
+import {RECIPE_SUPPLEMENT} from './recipe-supplement.js';
 import {normalized,itemTier,itemEnch} from './engine.js';
 const ROOT='https://cdn.jsdelivr.net/gh/vkorne-web/albion-market@main/';
 const BACK='https://raw.githubusercontent.com/vkorne-web/albion-market/main/';
@@ -90,7 +91,8 @@ export async function loadCatalog(force=false){
  if(nameResult.status==='fulfilled')names=nameResult.value;
  if(recipeResult.status==='fulfilled'){
   const previousSpecial=specialLoaded?Object.fromEntries(Object.entries(recipes).filter(([k,v])=>v.recipeSource==='ao-bin-dumps')):{};
-  recipes={...recipeResult.value,...previousSpecial};
+  // v9.10 · Objetos nuevos del juego que el catálogo principal aún no trae (sin sustituir nada).
+  recipes={...RECIPE_SUPPLEMENT,...recipeResult.value,...previousSpecial};
   return {names:Object.keys(names).length,recipes:Object.keys(recipes).length,warning:nameResult.status==='rejected'?'Los nombres en español están temporalmente sin actualizar; se muestran IDs.':null};
  }
  throw Error('Las recetas no se pudieron cargar. '+String(recipeResult.reason?.message||recipeResult.reason));

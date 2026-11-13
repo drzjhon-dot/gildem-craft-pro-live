@@ -34,6 +34,7 @@ function build(id,type,req){const ms=materials(req);if(!ms.length)return null;
  const amountCrafted=positive(req?.['@amountcrafted'])||1;
  return {materials:ms,city:craftCityForSpecial(type),amountCrafted,kind:type,
     specialtyEnabled:!specialNoCityBonus(type),dailyEnabled:!specialNoDailyBonus(type),
+    ...(positive(req?.['@craftingfocus'])?{focusPerCraft:positive(req['@craftingfocus'])}:{}),
     market:'royal',recipeSource:'ao-bin-dumps'};
 }
 export function extractSpecialRecipes(dump){

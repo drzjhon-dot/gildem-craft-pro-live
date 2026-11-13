@@ -102,7 +102,8 @@ export function calcBatch(items=[],{recipes={},quotes=new Map(),journalLookup=()
   }
   const cost={materials:parts,materialCost:netCost,rawMaterials:rawCost,total:netCost+n(stationFee),stationFee:n(stationFee)};
   const incomplete=missingPrices.length>0;
-  const amount=Math.max(1,n(recipe.amount)||1);
+  // v9.10 · Salida por craft del juego (@amountcrafted): pociones y comida dan 5–10 por craft.
+  const amount=Math.max(1,n(recipe.amountCrafted)||n(recipe.amount)||1);
   const bmManual=n(over.sellBM[id])>0,royalManual=n(over.sellRoyal[id])>0;
   const bmQuote=quotes.get(id)?.bm||null;
   const bm=bmManual?n(over.sellBM[id]):(bmQuote?.price||0);
@@ -122,8 +123,8 @@ export function calcBatch(items=[],{recipes={},quotes=new Map(),journalLookup=()
    journalsNeeded:journalsPerCraft*qty,journalEmpty:journal?.empty||null});
   for(const m of cost.materials){
    const key=m.id+'|'+(m.city||'');
-   const e=materials.get(key)||{id:m.id,city:m.city||null,manual:m.manual,stale:m.stale,ageHours:m.ageHours,missing:!(m.unitPrice>0),gross:0,used:0,unitPrice:m.unitPrice,usedBy:new Set()};
-   e.gross+=m.count*qty;e.used+=m.used*qty;
+   const e=materials.get(key)||{id:m.id,city:m.city||null,manual:m.manual,stale:m.stale,ageHours:m.ageHours,missing:!(m.unitPrice>0),gross:0,used:0,lastReturn:0,unitPrice:m.unitPrice,usedBy:new Set()};
+   e.gross+=m.count*qty;e.used+=m.used*qty;e.lastReturn=Math.max(e.lastReturn,m.returned||0);
    e.unitPrice=Math.max(e.unitPrice,n(m.unitPrice));e.usedBy.add(id);
    materials.set(key,e);
   }
@@ -137,7 +138,9 @@ export function calcBatch(items=[],{recipes={},quotes=new Map(),journalLookup=()
  // estación se reutilizan mientras crafteas, así que se compra el consumo neto.
  // El bruto de la receta queda como referencia (es lo que pasa por tus manos).
  const materialList=[...materials.values()].map(m=>{
-  const gross=Math.ceil(m.gross),buy=Math.min(gross,Math.ceil(m.used-1e-9));
+  // v9.10 · El retorno del ÚLTIMO craft ya no se reutiliza: se compra el neto + el
+  // retorno de un craft (nunca más que el bruto). Antes faltaba material al final del lote.
+  const gross=Math.ceil(m.gross-1e-9),buy=Math.min(gross,Math.ceil(m.used+m.lastReturn-1e-9));
   return {...m,usedBy:[...m.usedBy].sort(),gross,buy,reused:Math.max(0,gross-buy),
    spare:Math.max(0,gross-buy),buyCost:buy*m.unitPrice,grossCost:gross*m.unitPrice,netCost:m.used*m.unitPrice};
  });

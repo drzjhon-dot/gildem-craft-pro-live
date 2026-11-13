@@ -1,3 +1,13 @@
+## 9.11.0
+- Etapa de cumplimiento de la configuración en Black/Royal Craft y propuestas.
+- Importación del CSV de Trades del AFM Data Client (ventas reales → carteras y aprendizaje).
+
+## 9.10.0
+- Focus del juego (FCE) en Black/Royal Craft y refinado; refinado con Focus desbloqueado.
+- Calculadora: salida por craft del juego y compras = neto + retorno de un craft.
+- Recetas nuevas (cuero dragón) desde ao-bin-dumps.
+- Motor 3.0 (beneficio marginal) elegido automáticamente cuando supera claramente al 9.9.
+
 ## v9.9.0 (2026-11-11)
 
 - Listas de compras de los planes: «A comprar» descuenta el retorno (bono de ciudad, bono diario y Focus ahora cambian las cantidades); «reutilizas N», techos y texto copiable sobre la cantidad comprada. Versión unificada tras el ZIP del usuario. Ver `RELEASE_NOTES_9_9_0.md`.

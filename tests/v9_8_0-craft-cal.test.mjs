@@ -152,7 +152,8 @@ test('v9.8.0 · el retorno SÍ cambia cuánto comprar: más bono, menos recursos
  const daily=buyOf({dailyBonus:20});  // 34,6 %
  const focused=buyOf({focus:true});   // 47,9 %
  assert.equal(base.gross,80);assert.equal(noBonus.gross,80);assert.equal(daily.gross,80);
- assert.equal(base.buy,Math.ceil(80*(1-.24812)));
+ // v9.10: neto + retorno del último craft (8 lingotes × 24,8 %), que ya no se reutiliza.
+ assert.equal(base.buy,Math.ceil(80*(1-.24812)+8*.24812-1e-9));
  assert(noBonus.buy>base.buy&&daily.buy<base.buy&&focused.buy<daily.buy,
   `${noBonus.buy} > ${base.buy} > ${daily.buy} > ${focused.buy}`);
  assert.equal(base.reused,base.gross-base.buy);

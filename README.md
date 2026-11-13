@@ -1,4 +1,8 @@
-# Versión actual: Gildem Albion Lab v9.9.0-top.2
+# Versión actual: Gildem Albion Lab v9.11.0
+
+**Novedad v9.11.0:** el motor cumple tu configuración (filtros, límites estrictos, cobertura de todos los tiers/encantamientos marcados y «Usar todo») e importación de tus ventas reales desde el CSV de Trades del AFM Data Client. Ver [RELEASE_NOTES_9_11_0.md](RELEASE_NOTES_9_11_0.md).
+
+
 
 **Novedad v9.9.0-top.4:** los generadores permiten presupuesto manual, exploran combinaciones tier/encantamiento de manera más equilibrada, validan las restricciones sobre el plan final y ajustan la distribución por estilo/objetivo. La tabla Top Mercado alinea todas sus columnas. Consulte [COMPROBAR_PLANES_TOP_4.md](COMPROBAR_PLANES_TOP_4.md) para las pruebas de regresión y limitaciones de los datos.
 
